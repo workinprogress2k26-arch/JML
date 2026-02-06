@@ -174,12 +174,9 @@ function showSection(sectionId) {
     const activeLink = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick')?.includes(sectionId));
     if (activeLink) activeLink.classList.add('active');
 
-    if (sectionId === 'subscriptions-section' || sectionId === 'business-section') {
-        renderPremiumFeatures();
-    }
-
     if (sectionId === 'map-section' && map) setTimeout(() => map.invalidateSize(), 200);
 }
+
 
 function showModal(modalId) {
     const modal = document.getElementById(modalId);
