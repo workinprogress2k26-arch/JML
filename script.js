@@ -519,10 +519,54 @@ function finalizeAnnuncioCreation(title, category, desc, salary, address, coords
 
     annunci.unshift(newAnn);
     localStorage.setItem('annunci', JSON.stringify(annunci));
+
+    // Reset filtri per mostrare subito il nuovo annuncio
+    const searchInput = document.getElementById('search-input');
+    const catFilter = document.getElementById('filter-category');
+    if (searchInput) searchInput.value = '';
+    if (catFilter) catFilter.value = '';
+
     alert('Annuncio creato con successo!');
     closeCreateModal();
     renderBacheca();
     initMap();
+}
+
+// SISTEMA ABBONAMENTI & CORSI
+function showSubscriptionPlans() {
+    showView('app-view');
+    showSection('subscriptions-section');
+}
+
+function selectPlan(planType, price) {
+    // Simulazione pagamento o redirect a Stripe con parametri diversi
+    const confirm = window.confirm(`Vuoi procedere con il piano ${planType.toUpperCase()} a €${price}?`);
+    if (confirm) {
+        activatePremium(planType);
+    }
+}
+
+async function activatePremium(planType = 'PRO') {
+    // Qui integreremmo Stripe con il priceId specifico del piano
+    console.log(`Attivazione piano: ${planType}`);
+
+    try {
+        let userData = JSON.parse(localStorage.getItem('userData')) || {};
+
+        // Simulazione successo immediato per demo
+        userData.isPremium = true;
+        userData.subscriptionPlan = planType;
+        userData.credits = planType === 'PRO' ? 999 : (planType === 'STANDARD' ? 2 : 1);
+
+        localStorage.setItem('userData', JSON.stringify(userData));
+        localStorage.setItem('isLoggedIn', 'true');
+
+        alert(`Congratulazioni! Piano ${planType} attivato con successo. 💎\nHai accesso ai corsi Worky Academy.`);
+        location.reload();
+    } catch (err) {
+        console.error("Errore attivazione:", err);
+        alert("Errore durante l'attivazione dell'abbonamento.");
+    }
 }
 
 // Contratti e Chat

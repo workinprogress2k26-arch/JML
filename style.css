@@ -12,6 +12,88 @@
     --glass: blur(12px);
 }
 
+/* WORKY ACADEMY STYLES */
+.step-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    padding: 1rem;
+    border-radius: 12px;
+    width: 120px;
+    font-size: 0.9rem;
+    color: var(--text-main);
+}
+
+.arrow-right {
+    font-size: 1.5rem;
+    color: var(--text-dim);
+}
+
+.subscription-plans {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.plan-card {
+    padding: 2rem;
+    border-radius: 20px;
+    text-align: center;
+    position: relative;
+    border: 1px solid var(--border);
+    transition: transform 0.3s ease;
+}
+
+.plan-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--primary);
+}
+
+.plan-card.popular {
+    border: 2px solid var(--primary);
+    background: rgba(220, 170, 37, 0.05);
+}
+
+.popular-tag {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--primary);
+    color: #000;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.plan-card .price {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin: 1rem 0;
+    color: var(--text-main);
+}
+
+.plan-card .price span {
+    font-size: 1rem;
+    color: var(--text-dim);
+    font-weight: normal;
+}
+
+.plan-features {
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0;
+    text-align: left;
+    opacity: 0.9;
+}
+
+.plan-features li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+}
+
 .light {
     --bg-dark: #f0f2f5;
     --bg-card: rgba(255, 255, 255, 0.8);
