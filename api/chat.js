@@ -1,5 +1,3 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-
 module.exports = async (req, res) => {
     // Abilita CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
@@ -27,26 +25,41 @@ module.exports = async (req, res) => {
     }
 
     try {
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-1.5-flash-latest'
-        });
-
-        // Estrai il messaggio dell'utente
+        // Usa REST API direttamente senza SDK
         const userMessage = messages[messages.length - 1].content;
 
-        // Prompt di sistema + messaggio utente
         const prompt = `Sei Worky-AI, un assistente esperto del mercato del lavoro a Bologna. Aiuti gli utenti a trovare lavoro, migliorare il profilo e capire come usare la piattaforma Worky.
 
 Utente: ${userMessage}
 
 Rispondi in modo professionale e conciso:`;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }]
+                })
+            }
+        );
 
-        // Formato compatibile con il frontend (simile a OpenAI/DeepSeek)
+        if (!response.ok) {
+            const errorData = await response.text();
+            throw new Error(`Gemini API error: ${errorData}`);
+        }
+
+        const data = await response.json();
+        const text = data.candidates[0].content.parts[0].text;
+
+        // Formato compatibile con il frontend
         res.status(200).json({
             choices: [{
                 message: {
