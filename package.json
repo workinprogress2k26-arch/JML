@@ -19,7 +19,7 @@
   },
   "homepage": "https://github.com/workinprogress2k26-arch/JML#readme",
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
+    "@google/generative-ai": "^0.22.0",
     "@stripe/stripe-js": "^8.7.0",
     "@supabase/supabase-js": "^2.95.3",
     "openai": "^6.18.0",

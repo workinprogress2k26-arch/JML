@@ -28,7 +28,9 @@ module.exports = async (req, res) => {
 
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-1.5-flash-latest'
+        });
 
         // Estrai il messaggio dell'utente
         const userMessage = messages[messages.length - 1].content;
