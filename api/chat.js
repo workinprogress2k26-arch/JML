@@ -1,4 +1,4 @@
-const axios = require('axios');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 module.exports = async (req, res) => {
     // Abilita CORS
@@ -20,33 +20,44 @@ module.exports = async (req, res) => {
     }
 
     const { messages } = req.body;
-    const apiKey = process.env.DEEPSEEK_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
         return res.status(500).json({ error: 'Configurazione API Key mancante sul server' });
     }
 
     try {
-        const response = await axios.post('https://api.deepseek.com/v1/chat/completions', {
-            model: 'deepseek-chat',
-            messages: [
-                { role: 'system', content: 'Sei Worky-AI, un assistente esperto del mercato del lavoro a Bologna. Aiuti gli utenti a trovare lavoro, migliorare il profilo e capire come usare la piattaforma Worky.' },
-                ...messages
-            ],
-            stream: false
-        }, {
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json'
-            }
-        });
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
-        res.status(200).json(response.data);
+        // Estrai il messaggio dell'utente
+        const userMessage = messages[messages.length - 1].content;
+
+        // Prompt di sistema + messaggio utente
+        const prompt = `Sei Worky-AI, un assistente esperto del mercato del lavoro a Bologna. Aiuti gli utenti a trovare lavoro, migliorare il profilo e capire come usare la piattaforma Worky.
+
+Utente: ${userMessage}
+
+Rispondi in modo professionale e conciso:`;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        // Formato compatibile con il frontend (simile a OpenAI/DeepSeek)
+        res.status(200).json({
+            choices: [{
+                message: {
+                    role: 'assistant',
+                    content: text
+                }
+            }]
+        });
     } catch (error) {
-        console.error('Errore DeepSeek API:', error.response ? error.response.data : error.message);
-        res.status(error.response ? error.response.status : 500).json({
-            error: 'Errore durante la comunicazione con DeepSeek',
-            details: error.response ? error.response.data : error.message
+        console.error('Errore Gemini API:', error.message);
+        res.status(500).json({
+            error: 'Errore durante la comunicazione con Gemini',
+            details: error.message
         });
     }
 };
