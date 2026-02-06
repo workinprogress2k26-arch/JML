@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Work-in-Progress | Premium</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css">
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+
+<body>
+
+  <!-- AREA ACCESSO (HOME) -->
+  <section id="auth-view" class="hidden">
+    <div class="auth-card glass">
+      <h1>Work-in-Progress</h1>
+      <p>Entra nel futuro del lavoro a Bologna.</p>
+
+      <div id="login-form">
+        <div class="input-group">
+          <label>Email</label>
+          <input type="email" id="email-login" placeholder="mario@esempio.it">
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <input type="password" id="password-login" placeholder="••••••••">
+        </div>
+        <button class="btn-primary" onclick="login()">Accedi</button>
+        <div style="margin: 1.5rem 0; display: flex; align-items: center; gap: 1rem; color: var(--text-dim);">
+          <hr style="flex-grow: 1; border: 1px solid var(--border);"> O
+          <hr style="flex-grow: 1; border: 1px solid var(--border);">
+        </div>
+        <div id="google-login-btn"></div>
+      </div>
+
+      <div id="signup-form" class="hidden">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="input-group">
+            <label>Nome</label>
+            <input type="text" id="reg-name" placeholder="Mario">
+          </div>
+          <div class="input-group">
+            <label>Cognome</label>
+            <input type="text" id="reg-surname" placeholder="Rossi">
+          </div>
+        </div>
+        <div class="input-group">
+          <label>Email</label>
+          <input type="email" id="reg-email" placeholder="mario@esempio.it">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="input-group">
+            <label>Password</label>
+            <input type="password" id="reg-password" placeholder="••••••••">
+          </div>
+          <div class="input-group">
+            <label>Conferma Password</label>
+            <input type="password" id="reg-confirm" placeholder="••••••••">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="input-group">
+            <label>Carta d'Identità</label>
+            <input type="text" id="reg-id" placeholder="AB12345CD">
+          </div>
+          <div class="input-group">
+            <label>Data di Nascita</label>
+            <input type="date" id="reg-birth">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="input-group">
+            <label>Città</label>
+            <input type="text" id="reg-city" placeholder="Bologna">
+          </div>
+          <div class="input-group">
+            <label>Paese</label>
+            <input type="text" id="reg-country" placeholder="Italia">
+          </div>
+        </div>
+        <div class="input-group">
+          <label>CAP</label>
+          <input type="text" id="reg-zip" placeholder="40121">
+        </div>
+        <div class="input-group">
+          <label>Tipo Account</label>
+          <select id="reg-type" onchange="toggleCompanyFields()"
+            style="width: 100%; padding: 0.8rem; border-radius: 8px; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--border);">
+            <option value="private">Profilo Privato (Lavoratore)</option>
+            <option value="business">Profilo Azienda (Datore di Lavoro)</option>
+          </select>
+        </div>
+
+        <!-- CAMPI EXTRA AZIENDA (Mostrati solo se Tipo Account = Profilo Azienda) -->
+        <div id="company-extra-fields" class="hidden">
+          <div class="input-group">
+            <label>Nome Azienda</label>
+            <input type="text" id="reg-company-name" placeholder="Es. Worky Solutions Srl">
+          </div>
+          <div class="input-group">
+            <label>Via dell'Azienda</label>
+            <input type="text" id="reg-company-address" placeholder="Via, Città, Civico">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="signup()">Registrati</button>
+      </div>
+
+      <p id="auth-toggle-link" onclick="toggleForms()">Non hai un account? Registrati</p>
+    </div>
+  </section>
+
+  <!-- AREA OPERATIVA (DASHBOARD) -->
+  <section id="app-view" class="hidden">
+    <!-- Sidebar -->
+    <aside class="sidebar glass">
+      <div class="logo-container">
+        <span>🚀</span> WIP Premium
+      </div>
+      <ul class="nav-links">
+        <li class="nav-item active" onclick="showSection('bacheca-section')">
+          <span>📋</span> Bacheca Annunci
+        </li>
+        <li class="nav-item" onclick="showSection('map-section')">
+          <span>📍</span> Mappa Lavori
+        </li>
+        <li class="nav-item" onclick="showSection('chat-ai-section')">
+          <span>🤖</span> AI Assistant
+        </li>
+        <li class="nav-item" onclick="showSection('contracts-section')">
+          <span>🤝</span> Messaggi Aziende
+        </li>
+        <li class="nav-item" onclick="showSection('profile-section')">
+          <span>👤</span> Mio Profilo
+        </li>
+        <li class="nav-item" onclick="showSection('subscriptions-section')">
+          <span>💎</span> Abbonamenti
+        </li>
+        <!-- Voci Business (Visibili solo se account aziendale) -->
+        <li id="nav-business-dashboard" class="nav-item hidden" onclick="showSection('business-section')">
+          <span>📊</span> Statistiche Business
+        </li>
+      </ul>
+      <div class="user-profile">
+        <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100"
+          id="user-avatar" alt="Avatar">
+        <div class="user-info">
+          <p style="display: flex; align-items: center; gap: 0.3rem;">
+            <span id="user-display-name">Mario Rossi</span>
+            <span id="verified-badge" class="verified-badge hidden">✔</span>
+          </p>
+          <button onclick="logout()"
+            style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.8rem;">Logout</button>
+        </div>
+      </div>
+    </aside>
+
+    </aside>
+
+    <main class="main-content">
+
+      <!-- SEZIONE BACHECA -->
+      <section id="bacheca-section" class="content-section">
+        <div class="content-header" style="flex-direction: column; align-items: flex-start; gap: 1rem;">
+          <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+            <h2>Bacheca Opportunità</h2>
+            <button class="btn-primary" style="width: auto;" onclick="openCreateModal()">+ Crea Annuncio</button>
+          </div>
+
+          <!-- FILTRI DI RICERCA -->
+          <div class="filters-bar glass"
+            style="width: 100%; padding: 1rem; border-radius: 12px; display: flex; gap: 1rem; flex-wrap: wrap;">
+            <input type="text" id="search-input" placeholder="Cerca per titolo, autore..."
+              style="flex: 2; min-width: 200px;" oninput="renderBacheca()">
+            <select id="filter-category" style="flex: 1; min-width: 150px;" onchange="renderBacheca()">
+              <option value="">Tutte le categorie</option>
+              <option value="ristorazione">Ristorazione</option>
+              <option value="tecnologia">Tecnologia</option>
+              <option value="servizi">Servizi</option>
+              <option value="altro">Altro</option>
+            </select>
+          </div>
+        </div>
+        <div class="announcements-grid" id="announcements-grid">
+          <!-- Popolato via JS -->
+        </div>
+      </section>
+
+      <!-- SEZIONE MAPPA -->
+      <section id="map-section" class="content-section hidden">
+        <h2>Mappa Interattiva Bologna</h2>
+        <div id="map-content" class="glass" style="height: 500px; margin-top: 1rem;"></div>
+      </section>
+
+      <!-- SEZIONE CHAT AI -->
+      <section id="chat-ai-section" class="content-section hidden">
+        <h2>Worky-AI Assistant</h2>
+        <div class="chat-container glass">
+          <div class="chat-list">
+            <div class="chat-item"><strong>🤖 Worky-AI</strong><br><small>Supporto Candidature</small></div>
+          </div>
+          <div class="chat-window" style="display:flex; flex-direction:column;">
+            <div id="ai-chat-body" style="flex-grow:1; padding:1rem; overflow-y:auto;"></div>
+            <div class="input-area" style="padding:1rem;">
+              <div class="chat-input-area" id="ai-input-wrapper" style="display:flex; gap:1rem;">
+                <div class="suggestion-wrapper">
+                  <div id="ai-suggestion-ghost" class="suggestion-ghost"></div>
+                  <input type="text" id="ai-input" placeholder="Chiedi a Worky-AI (es: 'Ciao', 'Lavoro'...)"
+                    oninput="updateAIWithGhostText()" onkeydown="handleAIKeyDown(event)">
+                </div>
+                <button class="btn-primary" style="width: auto; padding: 0.8rem 1.5rem;"
+                  onclick="sendAIMessage()">Chiedi</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEZIONE MESSAGGI AZIENDE -->
+      <section id="contracts-section" class="content-section hidden">
+        <h2>Messaggi Aziende</h2>
+        <div class="chat-container glass">
+          <div id="company-chat-list" class="chat-list">
+            <!-- Mostra solo aziende con contratto accettato -->
+            <p style="padding:1rem; color:var(--text-dim);">Accetta un contratto per sbloccare la chat.</p>
+          </div>
+          <div class="chat-window" id="company-chat-window">
+            <div id="company-chat-header"
+              style="padding:1rem; border-bottom:1px solid var(--border); font-weight:bold;">Seleziona una chat</div>
+            <div id="company-chat-body"
+              style="flex-grow:1; padding:1rem; overflow-y:auto; display:flex; flex-direction:column; gap:0.5rem;">
+            </div>
+            <div id="company-chat-input-area" class="hidden"
+              style="padding:1rem; display:flex; gap:1rem; border-top:1px solid var(--border);">
+              <input type="text" id="company-input" placeholder="Scrivi all'azienda...">
+              <button class="btn-primary" style="width:100px;" onclick="sendCompanyMessage()">Invia</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEZIONE PROFILO -->
+      <section id="profile-section" class="content-section hidden">
+        <h2 style="text-align: center;">Mio Profilo</h2>
+        <div class="glass"
+          style="padding: 2rem; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2rem;">
+          <div style="position: relative;">
+            <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150"
+              id="profile-avatar-big"
+              style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); margin-bottom: 1rem;">
+            <label for="avatar-upload" class="btn-primary"
+              style="display: block; font-size: 0.8rem; padding: 0.5rem 1rem; cursor: pointer;">Scegli Foto dal
+              PC</label>
+            <input type="file" id="avatar-upload" style="display: none;" accept="image/*"
+              onchange="handleAvatarUpload(this)">
+          </div>
+
+          <div id="profile-display-data" style="display: grid; gap: 1rem; width: 100%;">
+            <!-- Popolato via JS -->
+            <p>Caricamento dati...</p>
+          </div>
+
+          <div class="profile-actions" style="margin-top: 1rem; display: flex; gap: 1rem; width: 100%;">
+            <button class="btn-primary" onclick="openEditAccountModal()" style="flex: 1; padding: 0.8rem;">Modifica
+              Profilo</button>
+            <button class="btn-primary" onclick="logout()"
+              style="flex: 1; padding: 0.8rem; background: #ff4757; color: white;">Logout</button>
+          </div>
+
+          <div class="balance-container glass"
+            style="width: 100%; margin-top: 1.5rem; padding: 1rem; border-radius: 12px; display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+            <div style="display: flex; justify-content: space-around; width: 100%; text-align: center;">
+              <div>
+                <span style="display: block; font-size: 0.8rem; color: var(--text-dim);">Saldo Disponibile</span>
+                <strong id="user-balance" style="font-size: 1.2rem; color: var(--primary);">€ 0.00</strong>
+              </div>
+              <div style="border-left: 1px solid var(--border); padding-left: 1rem;">
+                <span style="display: block; font-size: 0.8rem; color: var(--text-dim);">Fondi Congelati</span>
+                <strong id="frozen-balance" style="font-size: 1.2rem; color: #ffb347;">€ 0.00</strong>
+              </div>
+            </div>
+            <button class="btn-primary"
+              style="width: 100%; padding: 0.6rem; font-size: 0.8rem; background: var(--primary); color: #000;"
+              onclick="rechargeBalance()">+ Ricarica Saldo (500€)</button>
+          </div>
+
+          <div style="width: 100%; text-align: left; margin-top: 2rem;">
+            <h3>Lavori Completati</h3>
+            <div id="completed-jobs-list" style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem;">
+              <!-- Popolato via JS -->
+              <p style="color: var(--text-dim); font-size: 0.9rem;">Nessun lavoro completato ancora.</p>
+            </div>
+          </div>
+
+          <div style="width: 100%; text-align: left; margin-top: 2rem;">
+            <div id="review-switcher" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+              <button id="btn-reviews-received" class="btn-primary"
+                style="flex: 1; padding: 0.6rem; font-size: 0.8rem; background: var(--primary); color: #000;"
+                onclick="switchReviewView('received')">Ricevute</button>
+              <button id="btn-reviews-given" class="btn-primary"
+                style="flex: 1; padding: 0.6rem; font-size: 0.8rem; background: transparent; border: 1px solid var(--border); color: var(--text);"
+                onclick="switchReviewView('given')">Fatte</button>
+            </div>
+
+            <div id="profile-rating-average"
+              style="margin-bottom: 1rem; font-weight: bold; color: var(--primary); font-size: 0.9rem;">
+            </div>
+            <div id="reviews-list" style="display: grid; gap: 1rem;">
+              <!-- Popolato via JS -->
+            </div>
+          </div>
+
+          <button class="btn-primary" style="width: auto; padding: 0.8rem 2rem; background: var(--text-dim);"
+            onclick="logout()">Logout Sessione</button>
+        </div>
+      </section>
+
+      <!-- MODAL CHAT AZIENDA -->
+      <div id="company-chat-modal" class="modal hidden">
+        <div class="modal-content glass chat-modal">
+          <div class="chat-header">
+            <h2 id="company-chat-header">Chat con Azienda</h2>
+            <div style="display: flex; gap: 0.5rem;">
+              <button id="release-payment-btn" class="btn-primary"
+                style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #4CAF50; display: none;"
+                onclick="releasePayment()">Rilascia Pagamento</button>
+              <button class="close-btn" onclick="closeCompanyChat()">×</button>
+            </div>
+          </div>
+          <div class="chat-body" id="company-chat-body"></div>
+          <div class="chat-footer">
+            <input type="text" id="company-chat-input" placeholder="Scrivi un messaggio...">
+            <button onclick="sendCompanyMessage()">Invia</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL REVOCA CONTRATTO -->
+      <div id="revoke-modal" class="modal hidden">
+        <div class="modal-content glass" style="max-width: 450px; margin: 100px auto; padding: 2rem;">
+          <h2>Revoca Contratto</h2>
+          <p style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 1.5rem;">Segnala l'accaduto per annullare
+            il lavoro.</p>
+          <div class="input-group">
+            <label>Titolo Segnalazione</label>
+            <input type="text" id="revoke-title" placeholder="Es. Emergenza familiare, Problema tecnico...">
+          </div>
+          <div class="input-group">
+            <label>Descrizione Dettagliata</label>
+            <textarea id="revoke-desc" style="height: 100px;"
+              placeholder="Spiega brevemente cosa è successo..."></textarea>
+          </div>
+          <div class="modal-buttons" style="display:flex; gap:1rem; margin-top:2rem;">
+            <button class="btn-primary" style="background:var(--text-dim);"
+              onclick="closeRevokeModal()">Annulla</button>
+            <button class="btn-primary" style="background:#ff4d4d;" onclick="confirmRevocation()">Conferma
+              Revoca</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL CREAZIONE ANNUNCIO -->
+      <div id="create-annuncio-modal" class="modal hidden">
+        <div class="modal-content glass" style="max-width: 500px; margin: 50px auto; padding: 2rem;">
+          <h2>Nuovo Annuncio</h2>
+          <div class="input-group">
+            <label>Titolo</label>
+            <input type="text" id="ann-title" placeholder="Es. Programmatore Java">
+          </div>
+          <div class="input-group">
+            <label>Categoria</label>
+            <select id="ann-category" onchange="handleCategoryChange()">
+              <option value="tecnologia">Tecnologia</option>
+              <option value="ristorazione">Ristorazione</option>
+              <option value="assistenza">Assistenza</option>
+              <option value="altro">Altro</option>
+            </select>
+          </div>
+          <div id="other-category-container" class="input-group hidden">
+            <label>Specifica Altrol Lavoro</label>
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span style="font-size:1.5rem;">📝</span>
+              <input type="text" id="ann-other-category" placeholder="Cosa devi far fare?">
+            </div>
+          </div>
+          <div class="input-group">
+            <label>Descrizione</label>
+            <textarea id="ann-desc" style="height: 100px;"></textarea>
+          </div>
+          <div class="input-group">
+            <label>Città</label>
+            <input type="text" id="ann-city" placeholder="Es. Bologna, Milano, Online...">
+          </div>
+          <div class="input-group">
+            <label>Indirizzo (Via e Numero)</label>
+            <input type="text" id="ann-address" placeholder="Es. Via dell'Indipendenza 1, Bologna">
+          </div>
+          <div class="input-group">
+            <label>Foto Annuncio</label>
+            <input type="file" id="ann-image" accept="image/*" style="padding: 0.5rem;">
+          </div>
+          <div class="input-group">
+            <label>Compenso</label>
+            <input type="number" id="ann-salary" step="0.01" min="0" placeholder="Es. 15.00">
+          </div>
+          <div class="modal-buttons" style="display:flex; gap:1rem; margin-top:2rem;">
+            <button class="btn-primary" style="background:var(--text-dim);"
+              onclick="closeCreateModal()">Annulla</button>
+            <button class="btn-primary" onclick="createAnnuncio()">Pubblica</button>
+          </div>
+        </div>
+      </div>
+
+      </div>
+
+      <section id="business-section" class="content-section hidden">
+        <div class="content-header">
+          <h2>Statistiche Business</h2>
+        </div>
+
+        <div class="stats-grid-proportional">
+          <div class="glass stats-card-large">
+            <p>Persone Assunte</p>
+            <h3 id="stats-hired">12</h3>
+            <small style="color: #4CAF50;">+15% questo mese</small>
+          </div>
+          <div class="glass stats-card-large">
+            <p>Candidature Ricevute</p>
+            <h3 id="stats-applicants">48</h3>
+            <small style="color: #4CAF50;">12 nuove oggi</small>
+          </div>
+          <div class="glass stats-card-large">
+            <p>Bilancio Settimanale</p>
+            <h3 id="stats-budget" style="color: #ffb347;">€ 2.450</h3>
+            <small style="color: var(--text-dim);">Budget previsto: € 3.000</small>
+          </div>
+        </div>
+
+        <!-- STATISTICHE PREMIUM (Visibili solo agli abbonati) -->
+        <div id="premium-business-details" class="hidden" style="margin-top: 2rem;">
+          <h3 style="margin-bottom: 1.5rem; color: var(--primary);">Analisi Dettagliata Mercato 💎</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 1.5rem;">
+            <div class="glass" style="padding: 2rem; border-radius: 20px;">
+              <h4>Top 5 Competitors Vicini</h4>
+              <ul id="premium-competitors-list"
+                style="list-style: none; padding: 0; margin-top: 1rem; display: flex; flex-direction: column; gap: 0.8rem;">
+                <!-- Popolato via JS -->
+              </ul>
+            </div>
+            <div class="glass" style="padding: 2rem; border-radius: 20px;">
+              <h4>Trend Salariale Settore</h4>
+              <div style="margin-top: 1rem;">
+                <p style="font-size: 0.9rem; color: var(--text-dim);">Media Settore: <strong
+                    style="color: var(--text);">14.50€/ora</strong></p>
+                <p style="font-size: 0.9rem; color: var(--text-dim);">Tua Offerta Media: <strong
+                    style="color: var(--primary);">15.20€/ora</strong></p>
+                <div
+                  style="width: 100%; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; margin-top: 1rem; overflow: hidden;">
+                  <div style="width: 85%; height: 100%; background: var(--primary);"></div>
+                </div>
+                <p style="font-size: 0.8rem; margin-top: 0.5rem; text-align: right;">+4.8% rispetto alla media</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEZIONE ABBONAMENTI -->
+      <section id="subscriptions-section" class="content-section hidden">
+        <div class="content-header">
+          <h2 id="sub-title">WIP Premium & Abbonamenti</h2>
+        </div>
+
+        <!-- STATO: NON ABBONATO -->
+        <div id="premium-off-view">
+          <div class="premium-banner glass">
+            <div class="premium-content">
+              <h3>Sblocca il massimo potenziale di Worky</h3>
+              <p>Unisciti alla nostra community VIP per ottenere vantaggi esclusivi e distinguerti dagli altri.</p>
+            </div>
+            <div class="premium-badge-showcase">💎</div>
+          </div>
+
+          <div
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem;">
+            <div class="glass feature-card">
+              <div class="feature-icon">🎓</div>
+              <h4>Corsi Gratuiti</h4>
+              <p>Accesso illimitato alla nostra libreria di corsi professionali per migliorare le tue skill.</p>
+            </div>
+            <div class="glass feature-card">
+              <div class="feature-icon">📈</div>
+              <h4>Stats Dettagliate</h4>
+              <p>Analisi approfondite delle tue performance e posizionamento rispetto al mercato.</p>
+            </div>
+            <div class="glass feature-card">
+              <div class="feature-icon">✅</div>
+              <h4>Badge Verificato</h4>
+              <p>Ottieni il badge Verificato per aumentare la tua affidabilità agli occhi delle aziende.</p>
+            </div>
+          </div>
+
+          <div class="subscription-plans" style="margin-top: 3rem; text-align: center;">
+            <div class="glass plan-card"
+              style="max-width: 400px; margin: 0 auto; padding: 3rem; border: 2px solid var(--primary);">
+              <h2 style="color: var(--primary);">WIP PREMIUM</h2>
+              <div class="price">€ 9.99 <span>/mese</span></div>
+              <ul
+                style="list-style: none; padding: 0; margin: 2rem 0; text-align: left; display: flex; flex-direction: column; gap: 1rem;">
+                <li>✔ Corsi Professionali Gratis</li>
+                <li>✔ Statistiche Proporzionali</li>
+                <li>✔ Badge Verificato</li>
+                <li>✔ Supporto Prioritario</li>
+              </ul>
+              <button class="btn-primary" style="width: 100%; font-size: 1.2rem;" onclick="activatePremium()">Abbonati
+                Ora</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STATO: ABBONATO -->
+        <div id="premium-on-view" class="hidden">
+          <div class="premium-banner glass" style="padding: 2rem;">
+            <div class="premium-content">
+              <h3>Benvenuto nell'Area Premium 💎</h3>
+              <p>Il tuo abbonamento è attivo. Ecco i tuoi contenuti esclusivi.</p>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+              <button class="btn-primary"
+                style="width: auto; padding: 0.8rem 1.5rem; background: transparent; border: 1px solid var(--primary); color: var(--primary);"
+                onclick="alert('Rinnovo impostato correttamente! 🔄')">Rinnova Abbonamento</button>
+              <button class="btn-primary"
+                style="width: auto; padding: 0.8rem 1.5rem; background: transparent; border: 1px solid #ff4757; color: #ff4757;"
+                onclick="cancelPremium()">Disdici Abbonamento</button>
+            </div>
+          </div>
+
+          <h3 style="margin-top: 3rem; margin-bottom: 1.5rem;">I Tuoi Corsi Professionali</h3>
+          <div id="premium-courses-grid"
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+            <div class="glass course-card" style="padding: 0; overflow: hidden; border-radius: 20px;">
+              <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=400"
+                style="width: 100%; height: 150px; object-fit: cover;">
+              <div style="padding: 1.5rem;">
+                <span class="badge" style="background: rgba(76, 175, 80, 0.2); color: #4CAF50;">GRATIS</span>
+                <h4 style="margin: 0.5rem 0;">Leadership Aziendale</h4>
+                <p style="font-size: 0.85rem; color: var(--text-dim);">Impara a gestire team e progetti con successo.
+                </p>
+                <button class="btn-primary" style="margin-top: 1rem; font-size: 0.8rem;">Inizia Corso</button>
+              </div>
+            </div>
+            <div class="glass course-card" style="padding: 0; overflow: hidden; border-radius: 20px;">
+              <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=400"
+                style="width: 100%; height: 150px; object-fit: cover;">
+              <div style="padding: 1.5rem;">
+                <span class="badge" style="background: rgba(33, 150, 243, 0.2); color: #2196F3;">GRATIS</span>
+                <h4 style="margin: 0.5rem 0;">Marketing Digitale 2024</h4>
+                <p style="font-size: 0.85rem; color: var(--text-dim);">Le basi del marketing per far crescere il tuo
+                  business.</p>
+                <button class="btn-primary" style="margin-top: 1rem; font-size: 0.8rem;">Inizia Corso</button>
+              </div>
+            </div>
+            <div class="glass course-card" style="padding: 0; overflow: hidden; border-radius: 20px;">
+              <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=400"
+                style="width: 100%; height: 150px; object-fit: cover;">
+              <div style="padding: 1.5rem;">
+                <span class="badge" style="background: rgba(220, 170, 37, 0.2); color: var(--primary);">GRATIS</span>
+                <h4 style="margin: 0.5rem 0;">Worky Secrets</h4>
+                <p style="font-size: 0.85rem; color: var(--text-dim);">Come massimizzare i profitti sulla nostra
+                  piattaforma.</p>
+                <button class="btn-primary" style="margin-top: 1rem; font-size: 0.8rem;">Inizia Corso</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MODAL MODIFICA ACCOUNT -->
+      <div id="edit-account-modal" class="modal hidden">
+        <div class="modal-content glass" style="max-width: 500px; margin: 50px auto; padding: 2.5rem;">
+          <h2 style="margin-bottom: 2rem;">Modifica Tuoi Dati</h2>
+          <div class="input-group">
+            <label>Nome</label>
+            <input type="text" id="edit-name">
+          </div>
+          <div class="input-group">
+            <label>Cognome</label>
+            <input type="text" id="edit-surname">
+          </div>
+          <div class="input-group">
+            <label>Città</label>
+            <input type="text" id="edit-city">
+          </div>
+
+          <div id="edit-biz-fields" class="hidden">
+            <div class="input-group">
+              <label>Nome Azienda</label>
+              <input type="text" id="edit-company-name">
+            </div>
+            <div class="input-group">
+              <label>Indirizzo Azienda</label>
+              <input type="text" id="edit-company-address">
+            </div>
+          </div>
+
+          <div class="modal-buttons" style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <button class="btn-primary" style="background: var(--text-dim);"
+              onclick="closeModal('edit-account-modal')">Chiudi</button>
+            <button class="btn-primary" onclick="updateAccountData()">Salva Modifiche</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL RECENSIONE -->
+      <div id="review-modal" class="modal hidden">
+        <div class="modal-content glass"
+          style="max-width: 450px; margin: 100px auto; padding: 2rem; text-align: center;">
+          <h2>Lascia una Recensione</h2>
+          <p style="color: var(--text-dim); margin-bottom: 1.5rem;">Vota il lavoratore per questo contratto.</p>
+
+          <div class="star-rating"
+            style="font-size: 2rem; margin-bottom: 1.5rem; display: flex; justify-content: center; gap: 0.5rem; cursor: pointer;">
+            <span onclick="setRating(1)" class="star" data-value="1">☆</span>
+            <span onclick="setRating(2)" class="star" data-value="2">☆</span>
+            <span onclick="setRating(3)" class="star" data-value="3">☆</span>
+            <span onclick="setRating(4)" class="star" data-value="4">☆</span>
+            <span onclick="setRating(5)" class="star" data-value="5">☆</span>
+          </div>
+
+          <div class="input-group">
+            <textarea id="review-text" placeholder="Scrivi un breve commento..." style="height: 100px;"></textarea>
+          </div>
+
+          <div class="modal-buttons" style="display:flex; gap:1rem; margin-top:2rem;">
+            <button class="btn-primary" style="background:var(--text-dim);"
+              onclick="closeReviewModal()">Annulla</button>
+            <button class="btn-primary" onclick="submitReview()">Invia</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </section>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
