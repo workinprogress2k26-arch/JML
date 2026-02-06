@@ -471,6 +471,83 @@
       </section>
 
 
+      <!-- SEZIONE WORKY ACADEMY & ABBONAMENTI -->
+      <section id="subscriptions-section" class="content-section hidden">
+        <div class="content-header">
+          <h2 id="sub-title">Worky Academy & Piani Premium</h2>
+        </div>
+
+        <div class="premium-banner glass" style="margin-bottom: 2rem;">
+          <div class="premium-content">
+            <h3>Impara il lavoro del futuro 🚀</h3>
+            <p>Scegli il piano adatto a te. Ogni corso include 10 moduli pratici e un Test Finale gratuito per la
+              certificazione.</p>
+          </div>
+          <div class="premium-badge-showcase">🎓</div>
+        </div>
+
+        <!-- STRUTTURA CORSO VISIVA -->
+        <div class="glass" style="padding: 1.5rem; margin-bottom: 3rem; text-align: center;">
+          <h4 style="margin-bottom: 1rem; color: var(--text-dim);">IL PERCORSO DI CERTIFICAZIONE</h4>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+            <div class="step-card">📚 <br>10 Moduli</div>
+            <div class="arrow-right">→</div>
+            <div class="step-card">💻 <br>Esercitazioni</div>
+            <div class="arrow-right">→</div>
+            <div class="step-card" style="border-color: #4CAF50;">✅ <br>Test Finale (Gratis)</div>
+          </div>
+        </div>
+
+        <!-- PIANI ABBONAMENTO -->
+        <div class="subscription-plans">
+
+          <!-- PIANO BASIC -->
+          <div class="glass plan-card">
+            <h3 style="color: var(--text-main);">BASIC</h3>
+            <div class="price">€ 10 <span>/mese</span></div>
+            <p class="plan-desc">Ideale per iniziare</p>
+            <ul class="plan-features">
+              <li>🎓 <strong>1 Corso</strong> al mese incluso</li>
+              <li>✅ Test Finale Certificazione</li>
+              <li>👤 Badge Profilo "Learner"</li>
+            </ul>
+            <button class="btn-primary" onclick="selectPlan('BASIC', 10)">Scegli Basic</button>
+          </div>
+
+          <!-- PIANO STANDARD -->
+          <div class="glass plan-card popular">
+            <div class="popular-tag">PIÙ SCELTO</div>
+            <h3 style="color: var(--primary);">STANDARD</h3>
+            <div class="price">€ 20 <span>/mese</span></div>
+            <p class="plan-desc">Per chi vuole crescere</p>
+            <ul class="plan-features">
+              <li>🎓 <strong>2 Corsi</strong> al mese a scelta</li>
+              <li>✅ Test Finali Certificazione</li>
+              <li>⭐ Badge Profilo "Pro"</li>
+              <li>📈 Statistiche base profilo</li>
+            </ul>
+            <button class="btn-primary" onclick="selectPlan('STANDARD', 20)">Scegli Standard</button>
+          </div>
+
+          <!-- PIANO PRO -->
+          <div class="glass plan-card">
+            <h3 style="color: #ffb347;">PRO (Unlimited)</h3>
+            <div class="price">€ 50 <span>/mese</span></div>
+            <p class="plan-desc">Formazione senza limiti</p>
+            <ul class="plan-features">
+              <li>🎓 <strong>Corsi ILLIMITATI</strong> (All Access)</li>
+              <li>✅ Test Certificazione Prioritari</li>
+              <li>💎 Badge Profilo "Elite"</li>
+              <li>📊 Statistiche Mercato Complete</li>
+              <li>🤖 Tutor AI Dedicato</li>
+            </ul>
+            <button class="btn-primary" onclick="selectPlan('PRO', 50)">Scegli Unlimited</button>
+          </div>
+
+        </div>
+      </section>
+
+
       <!-- MODAL MODIFICA ACCOUNT -->
       <div id="edit-account-modal" class="modal hidden">
         <div class="modal-content glass" style="max-width: 500px; margin: 50px auto; padding: 2.5rem;">
