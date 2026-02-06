@@ -10,8 +10,6 @@ let hiddenAnnouncements = JSON.parse(localStorage.getItem('hiddenAnnouncements')
 let userBalance = parseFloat(localStorage.getItem('userBalance')) || 1500.00;
 let frozenBalance = parseFloat(localStorage.getItem('frozenBalance')) || 0.00;
 let reviewViewMode = 'received';
-const DEEPSEEK_API_KEY = "sk-deepseek-key-preimpostata"; // Chiave preimpostata come richiesto婆
-
 // Inizializzazione
 document.addEventListener('DOMContentLoaded', () => {
     if (annunci.length === 0) {
@@ -672,21 +670,25 @@ async function sendAIMessage() {
     body.scrollTop = body.scrollHeight;
 
     try {
-        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        const response = await fetch('/api/chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_API_KEY}` },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: "deepseek-chat",
-                messages: [{ role: "system", content: "Sei Worky-AI, un assistente esperto di lavoro e contratti a Bologna. Rispondi in modo professionale e conciso." },
-                { role: "user", content: userMsg }]
+                messages: [{ role: "user", content: userMsg }]
             })
         });
+
+        if (!response.ok) throw new Error("Errore API");
+
         const data = await response.json();
         if (body.contains(thinking)) body.removeChild(thinking);
-        appendMessage('ai', data.choices[0].message.content, body);
+        // DeepSeek response structure check
+        const aiText = data.choices && data.choices[0] ? data.choices[0].message.content : "Nessuna risposta.";
+        appendMessage('ai', aiText, body);
     } catch (e) {
+        console.error(e);
         if (body.contains(thinking)) body.removeChild(thinking);
-        appendMessage('ai', "Errore di connessione con l'assistente IA.", body);
+        appendMessage('ai', "Errore di connessione con l'assistente IA. Riprova più tardi.", body);
     }
 }
 
@@ -995,78 +997,4 @@ function renderReviews() {
 // ACCOUNT BUSINESS: STATS
 // Statistiche numeriche essenziali.
 
-// SISTEMA ABBONAMENTI
-function renderPremiumFeatures() {
-    const userData = JSON.parse(localStorage.getItem('userData')) || {};
-    const isPremium = userData.isPremium;
-
-    // Gestione Sezione Abbonamenti
-    const offView = document.getElementById('premium-off-view');
-    const onView = document.getElementById('premium-on-view');
-    const subTitle = document.getElementById('sub-title');
-
-    if (offView && onView) {
-        if (isPremium) {
-            offView.classList.add('hidden');
-            onView.classList.remove('hidden');
-            if (subTitle) subTitle.textContent = "Area Personale WIP Premium 💎";
-        } else {
-            offView.classList.remove('hidden');
-            onView.classList.add('hidden');
-            if (subTitle) subTitle.textContent = "WIP Premium & Abbonamenti";
-        }
-    }
-
-    // Gestione Statistiche Business Avanzate
-    const premiumStats = document.getElementById('premium-business-details');
-    if (premiumStats) {
-        if (isPremium && userData.type === 'business') {
-            premiumStats.classList.remove('hidden');
-            renderPremiumCompetitors();
-        } else {
-            premiumStats.classList.add('hidden');
-        }
-    }
-}
-
-function renderPremiumCompetitors() {
-    const list = document.getElementById('premium-competitors-list');
-    if (!list) return;
-
-    const competitors = [
-        { name: "Global Services Srl", hiring: 24, salary: "14.80€" },
-        { name: "Tech Hub Bologna", hiring: 18, salary: "16.00€" },
-        { name: "Ristorazione Elite", hiring: 15, salary: "13.50€" },
-        { name: "Logistica Flash", hiring: 12, salary: "14.00€" },
-        { name: "Creativity Lab", hiring: 9, salary: "15.50€" }
-    ];
-
-    list.innerHTML = competitors.map(c => `
-        <li>
-            <span><strong>${c.name}</strong></span>
-            <span style="color: var(--primary); font-size: 0.85rem;">Assunzioni: ${c.hiring} | Avg: ${c.salary}</span>
-        </li>
-    `).join('');
-}
-
-function activatePremium() {
-    let userData = JSON.parse(localStorage.getItem('userData'));
-
-    // Se non esiste, creiamo un profilo base al volo (resilienza bug utente normale)
-    if (!userData) {
-        userData = {
-            name: "Utente",
-            surname: "Worky",
-            email: "utente@worky.it",
-            type: "private",
-            currency: "€"
-        };
-    }
-
-    userData.isPremium = true;
-    localStorage.setItem('userData', JSON.stringify(userData));
-    localStorage.setItem('isLoggedIn', 'true'); // Garantiamo stato loggato
-
-    alert("Congratulazioni! Ora sei un utente WIP Premium. 💎\n\n- Badge Verificato sbloccato\n- Area Corsi sbloccata\n- Analisi di Mercato attivata");
-    location.reload();
-}
+// Funzionalità Premium rimosse su richiesta

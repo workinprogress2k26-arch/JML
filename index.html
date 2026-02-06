@@ -11,6 +11,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://js.stripe.com/v3/"></script>
 </head>
 
 <body>
@@ -136,9 +137,6 @@
         </li>
         <li class="nav-item" onclick="showSection('profile-section')">
           <span>👤</span> Mio Profilo
-        </li>
-        <li class="nav-item" onclick="showSection('subscriptions-section')">
-          <span>💎</span> Abbonamenti
         </li>
         <!-- Voci Business (Visibili solo se account aziendale) -->
         <li id="nav-business-dashboard" class="nav-item hidden" onclick="showSection('business-section')">
@@ -469,115 +467,6 @@
         </div>
       </section>
 
-      <!-- SEZIONE ABBONAMENTI -->
-      <section id="subscriptions-section" class="content-section hidden">
-        <div class="content-header">
-          <h2 id="sub-title">WIP Premium & Abbonamenti</h2>
-        </div>
-
-        <!-- STATO: NON ABBONATO -->
-        <div id="premium-off-view">
-          <div class="premium-banner glass">
-            <div class="premium-content">
-              <h3>Sblocca il massimo potenziale di Worky</h3>
-              <p>Unisciti alla nostra community VIP per ottenere vantaggi esclusivi e distinguerti dagli altri.</p>
-            </div>
-            <div class="premium-badge-showcase">💎</div>
-          </div>
-
-          <div
-            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem;">
-            <div class="glass feature-card">
-              <div class="feature-icon">🎓</div>
-              <h4>Corsi Gratuiti</h4>
-              <p>Accesso illimitato alla nostra libreria di corsi professionali per migliorare le tue skill.</p>
-            </div>
-            <div class="glass feature-card">
-              <div class="feature-icon">📈</div>
-              <h4>Stats Dettagliate</h4>
-              <p>Analisi approfondite delle tue performance e posizionamento rispetto al mercato.</p>
-            </div>
-            <div class="glass feature-card">
-              <div class="feature-icon">✅</div>
-              <h4>Badge Verificato</h4>
-              <p>Ottieni il badge Verificato per aumentare la tua affidabilità agli occhi delle aziende.</p>
-            </div>
-          </div>
-
-          <div class="subscription-plans" style="margin-top: 3rem; text-align: center;">
-            <div class="glass plan-card"
-              style="max-width: 400px; margin: 0 auto; padding: 3rem; border: 2px solid var(--primary);">
-              <h2 style="color: var(--primary);">WIP PREMIUM</h2>
-              <div class="price">€ 9.99 <span>/mese</span></div>
-              <ul
-                style="list-style: none; padding: 0; margin: 2rem 0; text-align: left; display: flex; flex-direction: column; gap: 1rem;">
-                <li>✔ Corsi Professionali Gratis</li>
-                <li>✔ Statistiche Proporzionali</li>
-                <li>✔ Badge Verificato</li>
-                <li>✔ Supporto Prioritario</li>
-              </ul>
-              <button class="btn-primary" style="width: 100%; font-size: 1.2rem;" onclick="activatePremium()">Abbonati
-                Ora</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- STATO: ABBONATO -->
-        <div id="premium-on-view" class="hidden">
-          <div class="premium-banner glass" style="padding: 2rem;">
-            <div class="premium-content">
-              <h3>Benvenuto nell'Area Premium 💎</h3>
-              <p>Il tuo abbonamento è attivo. Ecco i tuoi contenuti esclusivi.</p>
-            </div>
-            <div style="display: flex; gap: 1rem; align-items: center;">
-              <button class="btn-primary"
-                style="width: auto; padding: 0.8rem 1.5rem; background: transparent; border: 1px solid var(--primary); color: var(--primary);"
-                onclick="alert('Rinnovo impostato correttamente! 🔄')">Rinnova Abbonamento</button>
-              <button class="btn-primary"
-                style="width: auto; padding: 0.8rem 1.5rem; background: transparent; border: 1px solid #ff4757; color: #ff4757;"
-                onclick="cancelPremium()">Disdici Abbonamento</button>
-            </div>
-          </div>
-
-          <h3 style="margin-top: 3rem; margin-bottom: 1.5rem;">I Tuoi Corsi Professionali</h3>
-          <div id="premium-courses-grid"
-            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
-            <div class="glass course-card" style="padding: 0; overflow: hidden; border-radius: 20px;">
-              <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=400"
-                style="width: 100%; height: 150px; object-fit: cover;">
-              <div style="padding: 1.5rem;">
-                <span class="badge" style="background: rgba(76, 175, 80, 0.2); color: #4CAF50;">GRATIS</span>
-                <h4 style="margin: 0.5rem 0;">Leadership Aziendale</h4>
-                <p style="font-size: 0.85rem; color: var(--text-dim);">Impara a gestire team e progetti con successo.
-                </p>
-                <button class="btn-primary" style="margin-top: 1rem; font-size: 0.8rem;">Inizia Corso</button>
-              </div>
-            </div>
-            <div class="glass course-card" style="padding: 0; overflow: hidden; border-radius: 20px;">
-              <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=400"
-                style="width: 100%; height: 150px; object-fit: cover;">
-              <div style="padding: 1.5rem;">
-                <span class="badge" style="background: rgba(33, 150, 243, 0.2); color: #2196F3;">GRATIS</span>
-                <h4 style="margin: 0.5rem 0;">Marketing Digitale 2024</h4>
-                <p style="font-size: 0.85rem; color: var(--text-dim);">Le basi del marketing per far crescere il tuo
-                  business.</p>
-                <button class="btn-primary" style="margin-top: 1rem; font-size: 0.8rem;">Inizia Corso</button>
-              </div>
-            </div>
-            <div class="glass course-card" style="padding: 0; overflow: hidden; border-radius: 20px;">
-              <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=400"
-                style="width: 100%; height: 150px; object-fit: cover;">
-              <div style="padding: 1.5rem;">
-                <span class="badge" style="background: rgba(220, 170, 37, 0.2); color: var(--primary);">GRATIS</span>
-                <h4 style="margin: 0.5rem 0;">Worky Secrets</h4>
-                <p style="font-size: 0.85rem; color: var(--text-dim);">Come massimizzare i profitti sulla nostra
-                  piattaforma.</p>
-                <button class="btn-primary" style="margin-top: 1rem; font-size: 0.8rem;">Inizia Corso</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <!-- MODAL MODIFICA ACCOUNT -->
       <div id="edit-account-modal" class="modal hidden">
