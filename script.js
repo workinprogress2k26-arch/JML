@@ -650,20 +650,32 @@ function handleAIKeyDown(e) {
 async function sendAIMessage() {
     const input = document.getElementById('ai-input');
     const body = document.getElementById('ai-chat-body');
+    const modelSelect = document.getElementById('ai-model-select'); // Il selettore HTML
     const userMsg = input.value.trim();
+
     if (!userMsg) return;
+
+    // 1. RECUPERIAMO IL MODELLO SCELTO
+    const selectedModel = modelSelect.value;
+
+    // 2. LOGICA DEGLI ENDPOINT (MOLTO IMPORTANTE)
+    // Se è la versione 1.5 usiamo 'v1' (stabile), altrimenti usiamo 'v1beta'
+    let apiVersion = "v1beta";
+    if (selectedModel.includes("1.5")) {
+        apiVersion = "v1";
+    }
 
     appendMessage('user', userMsg, body);
     input.value = '';
 
     const thinking = document.createElement('div');
     thinking.className = 'message ai glass thinking';
-    thinking.textContent = 'Worky-AI 2.0 sta elaborando...';
+    thinking.textContent = `Worky-AI sta usando ${selectedModel}...`;
     body.appendChild(thinking);
 
     try {
-        // PASSO FONDAMENTALE: v1beta sblocca la quota gratuita per il 2.0
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+        // COSTRUIAMO L'URL DINAMICO
+        const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${selectedModel}:generateContent?key=${GEMINI_API_KEY}`;
 
         const response = await fetch(url, {
             method: 'POST',
@@ -678,12 +690,11 @@ async function sendAIMessage() {
         if (body.contains(thinking)) body.removeChild(thinking);
 
         if (data.error) {
-            // Se vedi ancora Limit: 0, Google ti sta chiedendo di aspettare qualche minuto
-            // perché l'account è nuovo o la regione è sovraccarica.
+            // Gestione errori specifica per la quota (molto comune nel piano gratis)
             if (data.error.message.includes("quota") || data.error.code === 429) {
-                appendMessage('ai', "🚀 Gemini 2.0 è pronto ma ha raggiunto il limite temporaneo. Riprova tra 30 secondi!", body);
+                appendMessage('ai', `⚠️ **Quota raggiunta per ${selectedModel}.**\n\nIl piano gratuito di Google limita i messaggi al minuto per i modelli nuovi. Prova a passare a **Gemini 1.5 Flash** nel menu in alto, di solito ha limiti più alti!`, body);
             } else {
-                appendMessage('ai', "❌ Errore 2.0: " + data.error.message, body);
+                appendMessage('ai', "❌ Errore Google: " + data.error.message, body);
             }
             return;
         }
@@ -691,6 +702,10 @@ async function sendAIMessage() {
         if (data.candidates && data.candidates[0].content) {
             const aiText = data.candidates[0].content.parts[0].text;
             appendMessage('ai', aiText, body);
+
+            // Aggiorna l'etichetta nella sidebar per estetica
+            const statusLabel = document.getElementById('ai-status-label');
+            if (statusLabel) statusLabel.textContent = "Attivo: " + selectedModel;
         }
     } catch (e) {
         if (body.contains(thinking)) body.removeChild(thinking);
