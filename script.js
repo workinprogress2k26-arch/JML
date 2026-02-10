@@ -658,18 +658,16 @@ async function sendAIMessage() {
 
     const thinking = document.createElement('div');
     thinking.className = 'message ai glass thinking';
-    thinking.textContent = 'Worky-AI sta elaborando...';
+    thinking.textContent = 'Worky-AI sta pensando (v2.0)...';
     body.appendChild(thinking);
 
     try {
-        // ENDPOINT STABILE V1
-        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        // USO IL MODELLO CHE HAI NELLA LISTA (v1 stabile)
+        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
         const response = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{
                     parts: [{ text: userMsg }]
@@ -681,18 +679,15 @@ async function sendAIMessage() {
 
         if (body.contains(thinking)) body.removeChild(thinking);
 
-        if (data.error) {
-            // Se la v1 dà ancora errore, ti spiego il perché qui sotto
-            appendMessage('ai', "Errore Google V1: " + data.error.message, body);
-            console.error("Dettagli errore:", data.error);
-        } else if (data.candidates && data.candidates[0].content) {
+        if (data.candidates && data.candidates[0].content) {
             const aiText = data.candidates[0].content.parts[0].text;
             appendMessage('ai', aiText, body);
+        } else if (data.error) {
+            appendMessage('ai', "Errore Google: " + data.error.message, body);
         }
-
     } catch (e) {
         if (body.contains(thinking)) body.removeChild(thinking);
-        appendMessage('ai', "Errore di rete: " + e.message, body);
+        appendMessage('ai', "Errore di connessione: " + e.message, body);
     }
 }
 
