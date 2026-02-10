@@ -663,7 +663,9 @@ async function sendAIMessage() {
 
     try {
         // USO IL MODELLO CHE HAI NELLA LISTA (v1 stabile)
-        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+        // Usiamo v1beta perché è l'unico canale che al momento offre 
+        // la quota gratuita (Free Tier) per la serie 2.0
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
         const response = await fetch(url, {
             method: 'POST',
