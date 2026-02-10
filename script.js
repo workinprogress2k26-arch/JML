@@ -658,22 +658,18 @@ async function sendAIMessage() {
 
     const thinking = document.createElement('div');
     thinking.className = 'message ai glass thinking';
-    thinking.textContent = 'Worky-AI sta pensando (v2.0)...';
+    thinking.textContent = 'Worky-AI 2.0 sta elaborando...';
     body.appendChild(thinking);
 
     try {
-        // USO IL MODELLO CHE HAI NELLA LISTA (v1 stabile)
-        // Usiamo v1beta perché è l'unico canale che al momento offre 
-        // la quota gratuita (Free Tier) per la serie 2.0
+        // PASSO FONDAMENTALE: v1beta sblocca la quota gratuita per il 2.0
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: userMsg }]
-                }]
+                contents: [{ parts: [{ text: userMsg }] }]
             })
         });
 
@@ -681,11 +677,20 @@ async function sendAIMessage() {
 
         if (body.contains(thinking)) body.removeChild(thinking);
 
+        if (data.error) {
+            // Se vedi ancora Limit: 0, Google ti sta chiedendo di aspettare qualche minuto
+            // perché l'account è nuovo o la regione è sovraccarica.
+            if (data.error.message.includes("quota") || data.error.code === 429) {
+                appendMessage('ai', "🚀 Gemini 2.0 è pronto ma ha raggiunto il limite temporaneo. Riprova tra 30 secondi!", body);
+            } else {
+                appendMessage('ai', "❌ Errore 2.0: " + data.error.message, body);
+            }
+            return;
+        }
+
         if (data.candidates && data.candidates[0].content) {
             const aiText = data.candidates[0].content.parts[0].text;
             appendMessage('ai', aiText, body);
-        } else if (data.error) {
-            appendMessage('ai', "Errore Google: " + data.error.message, body);
         }
     } catch (e) {
         if (body.contains(thinking)) body.removeChild(thinking);
