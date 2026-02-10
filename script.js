@@ -656,25 +656,43 @@ async function sendAIMessage() {
     appendMessage('user', userMsg, body);
     input.value = '';
 
+    const thinking = document.createElement('div');
+    thinking.className = 'message ai glass thinking';
+    thinking.textContent = 'Worky-AI sta elaborando...';
+    body.appendChild(thinking);
+
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        // ENDPOINT STABILE V1
+        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+
+        const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: userMsg }] }] })
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{ text: userMsg }]
+                }]
+            })
         });
 
         const data = await response.json();
 
+        if (body.contains(thinking)) body.removeChild(thinking);
+
         if (data.error) {
-            appendMessage('ai', "❌ Errore Google: " + data.error.message, body);
+            // Se la v1 dà ancora errore, ti spiego il perché qui sotto
+            appendMessage('ai', "Errore Google V1: " + data.error.message, body);
+            console.error("Dettagli errore:", data.error);
         } else if (data.candidates && data.candidates[0].content) {
-            appendMessage('ai', data.candidates[0].content.parts[0].text, body);
-        } else {
-            appendMessage('ai', "⚠️ Risposta vuota. Controlla la console (F12).", body);
-            console.log("Dati ricevuti strani:", data);
+            const aiText = data.candidates[0].content.parts[0].text;
+            appendMessage('ai', aiText, body);
         }
+
     } catch (e) {
-        appendMessage('ai', "Lo script è crashato. Errore: " + e.message, body);
+        if (body.contains(thinking)) body.removeChild(thinking);
+        appendMessage('ai', "Errore di rete: " + e.message, body);
     }
 }
 
