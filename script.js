@@ -651,46 +651,30 @@ async function sendAIMessage() {
     const input = document.getElementById('ai-input');
     const body = document.getElementById('ai-chat-body');
     const userMsg = input.value.trim();
-
     if (!userMsg) return;
 
-    // Aggiungi messaggio utente alla UI e alla storia
     appendMessage('user', userMsg, body);
-    chatHistoryAI.push({ role: "user", parts: [{ text: userMsg }] });
     input.value = '';
-    document.getElementById('ai-suggestion-ghost').textContent = "";
-
-    // Animazione "Sta pensando"
-    const thinking = document.createElement('div');
-    thinking.className = 'message ai glass thinking';
-    thinking.textContent = 'Worky-AI sta elaborando...';
-    body.appendChild(thinking);
-    body.scrollTop = body.scrollHeight;
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: chatHistoryAI.slice(-10), // Invia gli ultimi 10 messaggi per contesto
-                generationConfig: { maxOutputTokens: 500 }
-            })
+            body: JSON.stringify({ contents: [{ parts: [{ text: userMsg }] }] })
         });
 
         const data = await response.json();
-        body.removeChild(thinking);
 
-        const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Scusa, non sono riuscito a generare una risposta.";
-        appendMessage('ai', aiText, body);
-
-        // Salva nella storia
-        chatHistoryAI.push({ role: "model", parts: [{ text: aiText }] });
-        localStorage.setItem('chatHistoryAI', JSON.stringify(chatHistoryAI));
-
+        if (data.error) {
+            appendMessage('ai', "❌ Errore Google: " + data.error.message, body);
+        } else if (data.candidates && data.candidates[0].content) {
+            appendMessage('ai', data.candidates[0].content.parts[0].text, body);
+        } else {
+            appendMessage('ai', "⚠️ Risposta vuota. Controlla la console (F12).", body);
+            console.log("Dati ricevuti strani:", data);
+        }
     } catch (e) {
-        if (body.contains(thinking)) body.removeChild(thinking);
-        appendMessage('ai', "Errore di connessione con Google Gemini. Verifica la tua API Key.", body);
-        console.error("Gemini Error:", e);
+        appendMessage('ai', "Lo script è crashato. Errore: " + e.message, body);
     }
 }
 
