@@ -856,6 +856,35 @@ input:focus {
     }
 }
 
+/* AI Chat Body - Scrollable */
+#ai-chat-body {
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+}
+
+/* Custom Scrollbar per AI Chat */
+#ai-chat-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+#ai-chat-body::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+#ai-chat-body::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 10px;
+}
+
+#ai-chat-body::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
     #app-view {
