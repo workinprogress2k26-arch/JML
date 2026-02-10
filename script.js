@@ -11,18 +11,31 @@ let currentChatCompany = null;
 let map = null;
 let markers = [];
 
-// --- CONFIGURAZIONE SUPABASE (Queste chiavi sono pubbliche e sicure) ---
+// --- 1. CONFIGURAZIONE SUPABASE ---
+// Sostituisci con i tuoi dati reali dal pannello Supabase (Settings -> API)
 const SUPABASE_URL = 'https://tuoidprogetto.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // La tua Anon Key
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
 
-// Inizializzazione del client Supabase
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Usiamo "supabaseClient" invece di "supabase" per evitare conflitti con la libreria
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Variabili globali del sito
+// --- 2. VARIABILI GLOBALI (Indispensabili per evitare la schermata nera) ---
+let annunci = JSON.parse(localStorage.getItem('annunci')) || [];
+let acceptedContracts = JSON.parse(localStorage.getItem('acceptedContracts')) || [];
+let completedContracts = JSON.parse(localStorage.getItem('completedContracts')) || [];
+let hiddenAnnouncements = JSON.parse(localStorage.getItem('hiddenAnnouncements')) || [];
+let userBalance = parseFloat(localStorage.getItem('userBalance')) || 1500.00;
+let frozenBalance = parseFloat(localStorage.getItem('frozenBalance')) || 0.00;
+let chatHistoryAI = JSON.parse(localStorage.getItem('chatHistoryAI')) || [];
+let currentChatCompany = null;
+let map = null;
+let markers = [];
 
-// ... il resto del codice ...
-
+// --- 3. INIZIALIZZAZIONE ALL'AVVIO ---
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("App avviata...");
+
+    // Inizializza annunci se il database locale è vuoto
     if (annunci.length === 0) {
         annunci = [
             {
@@ -34,9 +47,72 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
         localStorage.setItem('annunci', JSON.stringify(annunci));
     }
-    checkLoginStatus();
-    renderChatHistory(); // Carica messaggi precedenti dell'AI
+
+    // Avvio delle funzioni principali
+    if (typeof checkLoginStatus === 'function') {
+        checkLoginStatus();
+    } else {
+        console.error("Errore: la funzione checkLoginStatus non è stata trovata!");
+    }
+
+    if (typeof renderChatHistory === 'function') {
+        renderChatHistory();
+    }
 });
+
+// --- 4. FUNZIONE CHAT AI AGGIORNATA (Usa supabaseClient) ---
+async function sendAIMessage() {
+    const input = document.getElementById('ai-input');
+    const body = document.getElementById('ai-chat-body');
+    const modelSelect = document.getElementById('ai-model-select');
+    const userMsg = input.value.trim();
+
+    if (!userMsg) return;
+
+    const selectedModel = modelSelect.value;
+    const apiVersion = selectedModel.includes("1.5") ? "v1" : "v1beta";
+
+    appendMessage('user', userMsg, body);
+    input.value = '';
+
+    const thinking = document.createElement('div');
+    thinking.className = 'message ai glass thinking';
+    thinking.textContent = `Worky-AI sta elaborando...`;
+    body.appendChild(thinking);
+
+    try {
+        // NOTA: Usiamo supabaseClient che abbiamo definito sopra
+        const { data, error } = await supabaseClient.functions.invoke('gemini-proxy', {
+            body: {
+                message: userMsg,
+                model: selectedModel,
+                apiVersion: apiVersion
+            }
+        });
+
+        if (body.contains(thinking)) body.removeChild(thinking);
+
+        if (error || (data && data.error)) {
+            appendMessage('ai', "❌ Errore: " + (error?.message || data.error.message), body);
+            return;
+        }
+
+        if (data.candidates && data.candidates[0].content) {
+            const aiText = data.candidates[0].content.parts[0].text;
+            appendMessage('ai', aiText, body);
+
+            // Salvataggio storia
+            chatHistoryAI.push({ role: "user", parts: [{ text: userMsg }] });
+            chatHistoryAI.push({ role: "model", parts: [{ text: aiText }] });
+            localStorage.setItem('chatHistoryAI', JSON.stringify(chatHistoryAI));
+        }
+    } catch (e) {
+        if (body.contains(thinking)) body.removeChild(thinking);
+        appendMessage('ai', "Errore di connessione: " + e.message, body);
+    }
+}
+
+// ... DA QUI IN POI COMINCIANO LE TUE ALTRE FUNZIONI (checkLoginStatus, renderBacheca, etc.) ...
 
 // --- LOGICA DI NAVIGAZIONE E AUTH ---
 function checkLoginStatus() {
