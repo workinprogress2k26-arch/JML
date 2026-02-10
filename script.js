@@ -1,15 +1,18 @@
 // Variabili globali
-let notifications = { private: 0, company: 0, ai: 0 };
 let annunci = JSON.parse(localStorage.getItem('annunci')) || [];
 let acceptedContracts = JSON.parse(localStorage.getItem('acceptedContracts')) || [];
 let completedContracts = JSON.parse(localStorage.getItem('completedContracts')) || [];
+let hiddenAnnouncements = JSON.parse(localStorage.getItem('hiddenAnnouncements')) || [];
+let chatHistoryAI = JSON.parse(localStorage.getItem('chatHistoryAI')) || []; // Persistenza chat AI
+
+let userBalance = parseFloat(localStorage.getItem('userBalance')) || 1500.00;
+let frozenBalance = parseFloat(localStorage.getItem('frozenBalance')) || 0.00;
 let currentChatCompany = null;
 let map = null;
 let markers = [];
-let hiddenAnnouncements = JSON.parse(localStorage.getItem('hiddenAnnouncements')) || [];
-let userBalance = parseFloat(localStorage.getItem('userBalance')) || 1500.00;
-let frozenBalance = parseFloat(localStorage.getItem('frozenBalance')) || 0.00;
-let reviewViewMode = 'received';
+
+// COSTANTE PER GOOGLE GEMINI (Sostituisci con la tua chiave reale)
+const GEMINI_API_KEY = "LA_TUA_CHIAVE_GOOGLE_GEMINI_QUI";
 // Inizializzazione
 document.addEventListener('DOMContentLoaded', () => {
     if (annunci.length === 0) {
@@ -17,42 +20,22 @@ document.addEventListener('DOMContentLoaded', () => {
             {
                 id: 1, title: "Cameriere part-time", description: "Ricerca cameriere per ristorante nel centro di Bologna...",
                 category: "ristorazione", location: "Via dell'Indipendenza, Bologna", salary: "12€/ora",
-                author: "Ristorante Bella Napoli", authorType: "azienda",
-                authorAvatar: "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=100",
+                author: "Ristorante Bella Napoli", authorId: "admin@bellanapoli.it", authorType: "azienda",
                 lat: 44.4949, lng: 11.3426
-            },
-            {
-                id: 2, title: "Sviluppatore Frontend React", description: "Azienda tech cerca sviluppatore frontend...",
-                category: "tecnologia", location: "Via Zamboni, Bologna", salary: "30-40k €/anno",
-                author: "Tech Solutions Srl", authorType: "azienda",
-                authorAvatar: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&w=100",
-                lat: 44.5050, lng: 11.3470
             }
         ];
         localStorage.setItem('annunci', JSON.stringify(annunci));
     }
-
-    // Inizializza recensioni mock se vuoto
-    const existingReviews = JSON.parse(localStorage.getItem('reviews')) || [];
-    if (existingReviews.length === 0) {
-        const mockReviews = [
-            { id: 101, type: 'received', author: "Tech Solutions Srl", rating: 5, text: "Ottimo lavoro, puntuale e professionale!", date: "01/02/2026", jobTitle: "Sviluppatore Frontend" },
-            { id: 102, type: 'received', author: "Ristorante Bella Napoli", rating: 4, text: "Ragazzo volenteroso, consigliato.", date: "20/01/2026", jobTitle: "Cameriere" }
-        ];
-        localStorage.setItem('reviews', JSON.stringify(mockReviews));
-    }
-
     checkLoginStatus();
-    initGoogleAuth();
-    renderReviews(); // Aggiunta chiamata unificata
+    renderChatHistory(); // Carica messaggi precedenti dell'AI
 });
 
+// --- LOGICA DI NAVIGAZIONE E AUTH ---
 function checkLoginStatus() {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     if (isLoggedIn) {
         showView('app-view');
         initDashboard();
-        renderUserProfile();
     } else {
         showView('auth-view');
     }
@@ -61,68 +44,29 @@ function checkLoginStatus() {
 function showView(viewId) {
     document.getElementById('auth-view').classList.add('hidden');
     document.getElementById('app-view').classList.add('hidden');
-    const view = document.getElementById(viewId);
-    if (view) view.classList.remove('hidden');
+    document.getElementById(viewId).classList.remove('hidden');
 }
 
 function initDashboard() {
     renderBacheca();
-    updateChatList();
-    initMap();
     updateSidebar();
-    renderUserProfile();
+    initMap();
+}
+
+// --- LOGICA PAGAMENTI E RICEVUTE (CORRETTA) ---
+function updateBalances() {
+    localStorage.setItem('userBalance', userBalance.toFixed(2));
+    localStorage.setItem('frozenBalance', frozenBalance.toFixed(2));
+    updateSidebar();
 }
 
 function updateSidebar() {
     const userData = JSON.parse(localStorage.getItem('userData'));
-    if (userData) {
-        const userNameEl = document.getElementById('user-display-name');
-        userNameEl.textContent = `${userData.name} ${userData.surname || ''}`;
+    if (!userData) return;
 
-        if (userData.avatar) document.getElementById('user-avatar').src = userData.avatar;
-
-        // Mostra saldo con valuta corretta
-        const cur = userData.currency || '€';
-        const bal = document.getElementById('user-balance');
-        const fro = document.getElementById('frozen-balance');
-        if (bal) bal.textContent = `${cur} ${userBalance.toFixed(2)}`;
-        if (fro) fro.textContent = `${cur} ${frozenBalance.toFixed(2)}`;
-
-        const bizNav = document.getElementById('nav-business-dashboard');
-        if (userData.type === 'business') {
-            if (bizNav) bizNav.classList.remove('hidden');
-        } else {
-            if (bizNav) bizNav.classList.add('hidden');
-        }
-
-        // Gestione Badge Verificato (Gold se Premium)
-        const badge = document.getElementById('verified-badge');
-        if (userData.isPremium) {
-            if (badge) {
-                badge.classList.remove('hidden');
-                badge.classList.add('gold');
-            }
-        } else {
-            if (badge) {
-                badge.classList.add('hidden');
-                badge.classList.remove('gold');
-            }
-        }
-
-        // Tag Aziendale (Solo se Business)
-        let companyTag = document.getElementById('sidebar-company-tag');
-        if (userData.type === 'business' && userData.companyName) {
-            if (!companyTag) {
-                companyTag = document.createElement('div');
-                companyTag.id = 'sidebar-company-tag';
-                companyTag.className = 'company-tag';
-                userNameEl.parentElement.appendChild(companyTag);
-            }
-            companyTag.textContent = `Azienda: ${userData.companyName}`;
-        } else if (companyTag) {
-            companyTag.remove();
-        }
-    }
+    document.getElementById('user-display-name').textContent = userData.name;
+    document.getElementById('user-balance').textContent = `${userData.currency || '€'} ${userBalance.toFixed(2)}`;
+    document.getElementById('frozen-balance').textContent = `${userData.currency || '€'} ${frozenBalance.toFixed(2)}`;
 }
 
 // Google Authentication
@@ -290,17 +234,25 @@ function renderBacheca() {
     syncMapMarkers(filtered);
 }
 
+// ELIMINAZIONE ANNUNCIO: Rimborso fondi congelati
 function deleteAnnuncio(id) {
-    if (!confirm("Sei sicuro di voler cancellare l'annuncio?")) return;
+    const ann = annunci.find(a => a.id === id);
+    if (!ann) return;
 
-    annunci = annunci.filter(a => a.id !== id);
-    localStorage.setItem('annunci', JSON.stringify(annunci));
+    if (confirm("Sei sicuro? Il compenso congelato verrà riaccreditato sul tuo saldo.")) {
+        const amount = parseFloat(ann.salary.replace(/[^0-9.]/g, '')) || 0;
 
-    acceptedContracts = acceptedContracts.filter(cid => cid !== id);
-    localStorage.setItem('acceptedContracts', JSON.stringify(acceptedContracts));
+        // Logica di rimborso
+        userBalance += amount;
+        frozenBalance -= amount;
 
-    renderBacheca();
-    initMap();
+        annunci = annunci.filter(a => a.id !== id);
+        localStorage.setItem('annunci', JSON.stringify(annunci));
+
+        updateBalances();
+        renderBacheca();
+        initMap();
+    }
 }
 
 function rechargeBalance() {
@@ -343,19 +295,26 @@ function closeRevokeModal() {
     closeModal('revoke-modal');
 }
 
+// REVOCA CONTRATTO: Rimborso fondi
 function confirmRevocation() {
     const title = document.getElementById('revoke-title').value;
     const desc = document.getElementById('revoke-desc').value;
     if (!title || !desc) { alert('Specifica motivo e dettagli.'); return; }
 
-    // Rimuovi dai contratti accettati
+    const ann = annunci.find(a => a.id === revokeAnnuncioId);
+    if (ann) {
+        const amount = parseFloat(ann.salary.replace(/[^0-9.]/g, '')) || 0;
+        userBalance += amount;
+        frozenBalance -= amount;
+        updateBalances();
+    }
+
     acceptedContracts = acceptedContracts.filter(cid => cid !== revokeAnnuncioId);
     localStorage.setItem('acceptedContracts', JSON.stringify(acceptedContracts));
 
-    alert(`Revoca inviata: ${title}. Il contratto è stato annullato.`);
-    closeRevokeModal();
+    alert(`Contratto revocato. I fondi sono stati riaccreditati.`);
+    closeModal('revoke-modal');
     renderBacheca();
-    updateSidebar();
 }
 
 function releasePayment() {
@@ -496,7 +455,8 @@ async function createAnnuncio() {
     }
 }
 
-function finalizeAnnuncioCreation(title, category, desc, salary, address, coords, imageBase64, userData) {
+// --- CREAZIONE ANNUNCIO (CORRETTA) ---
+async function finalizeAnnuncioCreation(title, category, desc, salary, address, coords, imageBase64, userData) {
     const newAnn = {
         id: Date.now(),
         title,
@@ -507,24 +467,17 @@ function finalizeAnnuncioCreation(title, category, desc, salary, address, coords
         lat: coords.lat,
         lng: coords.lng,
         author: userData.name + " " + (userData.surname || ""),
-        authorType: userData.type,
-        authorAvatar: userData.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100",
+        authorId: userData.email, // ID univoco
+        authorAvatar: userData.avatar || "",
         image: imageBase64,
-        isPremium: userData.isPremium || false,
-        companyName: userData.companyName || ""
+        isPremium: userData.isPremium || false
     };
 
     annunci.unshift(newAnn);
     localStorage.setItem('annunci', JSON.stringify(annunci));
 
-    // Reset filtri per mostrare subito il nuovo annuncio
-    const searchInput = document.getElementById('search-input');
-    const catFilter = document.getElementById('filter-category');
-    if (searchInput) searchInput.value = '';
-    if (catFilter) catFilter.value = '';
-
-    alert('Annuncio creato con successo!');
-    closeCreateModal();
+    alert('Annuncio creato. I fondi sono stati congelati in Escrow fino al completamento.');
+    closeModal('create-annuncio-modal');
     renderBacheca();
     initMap();
 }
@@ -693,44 +646,62 @@ function handleAIKeyDown(e) {
     }
 }
 
-// DeepSeek AI Integration
+// --- INTEGRAZIONE GOOGLE GEMINI AI ---
 async function sendAIMessage() {
     const input = document.getElementById('ai-input');
     const body = document.getElementById('ai-chat-body');
-    if (!input.value.trim()) return;
+    const userMsg = input.value.trim();
 
-    const userMsg = input.value;
+    if (!userMsg) return;
+
+    // Aggiungi messaggio utente alla UI e alla storia
     appendMessage('user', userMsg, body);
+    chatHistoryAI.push({ role: "user", parts: [{ text: userMsg }] });
     input.value = '';
-    document.getElementById('ai-suggestion-ghost').textContent = ""; // Pulisci suggerimento
+    document.getElementById('ai-suggestion-ghost').textContent = "";
 
+    // Animazione "Sta pensando"
     const thinking = document.createElement('div');
     thinking.className = 'message ai glass thinking';
-    thinking.textContent = 'Worky-AI sta pensando...';
+    thinking.textContent = 'Worky-AI sta elaborando...';
     body.appendChild(thinking);
     body.scrollTop = body.scrollHeight;
 
     try {
-        const response = await fetch('/api/chat', {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                messages: [{ role: "user", content: userMsg }]
+                contents: chatHistoryAI.slice(-10), // Invia gli ultimi 10 messaggi per contesto
+                generationConfig: { maxOutputTokens: 500 }
             })
         });
 
-        if (!response.ok) throw new Error("Errore API");
-
         const data = await response.json();
-        if (body.contains(thinking)) body.removeChild(thinking);
-        // DeepSeek response structure check
-        const aiText = data.choices && data.choices[0] ? data.choices[0].message.content : "Nessuna risposta.";
+        body.removeChild(thinking);
+
+        const aiText = data.candidates[0].content.parts[0].text;
         appendMessage('ai', aiText, body);
+
+        // Salva nella storia
+        chatHistoryAI.push({ role: "model", parts: [{ text: aiText }] });
+        localStorage.setItem('chatHistoryAI', JSON.stringify(chatHistoryAI));
+
     } catch (e) {
-        console.error(e);
         if (body.contains(thinking)) body.removeChild(thinking);
-        appendMessage('ai', "Errore di connessione con l'assistente IA. Riprova più tardi.", body);
+        appendMessage('ai', "Errore di connessione con Google Gemini. Verifica la tua API Key.", body);
+        console.error("Gemini Error:", e);
     }
+}
+
+function renderChatHistory() {
+    const body = document.getElementById('ai-chat-body');
+    if (!body) return;
+    body.innerHTML = '';
+    chatHistoryAI.forEach(msg => {
+        const role = msg.role === 'user' ? 'user' : 'ai';
+        appendMessage(role, msg.parts[0].text, body);
+    });
 }
 
 function appendMessage(role, text, container) {

@@ -207,13 +207,17 @@
           <div class="chat-window" style="display:flex; flex-direction:column;">
             <div id="ai-chat-body" style="flex-grow:1; padding:1rem; overflow-y:auto;"></div>
             <div class="input-area" style="padding:1rem;">
-              <div class="chat-input-area" id="ai-input-wrapper" style="display:flex; gap:1rem;">
-                <div class="suggestion-wrapper">
-                  <div id="ai-suggestion-ghost" class="suggestion-ghost"></div>
-                  <input type="text" id="ai-input" placeholder="Chiedi a Worky-AI (es: 'Ciao', 'Lavoro'...)"
-                    oninput="updateAIWithGhostText()" onkeydown="handleAIKeyDown(event)">
+              <div class="chat-input-area" style="display:flex; gap:1rem; position: relative;">
+                <div class="suggestion-wrapper" style="flex-grow: 1; position: relative;">
+                  <div id="ai-suggestion-ghost" class="suggestion-ghost"
+                    style="position: absolute; top: 12px; left: 13px; color: rgba(255,255,255,0.3); pointer-events: none; font-family: inherit;">
+                  </div>
+                  <input type="text" id="ai-input"
+                    style="background: rgba(255,255,255,0.05); position: relative; z-index: 1;"
+                    placeholder="Chiedi a Worky-AI..." oninput="updateAIWithGhostText()"
+                    onkeydown="handleAIKeyDown(event)">
                 </div>
-                <button class="btn-primary" style="width: auto; padding: 0.8rem 1.5rem;"
+                <button class="btn-primary" style="width: auto; padding: 0 1.5rem;"
                   onclick="sendAIMessage()">Chiedi</button>
               </div>
             </div>
