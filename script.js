@@ -11,9 +11,17 @@ let currentChatCompany = null;
 let map = null;
 let markers = [];
 
-// COSTANTE PER GOOGLE GEMINI (Sostituisci con la tua chiave reale)
-const GEMINI_API_KEY = "AIzaSyDdlUhBgqndw9Ep75yz_kYTLpC_XnWdGy0";
-// Inizializzazione
+// --- CONFIGURAZIONE SUPABASE (Queste chiavi sono pubbliche e sicure) ---
+const SUPABASE_URL = 'https://tuoidprogetto.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // La tua Anon Key
+
+// Inizializzazione del client Supabase
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Variabili globali del sito
+
+// ... il resto del codice ...
+
 document.addEventListener('DOMContentLoaded', () => {
     if (annunci.length === 0) {
         annunci = [
