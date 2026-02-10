@@ -680,7 +680,7 @@ async function sendAIMessage() {
         const data = await response.json();
         body.removeChild(thinking);
 
-        const aiText = data.candidates[0].content.parts[0].text;
+        const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Scusa, non sono riuscito a generare una risposta.";
         appendMessage('ai', aiText, body);
 
         // Salva nella storia
