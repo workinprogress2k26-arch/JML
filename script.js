@@ -12,7 +12,7 @@ let map = null;
 let markers = [];
 
 // COSTANTE PER GOOGLE GEMINI (Sostituisci con la tua chiave reale)
-const GEMINI_API_KEY = "LA_TUA_CHIAVE_GOOGLE_GEMINI_QUI";
+const GEMINI_API_KEY = "AIzaSyDdlUhBgqndw9Ep75yz_kYTLpC_XnWdGy0";
 // Inizializzazione
 document.addEventListener('DOMContentLoaded', () => {
     if (annunci.length === 0) {
