@@ -16,7 +16,7 @@ const SUPABASE_URL = 'https://tuoidprogetto.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // La tua Anon Key
 
 // Inizializzazione del client Supabase
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Variabili globali del sito
 
