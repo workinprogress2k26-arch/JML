@@ -61,45 +61,38 @@ async function sendAIMessage() {
     if (!userMsg) return;
 
     const selectedModel = modelSelect.value;
-    const apiVersion = selectedModel.includes("1.5") ? "v1" : "v1beta";
-
     appendMessage('user', userMsg, body);
     input.value = '';
 
     const thinking = document.createElement('div');
     thinking.className = 'message ai glass thinking';
-    thinking.textContent = `Worky-AI sta elaborando...`;
+    thinking.textContent = `Worky-AI sta elaborando con ${selectedModel}...`;
     body.appendChild(thinking);
 
     try {
-        // NOTA: Usiamo supabaseClient che abbiamo definito sopra
+        // Chiamata alla Edge Function di Supabase
         const { data, error } = await supabaseClient.functions.invoke('gemini-proxy', {
             body: {
                 message: userMsg,
-                model: selectedModel,
-                apiVersion: apiVersion
+                model: selectedModel
             }
         });
 
         if (body.contains(thinking)) body.removeChild(thinking);
 
-        if (error || (data && data.error)) {
-            appendMessage('ai', "❌ Errore: " + (error?.message || data.error.message), body);
-            return;
+        if (error) throw error;
+
+        // Visualizza la risposta che arriva dalla funzione
+        if (data && data.reply) {
+            appendMessage('ai', data.reply, body);
+        } else {
+            appendMessage('ai', "L'IA ha risposto, ma il formato è imprevisto.", body);
         }
 
-        if (data.candidates && data.candidates[0].content) {
-            const aiText = data.candidates[0].content.parts[0].text;
-            appendMessage('ai', aiText, body);
-
-            // Salvataggio storia
-            chatHistoryAI.push({ role: "user", parts: [{ text: userMsg }] });
-            chatHistoryAI.push({ role: "model", parts: [{ text: aiText }] });
-            localStorage.setItem('chatHistoryAI', JSON.stringify(chatHistoryAI));
-        }
     } catch (e) {
         if (body.contains(thinking)) body.removeChild(thinking);
-        appendMessage('ai', "Errore di connessione: " + e.message, body);
+        appendMessage('ai', "Errore: " + e.message, body);
+        console.error("Dettaglio errore:", e);
     }
 }
 
@@ -749,42 +742,28 @@ async function sendAIMessage() {
     body.appendChild(thinking);
 
     try {
-        // COSTRUIAMO L'URL DINAMICO
-        const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${selectedModel}:generateContent?key=${GEMINI_API_KEY}`;
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: userMsg }] }]
-            })
+        // Usiamo Supabase invece di chiamare Google direttamente
+        const { data, error } = await supabaseClient.functions.invoke('gemini-proxy', {
+            body: {
+                message: userMsg,
+                model: selectedModel
+            }
         });
-
-        const data = await response.json();
 
         if (body.contains(thinking)) body.removeChild(thinking);
 
-        if (data.error) {
-            // Gestione errori specifica per la quota (molto comune nel piano gratis)
-            if (data.error.message.includes("quota") || data.error.code === 429) {
-                appendMessage('ai', `⚠️ **Quota raggiunta per ${selectedModel}.**\n\nIl piano gratuito di Google limita i messaggi al minuto per i modelli nuovi. Prova a passare a **Gemini 1.5 Flash** nel menu in alto, di solito ha limiti più alti!`, body);
-            } else {
-                appendMessage('ai', "❌ Errore Google: " + data.error.message, body);
-            }
-            return;
-        }
+        if (error) throw error;
 
-        if (data.candidates && data.candidates[0].content) {
-            const aiText = data.candidates[0].content.parts[0].text;
-            appendMessage('ai', aiText, body);
+        if (data && data.reply) {
+            appendMessage('ai', data.reply, body);
 
-            // Aggiorna l'etichetta nella sidebar per estetica
+            // Aggiorna l'etichetta estetica
             const statusLabel = document.getElementById('ai-status-label');
             if (statusLabel) statusLabel.textContent = "Attivo: " + selectedModel;
         }
     } catch (e) {
         if (body.contains(thinking)) body.removeChild(thinking);
-        appendMessage('ai', "Errore di connessione: " + e.message, body);
+        appendMessage('ai', "Errore Supabase: " + e.message, body);
     }
 }
 
