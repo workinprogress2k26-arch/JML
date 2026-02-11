@@ -3,10 +3,11 @@
 const SUPABASE_URL = 'https://qtmfgmrigldgodxrecue.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0bWZnbXJpZ2xkZ29keHJlY3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNzMwMDYsImV4cCI6MjA4NTk0OTAwNn0.sHywE9mS6HU5-GOEt5_riL_9aywsNZE8iplVAQsGMf8';
 
-// Usiamo "supabaseClient" invece di "supabase" per evitare conflitti con la libreria
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Assicurati che sia scritto esattamente così (senza window. davanti se vuoi essere più sicuro)
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // --- 2. VARIABILI GLOBALI (Indispensabili per evitare la schermata nera) ---
+
 let annunci = JSON.parse(localStorage.getItem('annunci')) || [];
 let acceptedContracts = JSON.parse(localStorage.getItem('acceptedContracts')) || [];
 let completedContracts = JSON.parse(localStorage.getItem('completedContracts')) || [];
@@ -17,6 +18,8 @@ let chatHistoryAI = JSON.parse(localStorage.getItem('chatHistoryAI')) || [];
 let currentChatCompany = null;
 let map = null;
 let markers = [];
+let reviewViewMode = 'received'; // <--- Fondamentale per non far crashare il profilo
+
 
 // --- 3. INIZIALIZZAZIONE ALL'AVVIO ---
 document.addEventListener('DOMContentLoaded', () => {
