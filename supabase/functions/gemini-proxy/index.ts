@@ -1,38 +1,57 @@
-async function sendAIMessage() {
-    const input = document.getElementById('ai-input');
-    const body = document.getElementById('ai-chat-body');
-    const modelSelect = document.getElementById('ai-model-select');
-    const userMsg = input.value.trim();
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-    if (!userMsg) return;
-
-    appendMessage('user', userMsg, body);
-    input.value = '';
-
-    const thinking = document.createElement('div');
-    thinking.className = 'message ai glass thinking';
-    thinking.textContent = `Worky-AI sta elaborando...`;
-    body.appendChild(thinking);
-
-    try {
-        // CHIAMATA SICURA: Non passiamo nessuna chiave qui!
-        const { data, error } = await supabaseClient.functions.invoke('gemini-proxy', {
-            body: { 
-                message: userMsg, 
-                model: modelSelect.value 
-            }
-        });
-
-        if (body.contains(thinking)) body.removeChild(thinking);
-
-        if (error) throw error; // Se Supabase risponde con errore (es. 404 o 500)
-
-        // Se tutto è ok, data.reply contiene la risposta dell'IA
-        appendMessage('ai', data.reply, body);
-
-    } catch (e) {
-        if (body.contains(thinking)) body.removeChild(thinking);
-        console.error("Errore:", e);
-        appendMessage('ai', "Errore: La funzione non risponde. Controlla i log su Supabase.", body);
-    }
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+serve(async (req) => {
+  // Gestione CORS per il browser
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const { message, model } = await req.json()
+    
+    // RECUPERA LA CHIAVE DAI SEGRETI DI SUPABASE
+    const apiKey = Deno.env.get('GEMINI_API_KEY') 
+
+    if (!apiKey) {
+        throw new Error("API Key non trovata nei Secrets di Supabase")
+    }
+
+    // Costruiamo l'URL. Nota: usiamo v1beta che è più compatibile
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: message }] }]
+      })
+    })
+
+    const data = await response.json()
+
+    // Se Google risponde con un errore (tipo API key not valid)
+    if (data.error) {
+      return new Response(JSON.stringify({ error: data.error.message }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const aiReply = data.candidates[0].content.parts[0].text
+
+    return new Response(JSON.stringify({ reply: aiReply }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+})
