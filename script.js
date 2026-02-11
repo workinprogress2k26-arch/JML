@@ -718,52 +718,53 @@ function handleAIKeyDown(e) {
 async function sendAIMessage() {
     const input = document.getElementById('ai-input');
     const body = document.getElementById('ai-chat-body');
-    const modelSelect = document.getElementById('ai-model-select'); // Il selettore HTML
+    const modelSelect = document.getElementById('ai-model-select');
     const userMsg = input.value.trim();
 
     if (!userMsg) return;
 
-    // 1. RECUPERIAMO IL MODELLO SCELTO
-    const selectedModel = modelSelect.value;
+    // 1. DEFINISCI LA CHIAVE (Mettila qui se non l'hai messa in alto)
+    const GEMINI_API_KEY = 'IL_TUO_CODICE_API_DI_GOOGLE_QUI';
 
-    // 2. LOGICA DEGLI ENDPOINT (MOLTO IMPORTANTE)
-    // Se è la versione 1.5 usiamo 'v1' (stabile), altrimenti usiamo 'v1beta'
-    let apiVersion = "v1beta";
-    if (selectedModel.includes("1.5")) {
-        apiVersion = "v1";
-    }
+    const selectedModel = modelSelect.value;
+    const apiVersion = selectedModel.includes("1.5") ? "v1" : "v1beta";
 
     appendMessage('user', userMsg, body);
     input.value = '';
 
     const thinking = document.createElement('div');
     thinking.className = 'message ai glass thinking';
-    thinking.textContent = `Worky-AI sta usando ${selectedModel}...`;
+    thinking.textContent = `Worky-AI sta pensando...`;
     body.appendChild(thinking);
 
     try {
-        // Usiamo Supabase invece di chiamare Google direttamente
-        const { data, error } = await supabaseClient.functions.invoke('gemini-proxy', {
-            body: {
-                message: userMsg,
-                model: selectedModel
-            }
+        // Chiamata DIRETTA a Google (senza passare per Supabase)
+        const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${selectedModel}:generateContent?key=${GEMINI_API_KEY}`;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: userMsg }] }]
+            })
         });
+
+        const data = await response.json();
 
         if (body.contains(thinking)) body.removeChild(thinking);
 
-        if (error) throw error;
+        if (data.error) {
+            appendMessage('ai', "Errore Google: " + data.error.message, body);
+            return;
+        }
 
-        if (data && data.reply) {
-            appendMessage('ai', data.reply, body);
-
-            // Aggiorna l'etichetta estetica
-            const statusLabel = document.getElementById('ai-status-label');
-            if (statusLabel) statusLabel.textContent = "Attivo: " + selectedModel;
+        if (data.candidates && data.candidates[0].content) {
+            const aiText = data.candidates[0].content.parts[0].text;
+            appendMessage('ai', aiText, body);
         }
     } catch (e) {
         if (body.contains(thinking)) body.removeChild(thinking);
-        appendMessage('ai', "Errore Supabase: " + e.message, body);
+        appendMessage('ai', "Errore connessione: " + e.message, body);
     }
 }
 
