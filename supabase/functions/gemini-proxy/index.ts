@@ -6,30 +6,41 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Gestione CORS
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    // Ora che JWT è attivo, se la richiesta arriva qui, l'utente è GIÀ autenticato
     const { message, model } = await req.json()
     const apiKey = Deno.env.get('GEMINI_API_KEY')
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: message }] }]
-        })
-      }
-    )
+    // 1. Controllo Chiave
+    if (!apiKey) throw new Error("Chiave API mancante nei Secrets di Supabase")
+
+    // 2. Controllo Modello (Se selezioni 2.5 che non esiste, forziamo 1.5)
+    let aiModel = model;
+    if (model === 'gemini-2.5-flash' || !model) {
+        aiModel = 'gemini-1.5-flash'; 
+    }
+
+    // 3. Chiamata a Google
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${aiModel}:generateContent?key=${apiKey}`;
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: message }] }]
+      })
+    })
 
     const data = await response.json()
     
-    if (data.error) throw new Error(data.error.message)
+    // Se Google risponde con errore, lo mostriamo chiaramente
+    if (data.error) {
+        return new Response(JSON.stringify({ error: "Errore Google: " + data.error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+    }
 
     const reply = data.candidates[0].content.parts[0].text
 

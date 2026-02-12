@@ -9,6 +9,7 @@
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -213,11 +214,9 @@
           <!-- SELETTORE VERSIONE AI -->
           <div style="display: flex; align-items: center; gap: 0.8rem;">
             <label style="font-size: 0.8rem; color: var(--text-dim);">Modello:</label>
-            <select id="ai-model-select" class="glass"
-              style="width: auto; padding: 0.5rem 1rem; border-radius: 10px; font-size: 0.85rem; color: var(--primary); border: 1px solid var(--primary); cursor: pointer; outline: none;">
-              <option value="gemini-1.5-flash">Gemini 1.5 Flash (Consigliato - Stabile)</option>
-              <option value="gemini-2.0-flash">Gemini 2.0 Flash (Potente - Veloce)</option>
-              <option value="gemini-2.5-flash">Gemini 2.5 Flash (Sperimentale - Top)</option>
+            <select id="ai-model-select" class="glass">
+              <option value="gemini-1.5-flash">Gemini 1.5 Flash (Stabile)</option>
+              <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Potente)</option>
             </select>
           </div>
         </div>
