@@ -680,20 +680,26 @@ async function sendAIMessage() {
 
     if (!userMsg) return;
 
-    const selectedModel = modelSelect.value;
+    // CONTROLLO LOGIN: Se l'utente non è loggato, fermiamo la funzione
+    const { data: { session } } = await supabaseClient.auth.getSession();
 
-    // 1. Mostra il messaggio dell'utente nell'interfaccia
+    if (!session) {
+        alert("Devi effettuare il login per parlare con Worky-AI!");
+        showView('auth-view'); // Rimanda l'utente alla schermata di login
+        return;
+    }
+
+    const selectedModel = modelSelect.value;
     appendMessage('user', userMsg, body);
     input.value = '';
 
-    // 2. Mostra l'animazione di caricamento
     const thinking = document.createElement('div');
     thinking.className = 'message ai glass thinking';
-    thinking.textContent = `Worky-AI sta elaborando con ${selectedModel}...`;
+    thinking.textContent = `Worky-AI sta elaborando...`;
     body.appendChild(thinking);
 
     try {
-        // 3. CHIAMATA A SUPABASE (La chiave API è nascosta dentro la funzione su Supabase)
+        // invoke() aggiunge automaticamente l'Authorization Header con il token dell'utente
         const { data, error } = await supabaseClient.functions.invoke('gemini-proxy', {
             body: {
                 message: userMsg,
@@ -701,21 +707,22 @@ async function sendAIMessage() {
             }
         });
 
+        if (error) {
+            // Se l'errore è 401 qui, significa che la sessione è scaduta
+            if (error.status === 401) throw new Error("Sessione scaduta. Effettua di nuovo il login.");
+            throw error;
+        }
+
         if (body.contains(thinking)) body.removeChild(thinking);
 
-        if (error) throw error;
-
-        // 4. Mostra la risposta che arriva da Supabase
         if (data && data.reply) {
             appendMessage('ai', data.reply, body);
-        } else {
-            appendMessage('ai', "Errore: la funzione non ha restituito una risposta valida.", body);
         }
 
     } catch (e) {
         if (body.contains(thinking)) body.removeChild(thinking);
-        appendMessage('ai', "Errore di connessione alla funzione Supabase: " + e.message, body);
-        console.error("Dettaglio errore:", e);
+        appendMessage('ai', "Errore: " + e.message, body);
+        console.error("Dettaglio Errore Auth:", e);
     }
 }
 
