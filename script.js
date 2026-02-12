@@ -763,26 +763,38 @@ function getCurrencySymbol(country) {
 async function signup() {
     const email = document.getElementById('reg-email').value;
     const password = document.getElementById('reg-password').value;
-    // Dati extra che vogliamo salvare
     const name = document.getElementById('reg-name').value;
     const type = document.getElementById('reg-type').value;
 
-    // 1. Diciamo a Supabase di creare l'utente (Password gestita in automatico)
     const { data, error } = await supabaseClient.auth.signUp({
         email: email,
         password: password,
         options: {
-            data: { // Questi dati extra finiscono nel "metadato" dell'utente
-                display_name: name,
-                user_type: type
-            }
+            data: { display_name: name, user_type: type }
         }
     });
 
     if (error) {
-        alert("Errore Supabase: " + error.message);
+        alert("Errore registrazione: " + error.message);
+        return;
+    }
+
+    // Se "Confirm Email" è disattivato, data.session sarà già pieno!
+    if (data.session) {
+        alert("Registrazione riuscita! Benvenuto in Worky.");
+
+        // Salviamo i dati per la tua UI
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userData', JSON.stringify({
+            name: name,
+            email: email,
+            type: type
+        }));
+
+        // Entriamo direttamente nella dashboard
+        checkLoginStatus();
     } else {
-        alert("Registrazione Automatica completata! Ora fai il login.");
+        alert("Registrazione completata, ma devi confermare l'email o fare il login manuale.");
         toggleForms();
     }
 }
