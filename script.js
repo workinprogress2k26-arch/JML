@@ -52,49 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- 4. FUNZIONE CHAT AI AGGIORNATA (Usa supabaseClient) ---
-async function sendAIMessage() {
-    const input = document.getElementById('ai-input');
-    const body = document.getElementById('ai-chat-body');
-    const modelSelect = document.getElementById('ai-model-select');
-    const userMsg = input.value.trim();
-
-    if (!userMsg) return;
-
-    const selectedModel = modelSelect.value;
-    appendMessage('user', userMsg, body);
-    input.value = '';
-
-    const thinking = document.createElement('div');
-    thinking.className = 'message ai glass thinking';
-    thinking.textContent = `Worky-AI sta elaborando con ${selectedModel}...`;
-    body.appendChild(thinking);
-
-    try {
-        // Chiamata alla Edge Function di Supabase
-        const { data, error } = await supabaseClient.functions.invoke('gemini-proxy', {
-            body: {
-                message: userMsg,
-                model: selectedModel
-            }
-        });
-
-        if (body.contains(thinking)) body.removeChild(thinking);
-
-        if (error) throw error;
-
-        // Visualizza la risposta che arriva dalla funzione
-        if (data && data.reply) {
-            appendMessage('ai', data.reply, body);
-        } else {
-            appendMessage('ai', "L'IA ha risposto, ma il formato è imprevisto.", body);
-        }
-
-    } catch (e) {
-        if (body.contains(thinking)) body.removeChild(thinking);
-        appendMessage('ai', "Errore: " + e.message, body);
-        console.error("Dettaglio errore:", e);
-    }
-}
 
 // ... DA QUI IN POI COMINCIANO LE TUE ALTRE FUNZIONI (checkLoginStatus, renderBacheca, etc.) ...
 
@@ -714,7 +671,7 @@ function handleAIKeyDown(e) {
     }
 }
 
-// --- INTEGRAZIONE GOOGLE GEMINI AI ---
+
 async function sendAIMessage() {
     const input = document.getElementById('ai-input');
     const body = document.getElementById('ai-chat-body');
@@ -723,48 +680,42 @@ async function sendAIMessage() {
 
     if (!userMsg) return;
 
-    // 1. DEFINISCI LA CHIAVE (Mettila qui se non l'hai messa in alto)
-    const GEMINI_API_KEY = 'IL_TUO_CODICE_API_DI_GOOGLE_QUI';
-
     const selectedModel = modelSelect.value;
-    const apiVersion = selectedModel.includes("1.5") ? "v1" : "v1beta";
 
+    // 1. Mostra il messaggio dell'utente nell'interfaccia
     appendMessage('user', userMsg, body);
     input.value = '';
 
+    // 2. Mostra l'animazione di caricamento
     const thinking = document.createElement('div');
     thinking.className = 'message ai glass thinking';
-    thinking.textContent = `Worky-AI sta pensando...`;
+    thinking.textContent = `Worky-AI sta elaborando con ${selectedModel}...`;
     body.appendChild(thinking);
 
     try {
-        // Chiamata DIRETTA a Google (senza passare per Supabase)
-        const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${selectedModel}:generateContent?key=${GEMINI_API_KEY}`;
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: userMsg }] }]
-            })
+        // 3. CHIAMATA A SUPABASE (La chiave API è nascosta dentro la funzione su Supabase)
+        const { data, error } = await supabaseClient.functions.invoke('gemini-proxy', {
+            body: {
+                message: userMsg,
+                model: selectedModel
+            }
         });
 
-        const data = await response.json();
-
         if (body.contains(thinking)) body.removeChild(thinking);
 
-        if (data.error) {
-            appendMessage('ai', "Errore Google: " + data.error.message, body);
-            return;
+        if (error) throw error;
+
+        // 4. Mostra la risposta che arriva da Supabase
+        if (data && data.reply) {
+            appendMessage('ai', data.reply, body);
+        } else {
+            appendMessage('ai', "Errore: la funzione non ha restituito una risposta valida.", body);
         }
 
-        if (data.candidates && data.candidates[0].content) {
-            const aiText = data.candidates[0].content.parts[0].text;
-            appendMessage('ai', aiText, body);
-        }
     } catch (e) {
         if (body.contains(thinking)) body.removeChild(thinking);
-        appendMessage('ai', "Errore connessione: " + e.message, body);
+        appendMessage('ai', "Errore di connessione alla funzione Supabase: " + e.message, body);
+        console.error("Dettaglio errore:", e);
     }
 }
 
