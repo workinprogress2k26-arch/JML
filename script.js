@@ -760,51 +760,31 @@ function getCurrencySymbol(country) {
     return '€'; // Default
 }
 
-function signup() {
-    const name = document.getElementById('reg-name').value;
-    const surname = document.getElementById('reg-surname').value;
+async function signup() {
     const email = document.getElementById('reg-email').value;
     const password = document.getElementById('reg-password').value;
-    const confirm = document.getElementById('reg-confirm').value;
-    const idCard = document.getElementById('reg-id').value;
-    const birth = document.getElementById('reg-birth').value;
-    const city = document.getElementById('reg-city').value;
-    const country = document.getElementById('reg-country').value;
-    const zip = document.getElementById('reg-zip').value;
-    const type = document.getElementById('reg-type').value; // Recupero valore mancante
+    // Dati extra che vogliamo salvare
+    const name = document.getElementById('reg-name').value;
+    const type = document.getElementById('reg-type').value;
 
-    if (!name || !surname || !email || !password || !idCard || !birth || !city || !country || !zip) {
-        alert('Compila tutti i campi!'); return;
+    // 1. Diciamo a Supabase di creare l'utente (Password gestita in automatico)
+    const { data, error } = await supabaseClient.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+            data: { // Questi dati extra finiscono nel "metadato" dell'utente
+                display_name: name,
+                user_type: type
+            }
+        }
+    });
+
+    if (error) {
+        alert("Errore Supabase: " + error.message);
+    } else {
+        alert("Registrazione Automatica completata! Ora fai il login.");
+        toggleForms();
     }
-
-    if (!validateEmail(email)) {
-        alert('Inserisci un indirizzo email valido!'); return;
-    }
-
-    if (password !== confirm) {
-        alert('Le password non coincidono!'); return;
-    }
-
-    if (password.length < 6) {
-        alert('La password deve essere di almeno 6 caratteri!'); return;
-    }
-
-    const userData = {
-        name, surname, email, idCard, birth, city, country, zip,
-        type: type,
-        currency: getCurrencySymbol(country)
-    };
-
-    if (type === 'business') {
-        userData.companyName = document.getElementById('reg-company-name').value;
-        userData.companyAddress = document.getElementById('reg-company-address').value;
-        if (!userData.companyName) { alert("Inserisci il nome dell'azienda!"); return; }
-    }
-
-    localStorage.setItem('userData', JSON.stringify(userData));
-    localStorage.setItem('isLoggedIn', 'true');
-    alert(`Registrazione completata! Account ${type === 'business' ? 'Business' : 'Personale'} attivato. Valuta: ${userData.currency}`);
-    checkLoginStatus();
 }
 
 function toggleCompanyFields() {
@@ -818,26 +798,24 @@ function toggleCompanyFields() {
 }
 
 // Auth Logica
-function login() {
-    localStorage.setItem('isLoggedIn', 'true');
-    // Assicuriamoci che ci sia sempre un profilo minimo per evitare crash
-    if (!localStorage.getItem('userData')) {
-        const email = document.getElementById('login-email').value || "mario@rossi.it";
-        const isBiz = email.includes('azienda');
-        const mockUser = {
-            name: "Mario",
-            surname: "Rossi",
-            email: email,
-            city: "Bologna",
-            type: isBiz ? 'business' : 'private',
-            currency: '€'
-        };
-        if (isBiz) {
-            mockUser.companyName = "Worky Business Srl";
-            mockUser.companyAddress = "Via dell'Innovazione 1, Bologna";
-        }
-        localStorage.setItem('userData', JSON.stringify(mockUser));
+async function login() {
+    const email = document.getElementById('email-login').value;
+    const password = document.getElementById('password-login').value;
+
+    // 2. Chiediamo a Supabase di verificare le credenziali
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password,
+    });
+
+    if (error) {
+        alert("Email o Password errati: " + error.message);
+        return;
     }
+
+    // Se arrivi qui, Supabase ha creato il Token JWT e lo ha salvato nel browser.
+    // L'IA ora riconoscerà l'utente come "Autorizzato".
+    console.log("Token generato correttamente!");
     checkLoginStatus();
 }
 
