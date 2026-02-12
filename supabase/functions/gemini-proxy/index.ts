@@ -6,22 +6,18 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Gestione CORS
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
     const { message } = await req.json()
     const apiKey = Deno.env.get('GEMINI_API_KEY')
 
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: "Chiave API mancante nei Secrets di Supabase" }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
+    if (!apiKey) throw new Error("Chiave API non configurata")
 
-    // Usiamo il modello più stabile in assoluto
+    // Passiamo alla versione v1 (Stabile) e usiamo gemini-1.5-flash
+    // Se v1 dà ancora errore, Google richiede gemini-pro per i vecchi account
     const aiModel = "gemini-1.5-flash";
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${aiModel}:generateContent?key=${apiKey}`;
+    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${aiModel}:generateContent?key=${apiKey}`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -32,11 +28,12 @@ serve(async (req) => {
     })
 
     const data = await response.json()
-
-    // Se Google risponde con un errore (es. chiave non valida)
+    
+    // Se Google risponde ancora con un errore, leggiamo cosa dice la versione v1
     if (data.error) {
-      return new Response(JSON.stringify({ error: "Google dice: " + data.error.message }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      return new Response(JSON.stringify({ error: "Google v1 dice: " + data.error.message }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
@@ -48,7 +45,8 @@ serve(async (req) => {
 
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })
