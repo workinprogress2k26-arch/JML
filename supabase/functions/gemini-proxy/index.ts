@@ -6,17 +6,21 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Gestione CORS
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
     const { message } = await req.json()
     const apiKey = Deno.env.get('GEMINI_API_KEY')
 
-    if (!apiKey) throw new Error("Chiave API mancante nei Secrets di Supabase")
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: "Chiave API mancante nei Secrets di Supabase" }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
 
-    // USIAMO QUESTO MODELLO: è il più compatibile e veloce per tutte le API Key
+    // Usiamo il modello più stabile in assoluto
     const aiModel = "gemini-1.5-flash";
-
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${aiModel}:generateContent?key=${apiKey}`;
 
     const response = await fetch(apiUrl, {
@@ -28,11 +32,11 @@ serve(async (req) => {
     })
 
     const data = await response.json()
-    
+
+    // Se Google risponde con un errore (es. chiave non valida)
     if (data.error) {
-      return new Response(JSON.stringify({ error: "Errore Google: " + data.error.message }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      return new Response(JSON.stringify({ error: "Google dice: " + data.error.message }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -44,8 +48,7 @@ serve(async (req) => {
 
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })
