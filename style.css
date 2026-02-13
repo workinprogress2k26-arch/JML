@@ -896,76 +896,115 @@ input:focus {
     }
 }
 
-/* --- TRASFORMAZIONE SIDEBAR PER MOBILE --- */
-@media (max-width: 1024px) {
+/* --- TRASFORMAZIONE SIDEBAR SLIM PER MOBILE --- */
+@media (max-width: 768px) {
+
+    /* Forza il contenitore a dividersi esattamente in: Sidebar Stretta | Contenuto Largo */
     #app-view {
-        /* Restringe la colonna della sidebar da 280px a 75px */
-        grid-template-columns: 75px 1fr !important;
+        display: grid !important;
+        grid-template-columns: 65px 1fr !important;
+        /* Sidebar fissa a 65px, il resto al contenuto */
+        width: 100vw !important;
+        height: 100vh !important;
+        overflow: hidden !important;
+        position: fixed;
+        /* Evita rimbalzi dello schermo */
     }
 
+    /* SIDEBAR: Diventa una colonna stretta */
     .sidebar {
-        padding: 1.5rem 0.5rem !important;
-        align-items: center;
-        width: 75px !important;
+        width: 65px !important;
+        min-width: 65px !important;
+        padding: 1rem 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        border-right: 1px solid var(--border);
+        overflow: hidden;
     }
 
-    /* LOGO: Nasconde la scritta "WIP Premium", lascia solo l'emoji */
+    /* LOGO: Nasconde il testo, centra l'emoji */
     .logo-container {
         font-size: 0 !important;
-        margin-bottom: 2rem;
-        justify-content: center;
+        margin-bottom: 2rem !important;
+        display: flex !important;
+        justify-content: center !important;
+        width: 100% !important;
     }
 
     .logo-container span {
         font-size: 1.8rem !important;
-        /* Mantiene visibile l'emoji */
+        margin: 0 !important;
     }
 
-    /* NAV ITEMS: Nasconde il testo, centra l'icona */
+    /* NAV LINKS: Rimuove i margini e centra tutto */
+    .nav-links {
+        width: 100% !important;
+        padding: 0 !important;
+    }
+
     .nav-item {
-        justify-content: center !important;
         font-size: 0 !important;
-        /* Nasconde il testo dell'elenco */
-        padding: 1rem 0 !important;
-        width: 50px;
-        height: 50px;
-        margin: 0 auto 0.5rem auto;
+        /* Nasconde il testo */
+        padding: 15px 0 !important;
+        justify-content: center !important;
+        width: 100% !important;
+        border-radius: 0 !important;
     }
 
     .nav-item span {
         font-size: 1.5rem !important;
-        /* Forza la dimensione dell'emoji */
         margin: 0 !important;
     }
 
-    /* PROFILO UTENTE: Lascia solo l'avatar, nasconde nome e logout */
+    /* PROFILO UTENTE: Nasconde info, centra avatar */
     .user-profile {
-        justify-content: center !important;
         padding: 1rem 0 !important;
+        flex-direction: column !important;
+        align-items: center !important;
     }
 
     .user-info {
         display: none !important;
-        /* Rimuove nome e tasto logout testuale */
     }
 
     #user-avatar {
-        width: 45px;
-        height: 45px;
+        width: 35px;
+        height: 35px;
     }
 
-    /* CONTENUTO PRINCIPALE: Si espande per occupare tutto lo spazio */
+    /* CONTENUTO PRINCIPALE: Occupa tutto lo spazio rimanente e scorre */
     .main-content {
+        width: 100% !important;
+        max-width: calc(100vw - 65px) !important;
+        /* Forza la larghezza */
         padding: 1rem !important;
-    }
-
-    /* Adattamento griglia annunci a 1 colonna per mobile */
-    .announcements-grid {
-        grid-template-columns: 1fr !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        /* Evita scorrimento laterale */
+        background: var(--bg-dark);
     }
 
     /* Header compatto */
+    .content-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
     .content-header h2 {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
+    }
+
+    /* Griglia Annunci: Una sola colonna perfetta */
+    .announcements-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1rem !important;
+        width: 100% !important;
+    }
+
+    .annuncio-card {
+        width: 100% !important;
+        min-width: 100% !important;
     }
 }
