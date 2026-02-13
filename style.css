@@ -896,111 +896,76 @@ input:focus {
     }
 }
 
-/* --- OTTIMIZZAZIONE MOBILE: SIDEBAR SLIM CON ICONE --- */
+/* --- TRASFORMAZIONE SIDEBAR PER MOBILE --- */
 @media (max-width: 1024px) {
     #app-view {
-        grid-template-columns: 70px 1fr;
-        /* Sidebar stretta + contenuto */
-        height: 100vh;
-        overflow: hidden;
+        /* Restringe la colonna della sidebar da 280px a 75px */
+        grid-template-columns: 75px 1fr !important;
     }
 
-    /* Sidebar diventa una barra stretta fissa a sinistra */
     .sidebar {
-        width: 70px !important;
-        padding: 1rem 0.5rem !important;
-        display: flex !important;
-        flex-direction: column;
+        padding: 1.5rem 0.5rem !important;
         align-items: center;
-        border-right: 1px solid var(--border);
+        width: 75px !important;
     }
 
-    /* Nascondi il testo del Logo, lascia solo l'emoji */
+    /* LOGO: Nasconde la scritta "WIP Premium", lascia solo l'emoji */
     .logo-container {
-        font-size: 1.5rem;
+        font-size: 0 !important;
         margin-bottom: 2rem;
         justify-content: center;
     }
 
     .logo-container span {
-        margin: 0;
+        font-size: 1.8rem !important;
+        /* Mantiene visibile l'emoji */
     }
 
-    .logo-container {
-        font-size: 0;
-    }
-
-    /* Nasconde il testo "WIP Premium" */
-    .logo-container span {
-        font-size: 1.8rem;
-    }
-
-    /* Mantiene l'emoji */
-
-    /* Navigazione: Icone grandi e niente testo */
-    .nav-links {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
+    /* NAV ITEMS: Nasconde il testo, centra l'icona */
     .nav-item {
-        justify-content: center;
-        padding: 1rem !important;
+        justify-content: center !important;
+        font-size: 0 !important;
+        /* Nasconde il testo dell'elenco */
+        padding: 1rem 0 !important;
         width: 50px;
         height: 50px;
-        border-radius: 12px;
-        font-size: 1.4rem;
-        /* Dimensione icone */
-        color: transparent;
-        /* Nasconde il testo */
-        position: relative;
+        margin: 0 auto 0.5rem auto;
     }
 
     .nav-item span {
-        color: var(--text-main);
-        /* Forza visibilità emoji/icona */
+        font-size: 1.5rem !important;
+        /* Forza la dimensione dell'emoji */
         margin: 0 !important;
     }
 
-    /* User Profile Slim */
+    /* PROFILO UTENTE: Lascia solo l'avatar, nasconde nome e logout */
     .user-profile {
-        flex-direction: column;
-        padding: 1rem 0;
-        border-top: 1px solid var(--border);
-    }
-
-    #user-avatar {
-        width: 40px;
-        height: 40px;
+        justify-content: center !important;
+        padding: 1rem 0 !important;
     }
 
     .user-info {
-        display: none;
-        /* Nasconde nome e tasto logout testo */
+        display: none !important;
+        /* Rimuove nome e tasto logout testuale */
     }
 
-    /* Il contenuto principale si adatta */
+    #user-avatar {
+        width: 45px;
+        height: 45px;
+    }
+
+    /* CONTENUTO PRINCIPALE: Si espande per occupare tutto lo spazio */
     .main-content {
-        padding: 1rem;
-        overflow-y: auto;
-        height: 100vh;
+        padding: 1rem !important;
     }
 
-    /* Header delle sezioni più compatto */
-    .content-header h2 {
-        font-size: 1.2rem;
-    }
-
-    /* Griglia annunci mobile: 1 colonna */
+    /* Adattamento griglia annunci a 1 colonna per mobile */
     .announcements-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
     }
 
-    /* Nascondi filtri avanzati se troppo grandi, o falli scorrere */
-    .filters-bar {
-        flex-direction: column;
-        gap: 0.5rem;
+    /* Header compatto */
+    .content-header h2 {
+        font-size: 1.3rem;
     }
 }
