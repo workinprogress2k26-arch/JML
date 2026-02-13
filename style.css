@@ -1039,3 +1039,34 @@ body.auth-mode {
 .message.ai.warning {
     animation: shake 0.4s ease-in-out;
 }
+
+/* --- STILE PER OCCHIO MOSTRA PASSWORD --- */
+.password-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.password-wrapper input {
+    padding-right: 45px !important;
+    /* Fa spazio all'occhio per non coprire il testo */
+}
+
+.toggle-password {
+    position: absolute;
+    right: 15px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    user-select: none;
+    z-index: 10;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Colore dell'occhio nel tema scuro */
+.toggle-password {
+    color: var(--text-dim);
+}
