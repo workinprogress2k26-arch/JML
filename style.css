@@ -895,3 +895,112 @@ input:focus {
         display: none;
     }
 }
+
+/* --- OTTIMIZZAZIONE MOBILE: SIDEBAR SLIM CON ICONE --- */
+@media (max-width: 1024px) {
+    #app-view {
+        grid-template-columns: 70px 1fr;
+        /* Sidebar stretta + contenuto */
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    /* Sidebar diventa una barra stretta fissa a sinistra */
+    .sidebar {
+        width: 70px !important;
+        padding: 1rem 0.5rem !important;
+        display: flex !important;
+        flex-direction: column;
+        align-items: center;
+        border-right: 1px solid var(--border);
+    }
+
+    /* Nascondi il testo del Logo, lascia solo l'emoji */
+    .logo-container {
+        font-size: 1.5rem;
+        margin-bottom: 2rem;
+        justify-content: center;
+    }
+
+    .logo-container span {
+        margin: 0;
+    }
+
+    .logo-container {
+        font-size: 0;
+    }
+
+    /* Nasconde il testo "WIP Premium" */
+    .logo-container span {
+        font-size: 1.8rem;
+    }
+
+    /* Mantiene l'emoji */
+
+    /* Navigazione: Icone grandi e niente testo */
+    .nav-links {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .nav-item {
+        justify-content: center;
+        padding: 1rem !important;
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        font-size: 1.4rem;
+        /* Dimensione icone */
+        color: transparent;
+        /* Nasconde il testo */
+        position: relative;
+    }
+
+    .nav-item span {
+        color: var(--text-main);
+        /* Forza visibilità emoji/icona */
+        margin: 0 !important;
+    }
+
+    /* User Profile Slim */
+    .user-profile {
+        flex-direction: column;
+        padding: 1rem 0;
+        border-top: 1px solid var(--border);
+    }
+
+    #user-avatar {
+        width: 40px;
+        height: 40px;
+    }
+
+    .user-info {
+        display: none;
+        /* Nasconde nome e tasto logout testo */
+    }
+
+    /* Il contenuto principale si adatta */
+    .main-content {
+        padding: 1rem;
+        overflow-y: auto;
+        height: 100vh;
+    }
+
+    /* Header delle sezioni più compatto */
+    .content-header h2 {
+        font-size: 1.2rem;
+    }
+
+    /* Griglia annunci mobile: 1 colonna */
+    .announcements-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Nascondi filtri avanzati se troppo grandi, o falli scorrere */
+    .filters-bar {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}

@@ -199,6 +199,30 @@
         </div>
       </section>
 
+      <!-- BARRA DI NAVIGAZIONE MOBILE (Sostituisce la sidebar su smartphone) -->
+      <nav class="mobile-nav glass">
+        <div class="mobile-nav-item active" onclick="showSection('bacheca-section')">
+          <span>📋</span>
+          <small>Lavori</small>
+        </div>
+        <div class="mobile-nav-item" onclick="showSection('map-section')">
+          <span>📍</span>
+          <small>Mappa</small>
+        </div>
+        <div class="mobile-nav-item" onclick="showSection('chat-ai-section')">
+          <span>🤖</span>
+          <small>AI</small>
+        </div>
+        <div class="mobile-nav-item" onclick="showSection('contracts-section')">
+          <span>🤝</span>
+          <small>Chat</small>
+        </div>
+        <div class="mobile-nav-item" onclick="showSection('profile-section')">
+          <span>👤</span>
+          <small>Profilo</small>
+        </div>
+      </nav>
+
       <!-- SEZIONE MAPPA -->
       <section id="map-section" class="content-section hidden">
         <h2>Mappa Interattiva Bologna</h2>
@@ -257,6 +281,7 @@
           </div>
         </div>
       </section>
+
 
       <!-- SEZIONE MESSAGGI AZIENDE -->
       <section id="contracts-section" class="content-section hidden">
