@@ -472,9 +472,29 @@ async function createAnnuncio() {
         category = otherCatValue;
     }
 
+    // 1. Controlli base di compilazione
     if (!title || !desc || !address) { alert('Compila i campi necessari.'); return; }
 
-    // Escrow logic
+    // --- PARTE NUOVA: CONTROLLO SICUREZZA IA (MODERAZIONE) ---
+    // Mandiamo l'annuncio all'IA prima di toccare i soldi
+    try {
+        const checkText = `MODERAZIONE ANNUNCIO: Titolo: ${title}. Descrizione: ${desc}`;
+        const { data: safetyCheck } = await supabaseClient.functions.invoke('gemini-proxy', {
+            body: { message: checkText }
+        });
+
+        // Se l'IA risponde con l'avviso di sicurezza o blocca esplicitamente
+        if (safetyCheck?.reply?.includes("⚠️") || safetyCheck?.reply?.toLowerCase().includes("bloccato")) {
+            alert("🚨 AZIONE BLOCCATA: Il tuo annuncio è stato rifiutato perché viola le linee guida della community (contenuti illegali, odio, droghe o violenza).");
+            return; // Interrompe la funzione qui: l'annuncio non viene creato e i soldi non vengono toccati
+        }
+    } catch (e) {
+        console.error("Errore moderazione:", e);
+        // In caso di errore tecnico dell'IA, decidiamo se far passare l'annuncio o bloccarlo per sicurezza
+    }
+    // --- FINE PARTE NUOVA ---
+
+    // 2. Logica Escrow (Saldo e Fondi)
     const amount = parseFloat(salary) || 0;
     const userData = JSON.parse(localStorage.getItem('userData'));
     const cur = userData ? (userData.currency || '€') : '€';
@@ -489,6 +509,7 @@ async function createAnnuncio() {
         return;
     }
 
+    // Procediamo al pagamento solo se l'IA ha approvato
     userBalance -= amount;
     frozenBalance += amount;
     localStorage.setItem('userBalance', userBalance);
@@ -496,6 +517,7 @@ async function createAnnuncio() {
     renderUserProfile();
     updateSidebar();
 
+    // 3. Geocoding e Immagine
     const coords = await getCoordinates(`${address}, ${city}`);
 
     const file = document.getElementById('ann-image').files[0];
@@ -707,38 +729,20 @@ function handleAIKeyDown(e) {
 async function sendAIMessage() {
     const input = document.getElementById('ai-input');
     const body = document.getElementById('ai-chat-body');
-    const modelSelect = document.getElementById('ai-model-select');
     const userMsg = input.value.trim();
-
     if (!userMsg) return;
-
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session) { alert("Effettua il login!"); return; }
 
     appendMessage('user', userMsg, body);
     input.value = '';
 
     const thinking = document.createElement('div');
     thinking.className = 'message ai glass thinking';
-    thinking.textContent = `Worky-AI sta elaborando...`;
+    thinking.textContent = `Worky-AI sta analizzando...`;
     body.appendChild(thinking);
 
     try {
-        // Prepariamo i dati del sito da dare all'IA (il "Contesto")
-        const userData = JSON.parse(localStorage.getItem('userData')) || {};
-        const miniAnnunci = annunci.slice(0, 5).map(a => ({ t: a.title, c: a.category }));
-
         const { data, error } = await supabaseClient.functions.invoke('gemini-proxy', {
-            body: {
-                message: userMsg,
-                model: modelSelect.value,
-                context: {
-                    userName: userData.name || "Utente",
-                    balance: userBalance + "€",
-                    userType: userData.type || "private",
-                    currentJobs: miniAnnunci
-                }
-            }
+            body: { message: userMsg }
         });
 
         if (body.contains(thinking)) body.removeChild(thinking);
@@ -747,34 +751,40 @@ async function sendAIMessage() {
         if (data && data.reply) {
             let replyText = data.reply;
 
-            // --- ESECUZIONE AZIONI ---
+            // --- 1. CONTROLLO SICUREZZA (Politically Correct) ---
+            if (replyText.includes("⚠️")) {
+                // Se la risposta contiene il simbolo di pericolo che abbiamo messo nel prompt
+                appendMessage('ai warning', replyText, body);
+                return; // Ferma tutto, non esegue azioni
+            }
+
+            // --- 2. ESECUZIONE AZIONI (Navigazione) ---
             if (replyText.includes("[ACTION:OPEN_MODAL_ANNUNCIO]")) {
                 openCreateModal();
-                replyText = replyText.replace("[ACTION:OPEN_MODAL_ANNUNCIO]", "👉 Ti ho aperto il modulo per creare l'annuncio.");
+                replyText = replyText.replace("[ACTION:OPEN_MODAL_ANNUNCIO]", "");
             }
             if (replyText.includes("[ACTION:GO_TO_MAP]")) {
                 showSection('map-section');
-                replyText = replyText.replace("[ACTION:GO_TO_MAP]", "📍 Ti ho spostato sulla mappa.");
+                replyText = replyText.replace("[ACTION:GO_TO_MAP]", "");
             }
             if (replyText.includes("[ACTION:GO_TO_PROFILE]")) {
                 showSection('profile-section');
-                replyText = replyText.replace("[ACTION:GO_TO_PROFILE]", "👤 Ecco il tuo profilo.");
+                replyText = replyText.replace("[ACTION:GO_TO_PROFILE]", "");
             }
             if (replyText.includes("[ACTION:SEARCH:")) {
-                const parts = replyText.split("[ACTION:SEARCH:");
-                const query = parts[1].split("]")[0];
+                const query = replyText.split("[ACTION:SEARCH:")[1].split("]")[0];
                 document.getElementById('search-input').value = query;
-                renderBacheca();
+                renderBacheca(); // Esegue la ricerca
                 showSection('bacheca-section');
-                replyText = replyText.replace(`[ACTION:SEARCH:${query}]`, `🔍 Ho cercato "${query}" per te.`);
+                replyText = replyText.replace(`[ACTION:SEARCH:${query}]`, "");
             }
 
-            appendMessage('ai', replyText.trim(), body);
+            // Mostra la risposta pulita
+            appendMessage('ai', replyText.trim() || "Azione eseguita!", body);
         }
-
     } catch (e) {
         if (body.contains(thinking)) body.removeChild(thinking);
-        appendMessage('ai', "Errore IA: " + e.message, body);
+        appendMessage('ai warning', "Errore di connessione o violazione rilevata.", body);
     }
 }
 
@@ -1080,7 +1090,15 @@ function renderReviews() {
     });
 }
 
-// ACCOUNT BUSINESS: STATS
-// Statistiche numeriche essenziali.
+function togglePasswordVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    const toggleBtn = input.nextElementSibling; // Prende la span subito dopo l'input
 
-// Funzionalità Premium rimosse su richiesta
+    if (input.type === "password") {
+        input.type = "text";
+        toggleBtn.textContent = "🙈"; // Cambia icona in scimmietta o occhio sbarrato
+    } else {
+        input.type = "password";
+        toggleBtn.textContent = "👁️"; // Torna all'occhio normale
+    }
+}
