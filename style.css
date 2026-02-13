@@ -126,29 +126,22 @@ body {
     border-radius: 20px;
 }
 
-/* Layout Views */
-#auth-view,
-#app-view {
-    min-height: 100vh;
-    width: 100%;
-}
-
-
-
-/* Auth View Styles */
 #auth-view {
     display: flex;
-    justify-content: center;
     align-items: center;
-    background: radial-gradient(circle at top right, rgba(220, 170, 37, 0.1), transparent),
-        radial-gradient(circle at bottom left, rgba(10, 11, 16, 1), #1a1a2e);
+    justify-content: center;
+    padding: 20px 10px;
+    overflow-y: auto;
+    /* Permette di scorrere se il modulo è alto */
+    min-height: 100vh;
 }
 
 .auth-card {
-    width: 90%;
+    width: 100%;
     max-width: 450px;
-    padding: 3rem;
-    text-align: center;
+    padding: 2rem !important;
+    /* Riduciamo il padding interno su mobile */
+    margin: auto;
 }
 
 .auth-card h1 {
@@ -1007,4 +1000,42 @@ body.auth-mode {
     z-index: 10000;
     position: fixed;
     inset: 0;
+}
+
+/* Messaggio dell'IA quando blocca un contenuto offensivo o illegale */
+.message.ai.warning {
+    background: rgba(255, 71, 87, 0.1) !important;
+    /* Rosso trasparente */
+    border: 1px solid #ff4757 !important;
+    /* Bordo rosso acceso */
+    color: #ff4757 !important;
+    /* Testo rosso */
+    font-weight: 600;
+}
+
+/* Animazione per attirare l'attenzione sull'errore */
+@keyframes shake {
+    0% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-5px);
+    }
+
+    50% {
+        transform: translateX(5px);
+    }
+
+    75% {
+        transform: translateX(-5px);
+    }
+
+    100% {
+        transform: translateX(0);
+    }
+}
+
+.message.ai.warning {
+    animation: shake 0.4s ease-in-out;
 }
