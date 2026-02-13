@@ -56,12 +56,34 @@ document.addEventListener('DOMContentLoaded', () => {
 // ... DA QUI IN POI COMINCIANO LE TUE ALTRE FUNZIONI (checkLoginStatus, renderBacheca, etc.) ...
 
 // --- LOGICA DI NAVIGAZIONE E AUTH ---
-function checkLoginStatus() {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    if (isLoggedIn) {
+async function checkLoginStatus() {
+    // 1. Chiediamo a Supabase se c'è una sessione attiva (funziona su ogni dispositivo)
+    const { data: { session } } = await supabaseClient.auth.getSession();
+
+    if (session) {
+        // 2. Recuperiamo i dati dell'utente direttamente dal cloud
+        const user = session.user;
+
+        // Sincronizziamo il localStorage locale con i dati del cloud
+        const userData = {
+            name: user.user_metadata.display_name || user.user_metadata.first_name || "Utente",
+            email: user.email,
+            type: user.user_metadata.user_type || "private",
+            avatar: user.user_metadata.avatar_url || ""
+        };
+
+        localStorage.setItem('userData', JSON.stringify(userData));
+        localStorage.setItem('isLoggedIn', 'true');
+
+        // 3. Mostriamo l'app e carichiamo i dati
         showView('app-view');
         initDashboard();
+        renderUserProfile(); // <-- Fondamentale per far apparire i dati subito
+
+        console.log("Login sincronizzato con successo!");
     } else {
+        // Se non c'è sessione, puliamo tutto e mostriamo il login
+        localStorage.clear();
         showView('auth-view');
     }
 }
