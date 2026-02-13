@@ -896,144 +896,184 @@ input:focus {
     }
 }
 
-/* --- TRASFORMAZIONE SIDEBAR SLIM PER MOBILE --- */
-/* --- TRASFORMAZIONE MOBILE COMPATTA E FIX CHAT --- */
-@media (max-width: 768px) {
+/* --- TRASFORMAZIONE SIDEBAR SLIM E OTTIMIZZAZIONE MOBILE --- */
 
-    /* Rimpiccioliamo tutto il testo di base */
-    html {
-        font-size: 13px;
-    }
+/* --- TRASFORMAZIONE SIDEBAR SLIM E OTTIMIZZAZIONE MOBILE --- */
 
+@media (max-width: 1024px) {
+
+    /* Forza il layout a due colonne: Sidebar | Contenuto */
     #app-view {
-        display: grid !important;
-        grid-template-columns: 60px 1fr !important;
-        /* Sidebar ancora più stretta */
+        display: flex !important;
+        flex-direction: row !important;
         width: 100vw !important;
         height: 100vh !important;
         overflow: hidden !important;
     }
 
+    /* SIDEBAR MINI */
     .sidebar {
+        display: flex !important;
         width: 60px !important;
         min-width: 60px !important;
-        padding: 0.5rem 0 !important;
+        max-width: 60px !important;
+        padding: 1rem 0 !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        border-right: 1px solid var(--border);
+        z-index: 1000;
     }
 
-    /* Icone sidebar più piccole */
+    /* Nascondi i testi nella sidebar */
+    .logo-container {
+        font-size: 0 !important;
+        margin-bottom: 1.5rem !important;
+    }
+
+    .logo-container span {
+        font-size: 1.8rem !important;
+    }
+
+    .nav-links {
+        width: 100% !important;
+        padding: 0 !important;
+    }
+
+    .nav-item {
+        font-size: 0 !important;
+        justify-content: center !important;
+        padding: 15px 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+    }
+
     .nav-item span {
-        font-size: 1.2rem !important;
+        font-size: 1.4rem !important;
+        margin: 0 !important;
     }
 
+    .user-profile {
+        flex-direction: column !important;
+        padding: 1rem 0 !important;
+    }
+
+    .user-info {
+        display: none !important;
+    }
+
+    /* CONTENUTO PRINCIPALE (A DESTRA DELLA SIDEBAR) */
     .main-content {
+        flex: 1 !important;
+        width: calc(100vw - 60px) !important;
         max-width: calc(100vw - 60px) !important;
-        padding: 0.5rem !important;
-        /* Margini ridotti */
+        padding: 10px !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        height: 100vh !important;
     }
 
-    /* --- FIX CHAT (AI E AZIENDA) --- */
+    /* Header compatto */
+    .content-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+    }
+
+    .content-header h2 {
+        font-size: 1.4rem !important;
+    }
+
+    .btn-primary {
+        width: 100% !important;
+    }
+
+    /* Filtri: uno sotto l'altro per non spingere a destra */
+    .filters-bar {
+        flex-direction: column !important;
+        width: 100% !important;
+    }
+
+    .filters-bar input,
+    .filters-bar select {
+        width: 100% !important;
+    }
+
+    /* Griglia annunci 1 colonna */
+    .announcements-grid {
+        grid-template-columns: 1fr !important;
+        width: 100% !important;
+    }
+
+    /* --- FIX CHAT MOBILE --- */
     .chat-container {
         display: flex !important;
         flex-direction: column !important;
-        height: calc(100vh - 100px) !important;
-        /* Usa tutta l'altezza dello schermo */
-        grid-template-columns: 1fr !important;
-        /* Rimuove la griglia desktop */
+        height: calc(100vh - 120px) !important;
     }
 
     .chat-list {
-        max-height: 80px !important;
-        /* Lista contatti molto piccola su mobile */
+        max-height: 60px !important;
         display: flex !important;
         flex-direction: row !important;
         overflow-x: auto !important;
         padding: 5px !important;
-    }
-
-    .chat-item {
-        min-width: 120px;
-        padding: 5px !important;
-        font-size: 0.8rem;
+        border-bottom: 1px solid var(--border);
     }
 
     .chat-window {
         height: 100% !important;
-        /* Sovrascrive i 500px dell'HTML */
-        display: flex !important;
-        flex-direction: column !important;
     }
 
-    /* Area messaggi scorrevole */
     #ai-chat-body,
-    #company-chat-body,
-    .chat-body {
-        flex: 1 !important;
-        overflow-y: auto !important;
-        padding: 10px !important;
-        margin-bottom: 60px;
-        /* Spazio per la barra di input */
+    #company-chat-body {
+        padding-bottom: 80px !important;
+        /* Spazio per l'input fisso */
     }
 
-    /* BARRA INPUT FISSA IN BASSO */
+    /* BARRA INPUT FISSA IN FONDO ALLO SCHERMO */
     .input-area,
     .chat-footer,
-    #company-chat-input-area,
-    .chat-input-area {
+    #company-chat-input-area {
         position: fixed !important;
         bottom: 0 !important;
         left: 60px !important;
-        /* Inizia dopo la sidebar */
+        /* Inizia dopo la sidebar mini */
         right: 0 !important;
-        background: rgba(20, 21, 26, 0.95) !important;
-        /* Sfondo scuro per leggibilità */
-        backdrop-filter: blur(10px);
+        width: calc(100vw - 60px) !important;
+        background: #0a0b10 !important;
         padding: 10px !important;
         border-top: 1px solid var(--border);
         display: flex !important;
-        gap: 5px !important;
-        z-index: 100;
+        z-index: 2000;
     }
 
-    /* Input più sottili */
-    input[type="text"],
-    #ai-input,
-    #company-input {
-        padding: 0.6rem !important;
+    /* Rimpicciolisci testo globale per mobile */
+    p,
+    label,
+    span {
         font-size: 0.9rem !important;
     }
+}
 
-    .btn-primary {
-        padding: 0.6rem !important;
-        font-size: 0.9rem !important;
+/* Fix per schermi molto piccoli */
+@media (max-width: 480px) {
+    html {
+        font-size: 12px;
     }
 
-    /* --- COMPATTEZZA ANNUNCI --- */
-    .annuncio-card {
-        margin-bottom: 0.8rem !important;
+    .sidebar {
+        width: 55px !important;
+        min-width: 55px !important;
     }
 
-    .card-content {
-        padding: 0.8rem !important;
+    .main-content {
+        width: calc(100vw - 55px) !important;
     }
 
-    .annuncio-img {
-        height: 120px !important;
-        /* Immagini meno alte */
-    }
-
-    .annuncio-card p {
-        -webkit-line-clamp: 2;
-        /* Mostra meno righe di descrizione */
-    }
-
-    /* Nascondi elementi ingombranti */
-    .premium-banner {
-        padding: 1rem !important;
-        flex-direction: column;
-        text-align: center;
-    }
-
-    .premium-badge-showcase {
-        display: none;
+    .input-area,
+    .chat-footer,
+    #company-chat-input-area {
+        left: 55px !important;
+        width: calc(100vw - 55px) !important;
     }
 }
