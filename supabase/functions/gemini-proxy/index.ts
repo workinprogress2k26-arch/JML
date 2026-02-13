@@ -14,31 +14,35 @@ serve(async (req) => {
 
     if (!apiKey) throw new Error("Chiave API non configurata")
 
-    // --- AGGIORNAMENTO 2026 ---
-    // Secondo le note di rilascio, usiamo il nuovo modello Flash 3
     const aiModel = "gemini-3-flash-preview"; 
-    
-    // Le versioni "Preview" richiedono solitamente l'endpoint v1beta
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${aiModel}:generateContent?key=${apiKey}`;
+
+    // --- QUESTA È LA PARTE NUOVA: IL PROMPT DI SISTEMA ---
+    const systemInstruction = `Sei l'assistente virtuale di "Work-in-Progress", un sito di lavoro a Bologna. 
+    Il tuo compito è aiutare l'utente a navigare nel sito.
+    
+    Puoi scatenare azioni speciali includendo questi codici esatti nel tuo testo:
+    - Se l'utente vuole pubblicare o creare un annuncio: [ACTION:OPEN_MODAL_ANNUNCIO]
+    - Se l'utente vuole vedere la mappa dei lavori: [ACTION:GO_TO_MAP]
+    - Se l'utente vuole vedere il suo profilo o saldo: [ACTION:GO_TO_PROFILE]
+    - Se l'utente vuole cercare un lavoro specifico (es. cameriere): [ACTION:SEARCH:nome_lavoro]
+
+    Rispondi sempre in modo amichevole e professionale. Se attivi un'azione, dillo all'utente.
+    Messaggio dell'utente: ${message}`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: message }] }]
+        contents: [{ 
+          parts: [{ text: systemInstruction }] // Qui passiamo le istruzioni + il messaggio
+        }]
       })
     })
 
     const data = await response.json()
     
-    if (data.error) {
-      return new Response(JSON.stringify({ 
-        error: "Google AI (2026) dice: " + data.error.message 
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    if (data.error) throw new Error(data.error.message)
 
     const reply = data.candidates[0].content.parts[0].text
 
