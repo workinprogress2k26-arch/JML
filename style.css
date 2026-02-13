@@ -133,9 +133,7 @@ body {
     width: 100%;
 }
 
-.hidden {
-    display: none !important;
-}
+
 
 /* Auth View Styles */
 #auth-view {
@@ -902,9 +900,9 @@ input:focus {
 
 /* --- OTTIMIZZAZIONE FINALE MOBILE: SIDEBAR MINI, CHAT COMPATTA E FIX TASTO INVIA --- */
 
-@media (max-width: 1024px) {
+/* --- OTTIMIZZAZIONE MOBILE: BARRA FULL-WIDTH E RIMOZIONE TASTO INVIO --- */
 
-    /* Reset globale per calcoli larghezza corretti */
+@media (max-width: 1024px) {
     * {
         box-sizing: border-box;
     }
@@ -912,112 +910,41 @@ input:focus {
     html,
     body {
         overflow-x: hidden;
-        /* Impedisce il movimento laterale */
         font-size: 13px;
-        /* Rende tutto leggermente più piccolo e proporzionato */
     }
 
     #app-view {
-        display: flex !important;
-        flex-direction: row !important;
+        display: grid !important;
+        grid-template-columns: 60px 1fr !important;
+        /* Sidebar fissa a sinistra */
         width: 100vw !important;
         height: 100vh !important;
-        overflow: hidden !important;
     }
 
-    /* SIDEBAR MINI (60px fisso) */
     .sidebar {
-        display: flex !important;
         width: 60px !important;
-        min-width: 60px !important;
-        max-width: 60px !important;
         padding: 1rem 0 !important;
-        flex-direction: column !important;
-        align-items: center !important;
         border-right: 1px solid var(--border);
-        z-index: 2001;
     }
 
-    .logo-container {
-        font-size: 0 !important;
-        margin-bottom: 1.5rem !important;
-    }
-
-    .logo-container span {
-        font-size: 1.6rem !important;
-    }
-
-    .nav-links {
-        width: 100% !important;
-        padding: 0 !important;
-    }
-
-    .nav-item {
-        font-size: 0 !important;
-        justify-content: center !important;
-        padding: 12px 0 !important;
-        margin: 0 !important;
-    }
-
-    .nav-item span {
-        font-size: 1.3rem !important;
-    }
-
-    .user-profile {
-        flex-direction: column !important;
-        padding: 1rem 0 !important;
-    }
-
-    .user-info {
-        display: none !important;
-    }
-
-    /* CONTENUTO PRINCIPALE */
     .main-content {
-        flex: 1 !important;
         width: calc(100vw - 60px) !important;
         max-width: calc(100vw - 60px) !important;
         padding: 10px !important;
         overflow-y: auto !important;
-        height: 100vh !important;
     }
 
-    /* GRIGLIA ANNUNCI COMPATTA */
-    .announcements-grid {
-        grid-template-columns: 1fr !important;
-        gap: 15px !important;
+    /* --- CHAT E INPUT --- */
+
+    /* 1. Nascondi i tasti invio su mobile */
+    .input-area button,
+    .chat-input-area button,
+    #company-chat-input-area button,
+    .chat-footer button {
+        display: none !important;
     }
 
-    .annuncio-card p {
-        -webkit-line-clamp: 2;
-    }
-
-    /* Solo 2 righe di testo */
-
-    /* --- FIX CHAT E TASTO INVIA --- */
-    .chat-container {
-        display: flex !important;
-        flex-direction: column !important;
-        height: calc(100vh - 150px) !important;
-        width: 100% !important;
-    }
-
-    .chat-list {
-        max-height: 50px !important;
-        display: flex !important;
-        flex-direction: row !important;
-        overflow-x: auto !important;
-        padding: 2px !important;
-    }
-
-    #ai-chat-body,
-    #company-chat-body {
-        padding: 10px !important;
-        padding-bottom: 100px !important;
-        /* Spazio per non coprire i messaggi */
-    }
-
-    /* BARRA INPUT FISSA (Risolto l'overflow del tasto Invio) */
+    /* 2. Barra input adattiva (Full Width) */
     .input-area,
     .chat-footer,
     #company-chat-input-area,
@@ -1025,80 +952,103 @@ input:focus {
         position: fixed !important;
         bottom: 0 !important;
         left: 60px !important;
-        /* Inizia dopo la sidebar */
+        /* Parte dopo la sidebar */
         right: 0 !important;
         width: calc(100vw - 60px) !important;
+        padding: 10px 15px !important;
         background: #0d0e14 !important;
-        padding: 8px 12px !important;
-        /* Padding calibrato */
         border-top: 1px solid var(--border);
-        display: flex !important;
-        align-items: center !important;
-        gap: 8px !important;
         z-index: 2000;
     }
 
-    /* Input field dentro la barra */
+    /* 3. Forza gli input a prendersi tutto lo spazio */
     #ai-input,
     #company-input,
     .suggestion-wrapper {
+        width: 100% !important;
         flex: 1 !important;
-        /* Prende tutto lo spazio tranne il tasto */
-        min-width: 0 !important;
-        /* Importante per far funzionare flex-shrink */
+        margin: 0 !important;
     }
 
     input[type="text"] {
         width: 100% !important;
-        padding: 10px !important;
-        font-size: 0.9rem !important;
-        border-radius: 8px !important;
+        height: 45px !important;
+        /* Barra più comoda da toccare */
+        font-size: 1rem !important;
     }
 
-    /* Tasto Invio - Forza la visibilità */
-    .btn-primary[onclick*="Message"],
-    .chat-footer button,
-    #company-chat-input-area button {
-        width: auto !important;
-        min-width: 70px !important;
-        /* Larghezza minima fissa per il tasto */
-        padding: 10px 15px !important;
-        font-size: 0.85rem !important;
-        flex-shrink: 0 !important;
-        /* Impedisce al tasto di rimpicciolirsi o sparire */
-    }
-
-    /* Ghost suggestion (AI) - Sistemata per non spingere il tasto */
+    /* Ghost Text (AI) sistemato per la barra lunga */
     #ai-suggestion-ghost {
-        font-size: 0.9rem !important;
-        padding: 10px !important;
-        left: 0 !important;
-        top: 0 !important;
+        padding-left: 13px !important;
+        line-height: 45px !important;
     }
 
-    /* Modali più piccoli su mobile */
-    .modal-content {
-        width: 92% !important;
-        padding: 1.5rem !important;
-        margin: 10% auto !important;
+    /* Lista chat orizzontale compatta */
+    .chat-list {
+        max-height: 60px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
     }
 }
 
-/* Fix extra per schermi molto stretti (es. iPhone SE) */
-@media (max-width: 380px) {
-    .sidebar {
-        width: 50px !important;
-        min-width: 50px !important;
-    }
+/* Forza le sezioni a occupare solo lo schermo visibile */
+#auth-view,
+#app-view {
+    width: 100%;
+    height: 100vh;
+    height: -webkit-fill-available;
+    /* Fix per Safari mobile */
+    overflow: hidden;
+    /* Impedisce lo scroll globale */
+    position: fixed;
+    /* Blocca la sezione alla cima */
+    top: 0;
+    left: 0;
+}
 
-    .main-content {
-        width: calc(100vw - 50px) !important;
-    }
+/* Permetti lo scroll SOLO dentro il contenuto principale della dashboard */
+#app-view .main-content {
+    height: 100vh;
+    overflow-y: auto;
+    /* Solo qui lo scroll è permesso */
+    padding-bottom: 100px;
+    /* Spazio per non coprire il contenuto */
+}
 
-    .input-area,
-    .chat-footer,
-    #company-chat-input-area {
-        left: 50px !important;
-        width: calc(100vw - 50px) !important;
-    }
+/* La schermata di login deve essere centrata e non deve scrollare */
+#auth-view {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow-y: auto;
+    /* Permette lo scroll solo se il form è più lungo dello schermo */
+}
+
+/* Questa regola vince su qualsiasi altra impostazione di display */
+.hidden {
+    display: none !important;
+}
+
+/* Blocca lo scroll del corpo della pagina quando siamo nel login */
+body.auth-mode {
+    overflow: hidden !important;
+    height: 100vh !important;
+    position: fixed;
+    width: 100%;
+}
+
+/* Forza le sezioni a resettarsi */
+#auth-view,
+#app-view {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+}
+
+/* Assicurati che il Login copra tutto lo sfondo scuro */
+#auth-view {
+    background: #0a0b10;
+    /* Il colore scuro del tuo sito */
+    z-index: 9999;
 }

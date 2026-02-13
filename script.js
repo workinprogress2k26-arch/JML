@@ -79,13 +79,21 @@ async function checkLoginStatus() {
         showView('auth-view');
     }
 }
-
+//SHOW VIEW 
 function showView(viewId) {
+    // Nascondi tutto preventivamente con forza
     document.getElementById('auth-view').classList.add('hidden');
     document.getElementById('app-view').classList.add('hidden');
-    document.getElementById(viewId).classList.remove('hidden');
-}
 
+    // Mostra solo quella richiesta
+    const target = document.getElementById(viewId);
+    if (target) {
+        target.classList.remove('hidden');
+
+        // Reset dello scroll: quando cambi vista, torna in cima
+        window.scrollTo(0, 0);
+    }
+}
 function initDashboard() {
     renderBacheca();
     updateSidebar();
