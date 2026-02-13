@@ -135,15 +135,37 @@ async function getCoordinates(address) {
 
 // Navigazione
 function showSection(sectionId) {
+    // 1. Nascondi tutte le sezioni
     document.querySelectorAll('.content-section').forEach(s => s.classList.add('hidden'));
+
+    // 2. Mostra la sezione selezionata
     const section = document.getElementById(sectionId);
     if (section) section.classList.remove('hidden');
 
-    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-    const activeLink = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick')?.includes(sectionId));
-    if (activeLink) activeLink.classList.add('active');
+    // 3. Aggiorna stato ACTIVE nella Sidebar (Desktop)
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.getAttribute('onclick')?.includes(sectionId)) {
+            item.classList.add('active');
+        }
+    });
 
-    if (sectionId === 'map-section' && map) setTimeout(() => map.invalidateSize(), 200);
+    // 4. Aggiorna stato ACTIVE nella Mobile Nav (Smartphone)
+    document.querySelectorAll('.mobile-nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.getAttribute('onclick')?.includes(sectionId)) {
+            item.classList.add('active');
+        }
+    });
+
+    // 5. Fix per la Mappa se visualizzata
+    if (sectionId === 'map-section' && map) {
+        setTimeout(() => map.invalidateSize(), 200);
+    }
+
+    // 6. Chiudi la sidebar su mobile se fosse aperta (opzionale)
+    // Se usi uno scroll interno, riportalo in alto
+    document.querySelector('.main-content').scrollTop = 0;
 }
 
 
