@@ -712,16 +712,9 @@ async function sendAIMessage() {
 
     if (!userMsg) return;
 
-    // CONTROLLO LOGIN: Se l'utente non è loggato, fermiamo la funzione
     const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) { alert("Effettua il login!"); return; }
 
-    if (!session) {
-        alert("Devi effettuare il login per parlare con Worky-AI!");
-        showView('auth-view'); // Rimanda l'utente alla schermata di login
-        return;
-    }
-
-    const selectedModel = modelSelect.value;
     appendMessage('user', userMsg, body);
     input.value = '';
 
@@ -731,30 +724,57 @@ async function sendAIMessage() {
     body.appendChild(thinking);
 
     try {
-        // invoke() aggiunge automaticamente l'Authorization Header con il token dell'utente
+        // Prepariamo i dati del sito da dare all'IA (il "Contesto")
+        const userData = JSON.parse(localStorage.getItem('userData')) || {};
+        const miniAnnunci = annunci.slice(0, 5).map(a => ({ t: a.title, c: a.category }));
+
         const { data, error } = await supabaseClient.functions.invoke('gemini-proxy', {
             body: {
                 message: userMsg,
-                model: selectedModel
+                model: modelSelect.value,
+                context: {
+                    userName: userData.name || "Utente",
+                    balance: userBalance + "€",
+                    userType: userData.type || "private",
+                    currentJobs: miniAnnunci
+                }
             }
         });
 
-        if (error) {
-            // Se l'errore è 401 qui, significa che la sessione è scaduta
-            if (error.status === 401) throw new Error("Sessione scaduta. Effettua di nuovo il login.");
-            throw error;
-        }
-
         if (body.contains(thinking)) body.removeChild(thinking);
+        if (error) throw error;
 
         if (data && data.reply) {
-            appendMessage('ai', data.reply, body);
+            let replyText = data.reply;
+
+            // --- ESECUZIONE AZIONI ---
+            if (replyText.includes("[ACTION:OPEN_MODAL_ANNUNCIO]")) {
+                openCreateModal();
+                replyText = replyText.replace("[ACTION:OPEN_MODAL_ANNUNCIO]", "👉 Ti ho aperto il modulo per creare l'annuncio.");
+            }
+            if (replyText.includes("[ACTION:GO_TO_MAP]")) {
+                showSection('map-section');
+                replyText = replyText.replace("[ACTION:GO_TO_MAP]", "📍 Ti ho spostato sulla mappa.");
+            }
+            if (replyText.includes("[ACTION:GO_TO_PROFILE]")) {
+                showSection('profile-section');
+                replyText = replyText.replace("[ACTION:GO_TO_PROFILE]", "👤 Ecco il tuo profilo.");
+            }
+            if (replyText.includes("[ACTION:SEARCH:")) {
+                const parts = replyText.split("[ACTION:SEARCH:");
+                const query = parts[1].split("]")[0];
+                document.getElementById('search-input').value = query;
+                renderBacheca();
+                showSection('bacheca-section');
+                replyText = replyText.replace(`[ACTION:SEARCH:${query}]`, `🔍 Ho cercato "${query}" per te.`);
+            }
+
+            appendMessage('ai', replyText.trim(), body);
         }
 
     } catch (e) {
         if (body.contains(thinking)) body.removeChild(thinking);
-        appendMessage('ai', "Errore: " + e.message, body);
-        console.error("Dettaglio Errore Auth:", e);
+        appendMessage('ai', "Errore IA: " + e.message, body);
     }
 }
 
