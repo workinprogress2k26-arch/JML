@@ -81,18 +81,27 @@ async function checkLoginStatus() {
 }
 //SHOW VIEW 
 function showView(viewId) {
-    // Nascondi tutto preventivamente con forza
-    document.getElementById('auth-view').classList.add('hidden');
-    document.getElementById('app-view').classList.add('hidden');
+    const authView = document.getElementById('auth-view');
+    const appView = document.getElementById('app-view');
 
-    // Mostra solo quella richiesta
-    const target = document.getElementById(viewId);
-    if (target) {
-        target.classList.remove('hidden');
+    if (viewId === 'auth-view') {
+        // MOSTRA SOLO LOGIN
+        authView.classList.remove('hidden');
+        appView.classList.add('hidden');
+        document.body.classList.add('auth-mode'); // Blocca lo scroll del telefono
 
-        // Reset dello scroll: quando cambi vista, torna in cima
-        window.scrollTo(0, 0);
+        // Chiudi forzatamente il modale se fosse rimasto aperto
+        if (document.getElementById('create-annuncio-modal')) {
+            document.getElementById('create-annuncio-modal').classList.add('hidden');
+        }
+    } else {
+        // MOSTRA SOLO APP
+        authView.classList.add('hidden');
+        appView.classList.remove('hidden');
+        document.body.classList.remove('auth-mode'); // Sblocca lo scroll
     }
+
+    window.scrollTo(0, 0); // Riporta la pagina all'inizio
 }
 function initDashboard() {
     renderBacheca();
