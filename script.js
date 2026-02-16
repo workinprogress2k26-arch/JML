@@ -154,18 +154,16 @@ function handleGoogleLogin(response) {
 
 // Funzione di login con Google tramite Supabase OAuth
 async function loginWithGoogle() {
-    // Determina l'URL di ritorno in base a dove ti trovi
-    const redirectUrl = window.location.origin;
-
     const { data, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: redirectUrl
+            // Se scrivi l'indirizzo a mano qui, Supabase non può sbagliare
+            redirectTo: 'https://jml-gamma-v2.vercel.app'
         }
     });
 
     if (error) {
-        alert("Errore Login Google: " + error.message);
+        alert("Errore: " + error.message);
     }
 }
 
