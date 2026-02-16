@@ -6,20 +6,32 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Gestione preflight CORS
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
     const { message, context } = await req.json()
     const apiKey = Deno.env.get('GEMINI_API_KEY')
 
-    if (!apiKey) throw new Error("Chiave API GEMINI_API_KEY non configurata nei Secrets di Supabase")
+    if (!apiKey) throw new Error("Chiave API mancante nei Secrets")
 
-    // Istruzioni di sistema
-    const systemInstruction = `Sei l'assistente di Worky. Utente: ${context?.userName || 'Utente'}. Saldo: ${context?.balance || '0'}. Rispondi brevemente. Messaggio: ${message}`;
+    // --- CONFIGURAZIONE MODELLO 2026 ---
+    // Usiamo il nuovo modello Flash 3 come indicato nelle note di rilascio
+    const aiModel = "gemini-3-flash-preview"; 
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${aiModel}:generateContent?key=${apiKey}`;
 
-    // Chiamata a Google Gemini
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const systemInstruction = `Sei l'assistente di "Work-in-Progress".
+    DATI UTENTE: Nome ${context?.userName || 'Utente'}, Saldo ${context?.balance || '0€'}.
+    
+    AZIONI POSSIBILI:
+    - [ACTION:OPEN_MODAL_ANNUNCIO]
+    - [ACTION:GO_TO_MAP]
+    - [ACTION:GO_TO_PROFILE]
+
+    REGOLE SICUREZZA: Se l'utente chiede droghe, armi, o usa odio, rispondi SOLO con "⚠️".
+    
+    Rispondi in modo breve. Messaggio utente: ${message}`;
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -29,21 +41,16 @@ serve(async (req) => {
 
     const data = await response.json()
 
-    // DEBUG: Se c'è un errore da Google, lo restituiamo chiaramente
+    // Gestione errore Quota o Modello non trovato
     if (data.error) {
       return new Response(JSON.stringify({ error: "Errore Google: " + data.error.message }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    // CONTROLLO DI SICUREZZA: Verifichiamo che la risposta contenga i dati attesi
-    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content) {
-      return new Response(JSON.stringify({ 
-        error: "Risposta vuota da Google. Potrebbe essere stata bloccata dai filtri di sicurezza.",
-        debug: data // Invia i dati grezzi per capire cosa è successo
-      }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+    // Estrazione risposta
+    if (!data.candidates || data.candidates.length === 0) {
+        throw new Error("Nessuna risposta generata dal modello Gemini 3");
     }
 
     const reply = data.candidates[0].content.parts[0].text
@@ -52,9 +59,10 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
 
-  } catch (err) {
-    return new Response(JSON.stringify({ error: "Errore interno funzione: " + err.message }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })
