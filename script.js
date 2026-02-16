@@ -533,6 +533,7 @@ async function createAnnuncio() {
     // 1. Controlli base di compilazione
     if (!title || !desc || !address) { alert('Compila i campi necessari.'); return; }
 
+    /* --- MODERAZIONE AI TEMPORANEAMENTE DISABILITATA PER RISPARMIARE GETTONI ---
     // --- PARTE NUOVA: CONTROLLO SICUREZZA IA (MODERAZIONE) ---
     // Mandiamo l'annuncio all'IA prima di toccare i soldi
     try {
@@ -551,6 +552,7 @@ async function createAnnuncio() {
         // In caso di errore tecnico dell'IA, decidiamo se far passare l'annuncio o bloccarlo per sicurezza
     }
     // --- FINE PARTE NUOVA ---
+    */
 
     // 2. Logica Escrow (Saldo e Fondi)
     const amount = parseFloat(salary) || 0;
@@ -809,11 +811,21 @@ function handleAIKeyDown(e) {
 }
 
 
+let isAIBusy = false; // Variabile di controllo per evitare invii multipli
+
 async function sendAIMessage() {
+    // Se stiamo già parlando, non fare nulla
+    if (isAIBusy) {
+        console.log("⏳ AI occupata, attendere...");
+        return;
+    }
+
     const input = document.getElementById('ai-input');
     const body = document.getElementById('ai-chat-body');
     const userMsg = input.value.trim();
     if (!userMsg) return;
+
+    isAIBusy = true; // Blocca invii multipli
 
     appendMessage('user', userMsg, body);
     input.value = '';
@@ -857,6 +869,12 @@ async function sendAIMessage() {
         if (body.contains(thinking)) body.removeChild(thinking);
         console.error("Errore completo:", e);
         appendMessage('ai warning', "🔌 Errore di connessione. Controlla la console (F12).", body);
+    } finally {
+        // Sblocca l'IA dopo 3 secondi per sicurezza
+        setTimeout(() => {
+            isAIBusy = false;
+            console.log("✅ AI pronta per nuovi messaggi");
+        }, 3000);
     }
 }
 
