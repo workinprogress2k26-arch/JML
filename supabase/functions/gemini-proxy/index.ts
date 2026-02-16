@@ -6,25 +6,19 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Gestione preflight CORS
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const body = await req.json()
-    const { message, context } = body
+    const { message, context } = await req.json()
     const apiKey = Deno.env.get('GEMINI_API_KEY')
 
-    if (!apiKey) throw new Error("Chiave API mancante nei Secrets")
+    if (!apiKey) throw new Error("Chiave API GEMINI_API_KEY non configurata nei Secrets di Supabase")
 
-    // Recupero dati in modo sicuro (se mancano usiamo valori di default)
-    const name = context?.userName || "Utente";
-    const balance = context?.balance || "Non disponibile";
+    // Istruzioni di sistema
+    const systemInstruction = `Sei l'assistente di Worky. Utente: ${context?.userName || 'Utente'}. Saldo: ${context?.balance || '0'}. Rispondi brevemente. Messaggio: ${message}`;
 
-    const systemInstruction = `Sei l'assistente di "Work-in-Progress". 
-    Rispondi in modo breve. 
-    UTENTE: ${name}, SALDO: ${balance}. 
-    Se l'utente offende o chiede cose illegali usa "⚠️". 
-    Messaggio: ${message}`;
-
+    // Chiamata a Google Gemini
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -34,23 +28,33 @@ serve(async (req) => {
     })
 
     const data = await response.json()
-    
-    // Gestione errore Quota di Google
+
+    // DEBUG: Se c'è un errore da Google, lo restituiamo chiaramente
     if (data.error) {
-        return new Response(JSON.stringify({ error: data.error.message }), {
-            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
+      return new Response(JSON.stringify({ error: "Errore Google: " + data.error.message }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Non ho capito, puoi ripetere?";
+    // CONTROLLO DI SICUREZZA: Verifichiamo che la risposta contenga i dati attesi
+    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content) {
+      return new Response(JSON.stringify({ 
+        error: "Risposta vuota da Google. Potrebbe essere stata bloccata dai filtri di sicurezza.",
+        debug: data // Invia i dati grezzi per capire cosa è successo
+      }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    const reply = data.candidates[0].content.parts[0].text
 
     return new Response(JSON.stringify({ reply }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
 
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  } catch (err) {
+    return new Response(JSON.stringify({ error: "Errore interno funzione: " + err.message }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 })
