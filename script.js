@@ -152,6 +152,21 @@ function handleGoogleLogin(response) {
     checkLoginStatus();
 }
 
+// Funzione di login con Google tramite Supabase OAuth
+async function loginWithGoogle() {
+    const { data, error } = await supabaseClient.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: window.location.origin // Funziona sia su PC che su Vercel
+        }
+    });
+
+    if (error) {
+        console.error("Errore Login Google:", error.message);
+        alert("Errore durante l'accesso con Google: " + error.message);
+    }
+}
+
 // Geocoding (Nominatim API)
 async function getCoordinates(address) {
     try {
