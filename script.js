@@ -154,16 +154,18 @@ function handleGoogleLogin(response) {
 
 // Funzione di login con Google tramite Supabase OAuth
 async function loginWithGoogle() {
+    // Determina l'URL di ritorno in base a dove ti trovi
+    const redirectUrl = window.location.origin;
+
     const { data, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: window.location.origin // Funziona sia su PC che su Vercel
+            redirectTo: redirectUrl
         }
     });
 
     if (error) {
-        console.error("Errore Login Google:", error.message);
-        alert("Errore durante l'accesso con Google: " + error.message);
+        alert("Errore Login Google: " + error.message);
     }
 }
 
