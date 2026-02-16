@@ -7,14 +7,14 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Riga 7 di script.js
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// --- 2. VARIABILI GLOBALI (Indispensabili per evitare la schermata nera) ---
+// --- 2. VARIABILI GLOBALI (Caricate da Supabase) ---
 
-let annunci = JSON.parse(localStorage.getItem('annunci')) || [];
+let annunci = []; // Caricati dal database
 let acceptedContracts = JSON.parse(localStorage.getItem('acceptedContracts')) || [];
 let completedContracts = JSON.parse(localStorage.getItem('completedContracts')) || [];
 let hiddenAnnouncements = JSON.parse(localStorage.getItem('hiddenAnnouncements')) || [];
-let userBalance = parseFloat(localStorage.getItem('userBalance')) || 1500.00;
-let frozenBalance = parseFloat(localStorage.getItem('frozenBalance')) || 0.00;
+let userBalance = 0; // Caricato dal profilo Supabase
+let frozenBalance = 0; // Caricato dal profilo Supabase
 let chatHistoryAI = JSON.parse(localStorage.getItem('chatHistoryAI')) || [];
 let currentChatCompany = null;
 let map = null;
@@ -25,19 +25,6 @@ let reviewViewMode = 'received'; // <--- Fondamentale per non far crashare il pr
 // --- 3. INIZIALIZZAZIONE ALL'AVVIO ---
 document.addEventListener('DOMContentLoaded', () => {
     console.log("App avviata...");
-
-    // Inizializza annunci se il database locale è vuoto
-    if (annunci.length === 0) {
-        annunci = [
-            {
-                id: 1, title: "Cameriere part-time", description: "Ricerca cameriere per ristorante nel centro di Bologna...",
-                category: "ristorazione", location: "Via dell'Indipendenza, Bologna", salary: "12€/ora",
-                author: "Ristorante Bella Napoli", authorId: "admin@bellanapoli.it", authorType: "azienda",
-                lat: 44.4949, lng: 11.3426
-            }
-        ];
-        localStorage.setItem('annunci', JSON.stringify(annunci));
-    }
 
     // Avvio delle funzioni principali
     if (typeof checkLoginStatus === 'function') {
@@ -60,20 +47,31 @@ async function checkLoginStatus() {
     const { data: { session } } = await supabaseClient.auth.getSession();
 
     if (session) {
-        // Se c'è la sessione, NON stamparla, ma usa i dati per la UI
         const user = session.user;
 
-        const userData = {
-            name: user.user_metadata.display_name || "Utente",
-            email: user.email,
-            type: user.user_metadata.user_type || "private"
-        };
+        // 1. Scarica il profilo (Saldo, Nome, ecc.)
+        const { data: profile } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
 
-        localStorage.setItem('userData', JSON.stringify(userData));
+        if (profile) {
+            userBalance = parseFloat(profile.balance) || 0;
+            frozenBalance = parseFloat(profile.frozen_balance) || 0;
 
-        // Passa alla visualizzazione dell'app
+            // Salva i dati dell'utente per la UI
+            const userData = {
+                name: profile.display_name,
+                email: profile.email,
+                type: profile.user_type
+            };
+            localStorage.setItem('userData', JSON.stringify(userData));
+        }
+
+        // 2. Mostra l'app e carica la bacheca dal DB
         showView('app-view');
-        initDashboard();
+        loadAnnouncementsFromDB(); // Carica annunci dal cloud
         renderUserProfile();
     } else {
         showView('auth-view');
@@ -107,6 +105,51 @@ function initDashboard() {
     renderBacheca();
     updateSidebar();
     initMap();
+}
+
+// Carica annunci dal Database Cloud
+async function loadAnnouncementsFromDB() {
+    // Scarica tutti gli annunci dalla tabella che abbiamo creato su Supabase
+    const { data, error } = await supabaseClient
+        .from('announcements')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Errore scaricamento annunci:", error);
+        return;
+    }
+
+    // Trasforma i dati dal formato DB al formato atteso dal frontend
+    annunci = await Promise.all((data || []).map(async (ann) => {
+        // Scarica il profilo dell'autore per avere nome e avatar
+        const { data: authorProfile } = await supabaseClient
+            .from('profiles')
+            .select('display_name, email')
+            .eq('id', ann.author_id)
+            .single();
+
+        return {
+            id: ann.id,
+            title: ann.title,
+            description: ann.description,
+            category: ann.category,
+            salary: ann.salary + '€/ora', // Formato stringa con valuta
+            location: ann.address,
+            address: ann.address,
+            lat: ann.lat,
+            lng: ann.lng,
+            author: authorProfile?.display_name || 'Anonimo',
+            authorId: ann.author_id,
+            authorAvatar: '', // Da implementare se necessario
+            image: ann.image_url,
+            isPremium: false, // Da implementare se necessario
+            created_at: ann.created_at
+        };
+    }));
+
+    renderBacheca(); // Questa è la tua funzione che disegna le card
+    initMap(); // Aggiorna anche la mappa
 }
 
 // --- LOGICA PAGAMENTI E RICEVUTE (CORRETTA) ---
@@ -549,31 +592,46 @@ async function createAnnuncio() {
     }
 }
 
-// --- CREAZIONE ANNUNCIO (CORRETTA) ---
+// --- CREAZIONE ANNUNCIO (SALVATAGGIO SU SUPABASE) ---
 async function finalizeAnnuncioCreation(title, category, desc, salary, address, coords, imageBase64, userData) {
-    const newAnn = {
-        id: Date.now(),
-        title,
-        category,
-        description: desc,
-        salary: salary + (userData.currency || '€'),
-        location: address,
-        lat: coords.lat,
-        lng: coords.lng,
-        author: userData.name + " " + (userData.surname || ""),
-        authorId: userData.email, // ID univoco
-        authorAvatar: userData.avatar || "",
-        image: imageBase64,
-        isPremium: userData.isPremium || false
-    };
+    const { data: { user } } = await supabaseClient.auth.getUser();
 
-    annunci.unshift(newAnn);
-    localStorage.setItem('annunci', JSON.stringify(annunci));
+    // 1. Salva l'annuncio su Supabase
+    const { error: annError } = await supabaseClient
+        .from('announcements')
+        .insert([{
+            author_id: user.id,
+            title: title,
+            description: desc,
+            category: category,
+            salary: parseFloat(salary),
+            address: address,
+            lat: coords.lat,
+            lng: coords.lng,
+            image_url: imageBase64
+        }]);
 
-    alert('Annuncio creato. I fondi sono stati congelati in Escrow fino al completamento.');
-    closeModal('create-annuncio-modal');
-    renderBacheca();
-    initMap();
+    if (annError) {
+        alert("Errore salvataggio annuncio: " + annError.message);
+        return;
+    }
+
+    // 2. Aggiorna il saldo dell'utente sul Database
+    const { error: balanceError } = await supabaseClient
+        .from('profiles')
+        .update({
+            balance: userBalance,
+            frozen_balance: frozenBalance
+        })
+        .eq('id', user.id);
+
+    if (!balanceError) {
+        alert('Annuncio creato e sincronizzato nel Cloud! 🚀');
+        closeModal('create-annuncio-modal');
+        loadAnnouncementsFromDB(); // Ricarica tutto dal database
+    } else {
+        alert("Errore aggiornamento saldo: " + balanceError.message);
+    }
 }
 
 // SISTEMA ABBONAMENTI & CORSI
