@@ -820,7 +820,7 @@ async function sendAIMessage() {
 
     const thinking = document.createElement('div');
     thinking.className = 'message ai glass thinking';
-    thinking.textContent = `Worky-AI sta elaborando...`;
+    thinking.textContent = `Worky-AI sta pensando...`;
     body.appendChild(thinking);
 
     try {
@@ -831,34 +831,32 @@ async function sendAIMessage() {
                 message: userMsg,
                 context: {
                     userName: userData.name || "Utente",
-                    balance: (userBalance || 0) + "€", // Assicuriamoci che non sia null
-                    userType: userData.type || "private"
+                    balance: (typeof userBalance !== 'undefined' ? userBalance : 0) + "€"
                 }
             }
         });
 
         if (body.contains(thinking)) body.removeChild(thinking);
 
-        // Se Supabase restituisce un errore reale
-        if (error) throw error;
+        // Se Supabase o Google rispondono con errore
+        if (error || (data && data.error)) {
+            const errorMsg = error?.message || data?.error;
+            if (errorMsg.includes("429") || errorMsg.includes("quota")) {
+                appendMessage('ai warning', "🛑 Troppi messaggi! Google mi ha bloccato per 60 secondi. Riprova tra un minuto.", body);
+            } else {
+                appendMessage('ai warning', "⚠️ Errore: " + errorMsg, body);
+            }
+            return;
+        }
 
         if (data && data.reply) {
-            let replyText = data.reply;
-
-            // --- Gestione delle Azioni (come prima) ---
-            if (replyText.includes("[ACTION:OPEN_MODAL_ANNUNCIO]")) {
-                openCreateModal();
-                replyText = replyText.replace("[ACTION:OPEN_MODAL_ANNUNCIO]", "👉 Ho aperto il modulo.");
-            }
-            // ... (altri if action) ...
-
-            appendMessage('ai', replyText.trim(), body);
+            appendMessage('ai', data.reply, body);
         }
 
     } catch (e) {
         if (body.contains(thinking)) body.removeChild(thinking);
-        console.error("Errore IA:", e);
-        appendMessage('ai warning', "L'IA è momentaneamente occupata o il messaggio viola le regole.", body);
+        console.error("Errore completo:", e);
+        appendMessage('ai warning', "🔌 Errore di connessione. Controlla la console (F12).", body);
     }
 }
 

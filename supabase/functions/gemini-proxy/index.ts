@@ -9,25 +9,23 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { message, context } = await req.json() // Ora leggiamo anche il contesto
+    const body = await req.json()
+    const { message, context } = body
     const apiKey = Deno.env.get('GEMINI_API_KEY')
 
-    if (!apiKey) throw new Error("Chiave API mancante")
+    if (!apiKey) throw new Error("Chiave API mancante nei Secrets")
 
-    // Costruiamo le istruzioni usando i dati reali dell'utente
-    const systemInstruction = `Sei l'assistente di "Work-in-Progress".
-    UTENTE ATTUALE: ${context?.userName || 'Utente'}, SALDO: ${context?.balance || '0€'}.
-    
-    AZIONI POSSIBILI:
-    - [ACTION:OPEN_MODAL_ANNUNCIO]
-    - [ACTION:GO_TO_MAP]
-    - [ACTION:GO_TO_PROFILE]
+    // Recupero dati in modo sicuro (se mancano usiamo valori di default)
+    const name = context?.userName || "Utente";
+    const balance = context?.balance || "Non disponibile";
 
-    REGOLE SICUREZZA: Blocca odio, droghe e violenza con "⚠️".
-    
-    Rispondi in modo breve al messaggio: ${message}`;
+    const systemInstruction = `Sei l'assistente di "Work-in-Progress". 
+    Rispondi in modo breve. 
+    UTENTE: ${name}, SALDO: ${balance}. 
+    Se l'utente offende o chiede cose illegali usa "⚠️". 
+    Messaggio: ${message}`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -36,7 +34,15 @@ serve(async (req) => {
     })
 
     const data = await response.json()
-    const reply = data.candidates[0].content.parts[0].text
+    
+    // Gestione errore Quota di Google
+    if (data.error) {
+        return new Response(JSON.stringify({ error: data.error.message }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+    }
+
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Non ho capito, puoi ripetere?";
 
     return new Response(JSON.stringify({ reply }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -44,8 +50,7 @@ serve(async (req) => {
 
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })
