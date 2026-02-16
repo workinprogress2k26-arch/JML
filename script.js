@@ -594,13 +594,19 @@ async function createAnnuncio() {
 
 // --- CREAZIONE ANNUNCIO (SALVATAGGIO SU SUPABASE) ---
 async function finalizeAnnuncioCreation(title, category, desc, salary, address, coords, imageBase64, userData) {
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    // 1. Recupera l'utente loggato attualmente
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
 
-    // 1. Salva l'annuncio su Supabase
+    if (authError || !user) {
+        alert("Devi essere loggato per pubblicare un annuncio!");
+        return;
+    }
+
+    // 2. Prova a salvare l'annuncio
     const { error: annError } = await supabaseClient
         .from('announcements')
         .insert([{
-            author_id: user.id,
+            author_id: user.id, // <--- Questo deve essere l'ID esatto di Supabase Auth
             title: title,
             description: desc,
             category: category,
@@ -612,11 +618,12 @@ async function finalizeAnnuncioCreation(title, category, desc, salary, address, 
         }]);
 
     if (annError) {
+        console.error("Errore DB:", annError);
         alert("Errore salvataggio annuncio: " + annError.message);
         return;
     }
 
-    // 2. Aggiorna il saldo dell'utente sul Database
+    // 3. Aggiorna il saldo dell'utente sul Database
     const { error: balanceError } = await supabaseClient
         .from('profiles')
         .update({
@@ -625,13 +632,16 @@ async function finalizeAnnuncioCreation(title, category, desc, salary, address, 
         })
         .eq('id', user.id);
 
-    if (!balanceError) {
-        alert('Annuncio creato e sincronizzato nel Cloud! 🚀');
-        closeModal('create-annuncio-modal');
-        loadAnnouncementsFromDB(); // Ricarica tutto dal database
-    } else {
+    if (balanceError) {
+        console.error("Errore aggiornamento saldo:", balanceError);
         alert("Errore aggiornamento saldo: " + balanceError.message);
+        return;
     }
+
+    // 4. Tutto ok! Chiudi modale e ricarica
+    alert('Annuncio creato e sincronizzato nel Cloud! 🚀');
+    closeModal('create-annuncio-modal');
+    loadAnnouncementsFromDB(); // Ricarica tutto dal database
 }
 
 // SISTEMA ABBONAMENTI & CORSI
