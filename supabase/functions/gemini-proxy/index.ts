@@ -6,30 +6,32 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Gestione permessi browser
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
     const { message, context } = await req.json()
     const apiKey = Deno.env.get('GEMINI_API_KEY')
 
-    if (!apiKey) throw new Error("Chiave API mancante nei Secrets")
+    if (!apiKey) throw new Error("Chiave API mancante")
 
-    // --- CONFIGURAZIONE MODELLO 2026 ---
-    // Usiamo il nuovo modello Flash 3 come indicato nelle note di rilascio
+    // MODELLO ATTUALE (Gemini 3 Flash)
     const aiModel = "gemini-3-flash-preview"; 
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${aiModel}:generateContent?key=${apiKey}`;
 
+    // Le istruzioni che rendono l'IA "intelligente" per il tuo sito
     const systemInstruction = `Sei l'assistente di "Work-in-Progress".
     DATI UTENTE: Nome ${context?.userName || 'Utente'}, Saldo ${context?.balance || '0€'}.
     
     AZIONI POSSIBILI:
-    - [ACTION:OPEN_MODAL_ANNUNCIO]
-    - [ACTION:GO_TO_MAP]
-    - [ACTION:GO_TO_PROFILE]
+    - [ACTION:OPEN_MODAL_ANNUNCIO] (se l'utente vuole pubblicare annunci)
+    - [ACTION:GO_TO_MAP] (se vuole vedere la mappa)
+    - [ACTION:GO_TO_PROFILE] (se vuole vedere profilo o saldo)
+    - [ACTION:SEARCH:lavoro] (se vuole cercare qualcosa)
 
-    REGOLE SICUREZZA: Se l'utente chiede droghe, armi, o usa odio, rispondi SOLO con "⚠️".
+    REGOLE: Sii breve e amichevole. Se l'utente chiede cose illegali o usa odio rispondi con "⚠️".
     
-    Rispondi in modo breve. Messaggio utente: ${message}`;
+    Messaggio utente: ${message}`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -41,19 +43,15 @@ serve(async (req) => {
 
     const data = await response.json()
 
-    // Gestione errore Quota o Modello non trovato
+    // Se Google dà errore (tipo Quota Exceeded), lo mandiamo al sito
     if (data.error) {
-      return new Response(JSON.stringify({ error: "Errore Google: " + data.error.message }), {
+      return new Response(JSON.stringify({ error: data.error.message }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    // Estrazione risposta
-    if (!data.candidates || data.candidates.length === 0) {
-        throw new Error("Nessuna risposta generata dal modello Gemini 3");
-    }
-
-    const reply = data.candidates[0].content.parts[0].text
+    // Estraiamo il testo della risposta
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Non ho potuto elaborare la risposta.";
 
     return new Response(JSON.stringify({ reply }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -61,8 +59,7 @@ serve(async (req) => {
 
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })
