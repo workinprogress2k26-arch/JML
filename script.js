@@ -521,7 +521,12 @@ async function createAnnuncio() {
     const title = document.getElementById('ann-title').value;
     let category = document.getElementById('ann-category').value;
     const desc = document.getElementById('ann-desc').value;
-    const salary = document.getElementById('ann-salary').value;
+
+    // --- NUOVI CAMPI PER IL CALCOLO TEMPORALE ---
+    const rate = parseFloat(document.getElementById('ann-salary').value) || 0;      // Prezzo unitario
+    const duration = parseFloat(document.getElementById('ann-duration').value) || 1; // Quantità (ore/giorni)
+    const unit = document.getElementById('ann-time-unit').value;                   // Unità (ora/giorno/min)
+
     const address = document.getElementById('ann-address').value;
     const city = document.getElementById('ann-city').value;
 
@@ -533,45 +538,29 @@ async function createAnnuncio() {
     // 1. Controlli base di compilazione
     if (!title || !desc || !address) { alert('Compila i campi necessari.'); return; }
 
-    /* --- MODERAZIONE AI TEMPORANEAMENTE DISABILITATA PER RISPARMIARE GETTONI ---
-    // --- PARTE NUOVA: CONTROLLO SICUREZZA IA (MODERAZIONE) ---
-    // Mandiamo l'annuncio all'IA prima di toccare i soldi
-    try {
-        const checkText = `MODERAZIONE ANNUNCIO: Titolo: ${title}. Descrizione: ${desc}`;
-        const { data: safetyCheck } = await supabaseClient.functions.invoke('gemini-proxy', {
-            body: { message: checkText }
-        });
-
-        // Se l'IA risponde con l'avviso di sicurezza o blocca esplicitamente
-        if (safetyCheck?.reply?.includes("⚠️") || safetyCheck?.reply?.toLowerCase().includes("bloccato")) {
-            alert("🚨 AZIONE BLOCCATA: Il tuo annuncio è stato rifiutato perché viola le linee guida della community (contenuti illegali, odio, droghe o violenza).");
-            return; // Interrompe la funzione qui: l'annuncio non viene creato e i soldi non vengono toccati
-        }
-    } catch (e) {
-        console.error("Errore moderazione:", e);
-        // In caso di errore tecnico dell'IA, decidiamo se far passare l'annuncio o bloccarlo per sicurezza
-    }
-    // --- FINE PARTE NUOVA ---
-    */
+    // --- LOGICA MATEMATICA COMPENSO ---
+    const totalAmount = rate * duration; // Esempio: 15€ * 4 ore = 60€
 
     // 2. Logica Escrow (Saldo e Fondi)
-    const amount = parseFloat(salary) || 0;
     const userData = JSON.parse(localStorage.getItem('userData'));
     const cur = userData ? (userData.currency || '€') : '€';
 
-    if (amount <= 0) {
-        alert('❌ Il compenso deve essere maggiore di zero!');
+    if (totalAmount <= 0) {
+        alert('❌ Il compenso totale deve essere maggiore di zero!');
         return;
     }
 
-    if (userBalance < amount) {
-        alert(`❌ Saldo insufficiente!\nIl costo dell'annuncio è ${cur} ${amount.toFixed(2)}, ma il tuo saldo attuale è ${cur} ${userBalance.toFixed(2)}.\n\nPer favore, ricarica il saldo dal tuo profilo.`);
+    // Controllo se l'utente ha abbastanza soldi per il TOTALE calcolato
+    if (userBalance < totalAmount) {
+        alert(`❌ Saldo insufficiente!\nIl costo totale dell'annuncio è ${cur} ${totalAmount.toFixed(2)} (${rate}${cur}/${unit} x ${duration} ${unit}), ma il tuo saldo attuale è ${cur} ${userBalance.toFixed(2)}.`);
         return;
     }
 
-    // Procediamo al pagamento solo se l'IA ha approvato
-    userBalance -= amount;
-    frozenBalance += amount;
+    // Sottraiamo il TOTALE calcolato
+    userBalance -= totalAmount;
+    frozenBalance += totalAmount;
+
+    // Aggiornamento locale (localStorage e UI)
     localStorage.setItem('userBalance', userBalance);
     localStorage.setItem('frozenBalance', frozenBalance);
     renderUserProfile();
@@ -580,39 +569,44 @@ async function createAnnuncio() {
     // 3. Geocoding e Immagine
     const coords = await getCoordinates(`${address}, ${city}`);
 
+    // Prepariamo la stringa del salario da visualizzare nella card (es: "15€/ora per 4 ore")
+    const displaySalary = `${rate}${cur}/${unit} x ${duration} (Tot: ${totalAmount}${cur})`;
+
     const file = document.getElementById('ann-image').files[0];
     let imageBase64 = "";
     if (file) {
         const reader = new FileReader();
         reader.onload = function (e) {
             imageBase64 = e.target.result;
-            finalizeAnnuncioCreation(title, category, desc, salary, address, coords, imageBase64, userData);
+            // Passiamo displaySalary (stringa descrittiva) alla creazione finale
+            finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageBase64, userData);
         };
         reader.readAsDataURL(file);
     } else {
-        finalizeAnnuncioCreation(title, category, desc, salary, address, coords, imageBase64, userData);
+        finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageBase64, userData);
     }
 }
 
 // --- CREAZIONE ANNUNCIO (SALVATAGGIO SU SUPABASE) ---
-async function finalizeAnnuncioCreation(title, category, desc, salary, address, coords, imageBase64, userData) {
-    // 1. Recupera l'utente loggato attualmente
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+async function finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageBase64, userData) {
+    const { data: { user } } = await supabaseClient.auth.getUser();
 
-    if (authError || !user) {
-        alert("Devi essere loggato per pubblicare un annuncio!");
-        return;
-    }
+    // Recuperiamo i valori grezzi per il database (serviranno per i calcoli futuri)
+    const rate = parseFloat(document.getElementById('ann-salary').value) || 0;
+    const duration = parseFloat(document.getElementById('ann-duration').value) || 1;
+    const unit = document.getElementById('ann-time-unit').value;
 
-    // 2. Prova a salvare l'annuncio
     const { error: annError } = await supabaseClient
         .from('announcements')
         .insert([{
-            author_id: user.id, // <--- Questo deve essere l'ID esatto di Supabase Auth
+            author_id: user.id,
             title: title,
             description: desc,
             category: category,
-            salary: parseFloat(salary),
+            salary: rate * duration, // Salviamo il totale come numero nel campo salary
+            rate: rate,             // Nuova colonna: tariffa singola
+            duration: duration,     // Nuova colonna: quantità
+            time_unit: unit,        // Nuova colonna: ora/giorno/min
             address: address,
             lat: coords.lat,
             lng: coords.lng,
@@ -620,30 +614,19 @@ async function finalizeAnnuncioCreation(title, category, desc, salary, address, 
         }]);
 
     if (annError) {
-        console.error("Errore DB:", annError);
-        alert("Errore salvataggio annuncio: " + annError.message);
+        alert("Errore salvataggio: " + annError.message);
         return;
     }
 
-    // 3. Aggiorna il saldo dell'utente sul Database
-    const { error: balanceError } = await supabaseClient
+    // Aggiorniamo il saldo reale nel cloud
+    await supabaseClient
         .from('profiles')
-        .update({
-            balance: userBalance,
-            frozen_balance: frozenBalance
-        })
+        .update({ balance: userBalance, frozen_balance: frozenBalance })
         .eq('id', user.id);
 
-    if (balanceError) {
-        console.error("Errore aggiornamento saldo:", balanceError);
-        alert("Errore aggiornamento saldo: " + balanceError.message);
-        return;
-    }
-
-    // 4. Tutto ok! Chiudi modale e ricarica
-    alert('Annuncio creato e sincronizzato nel Cloud! 🚀');
+    alert('Annuncio creato! Il totale è stato calcolato e impegnato con successo. 🚀');
     closeModal('create-annuncio-modal');
-    loadAnnouncementsFromDB(); // Ricarica tutto dal database
+    loadAnnouncementsFromDB();
 }
 
 // SISTEMA ABBONAMENTI & CORSI
@@ -1190,5 +1173,40 @@ function togglePasswordVisibility(inputId) {
     } else {
         input.type = "password";
         toggleBtn.textContent = "👁️"; // Torna all'occhio normale
+    }
+}
+
+function calculateTotalPreview() {
+    const rate = parseFloat(document.getElementById('ann-salary').value) || 0;
+    const duration = parseFloat(document.getElementById('ann-duration').value) || 0;
+    const unit = document.getElementById('ann-time-unit').value;
+    const preview = document.getElementById('total-preview');
+
+    if (rate > 0 && duration > 0) {
+        const total = (rate * duration).toFixed(2);
+        preview.textContent = `Totale da impegnare: € ${total} (Pagamento garantito in Escrow)`;
+    } else {
+        preview.textContent = "";
+    }
+}
+
+function updatePricePreview() {
+    const rate = parseFloat(document.getElementById('ann-salary').value) || 0;
+    const duration = parseFloat(document.getElementById('ann-duration').value) || 0;
+    const total = (rate * duration).toFixed(2);
+
+    const previewElement = document.getElementById('calc-preview');
+    if (previewElement) {
+        previewElement.textContent = `Totale da impegnare: € ${total}`;
+
+        // Controllo se il totale supera il tuo saldo attuale (userBalance)
+        if (total > userBalance) {
+            previewElement.style.color = "#ff4757"; // Rosso errore
+            previewElement.style.borderColor = "#ff4757";
+            previewElement.textContent += " ⚠️ Saldo insufficiente!";
+        } else {
+            previewElement.style.color = "var(--primary)"; // Oro standard
+            previewElement.style.borderColor = "var(--primary)";
+        }
     }
 }

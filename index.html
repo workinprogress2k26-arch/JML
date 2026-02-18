@@ -476,7 +476,30 @@
           </div>
           <div class="input-group">
             <label>Compenso</label>
-            <input type="number" id="ann-salary" step="0.01" min="0" placeholder="Es. 15.00">
+            <div style="display: flex; gap: 0.5rem;">
+              <!-- Aggiunto oninput -->
+              <input type="number" id="ann-salary" step="0.01" placeholder="Es. 15.00" style="flex: 2;"
+                oninput="updatePricePreview()">
+              <select id="ann-time-unit" style="flex: 1;" onchange="updatePricePreview()">
+                <option value="ora">/ ora</option>
+                <option value="minuto">/ minuto</option>
+                <option value="giorno">/ giorno</option>
+                <option value="settimana">/ settimana</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- AGGIUNGI QUESTO BLOCCO SUBITO SOTTO -->
+          <div class="input-group">
+            <label>Durata (Quantità)</label>
+            <input type="number" id="ann-duration" value="1" min="1" placeholder="Quante ore/giorni?"
+              oninput="updatePricePreview()">
+
+            <!-- IL CALCOLATORE AUTOMATICO -->
+            <p id="calc-preview"
+              style="color: var(--primary); font-weight: bold; font-size: 0.9rem; margin-top: 10px; background: rgba(220, 170, 37, 0.1); padding: 10px; border-radius: 8px; text-align: center; border: 1px dashed var(--primary);">
+              Totale da impegnare: € 0.00
+            </p>
           </div>
           <div class="modal-buttons" style="display:flex; gap:1rem; margin-top:2rem;">
             <button class="btn-primary" style="background:var(--text-dim);"
