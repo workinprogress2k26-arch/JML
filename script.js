@@ -502,38 +502,34 @@ function syncMapMarkers(filteredAnnunci) {
 
     // Aggiungi solo marker filtrati
     filteredAnnunci.forEach(ann => {
-        const isGold = ann.isPremium;
-        const bizTag = ann.companyName ? `<br><span class="company-tag" style="margin-top: 5px;">${ann.companyName}</span>` : '';
-        const goldTag = isGold ? `<span class="verified-badge gold" style="margin-left: 5px; font-size: 8px; width: 14px; height: 14px;" title="Inserzionista Premium">✔</span>` : '';
+        // 1. Definiamo l'icona in base alla categoria
+        const categoryIcons = {
+            ristorazione: '🍴',
+            tecnologia: '💻',
+            assistenza: '🤝',
+            altro: '📦'
+        };
+        const iconEmoji = categoryIcons[ann.category] || '🚀';
 
-        const popupContent = `
-            <div style="text-align: center;">
-                <strong style="font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                    ${ann.title} ${goldTag}
-                </strong>
-                <p style="margin: 5px 0; color: var(--text-dim); display: flex; align-items: center; justify-content: center; gap: 5px;">
-                    <img src="${ann.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100'}" class="author-logo">
-                    ${ann.author}
-                </p>
-                ${bizTag}
-                <hr style="border: 0.5px solid var(--border); margin: 8px 0;">
-                <small style="color: var(--primary); cursor: pointer; font-weight: bold;">Clicca per i dettagli</small>
+        // 2. Creiamo l'icona con HTML invece che con un file immagine
+        const customIcon = L.divIcon({
+            html: `<div class="custom-marker">${iconEmoji}</div>`,
+            className: 'custom-div-icon', // Classe neutra
+            iconSize: [35, 35],
+            iconAnchor: [17, 17] // Centra l'icona sulle coordinate
+        });
+
+        // 3. Creiamo il marker sulla mappa usando la nostra nuova icona
+        const marker = L.marker([ann.lat, ann.lng], { icon: customIcon }).addTo(map)
+            .bindPopup(`
+            <div style="text-align: center; color: black;">
+                <strong style="font-size: 1rem;">${ann.title}</strong><br>
+                <span style="color: #666;">${ann.author}</span><br>
+                <strong style="color: var(--primary);">${ann.salary}</strong>
             </div>
-        `;
+        `);
 
-        const markerOptions = {};
-        if (isGold) {
-            markerOptions.icon = L.divIcon({
-                className: 'custom-gold-marker',
-                iconSize: [30, 30],
-                iconAnchor: [15, 30],
-                popupAnchor: [0, -30]
-            });
-        }
-
-        const marker = L.marker([ann.lat, ann.lng], markerOptions).addTo(map)
-            .bindPopup(popupContent);
-
+        // Al click sul marker, porta l'utente all'annuncio in bacheca
         marker.on('click', () => {
             showSection('bacheca-section');
             const target = document.getElementById(`annuncio-${ann.id}`);
