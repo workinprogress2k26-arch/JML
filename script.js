@@ -688,28 +688,48 @@ async function activatePremium(planType = 'PRO') {
 
 // Contratti e Chat
 function toggleContract(id) {
-    if (acceptedContracts.includes(id)) { alert('Contratto già attivo.'); return; }
-    acceptedContracts.push(id);
+    // Trasformiamo l'ID in numero se necessario per il confronto
+    const jobId = Number(id);
+
+    if (acceptedContracts.includes(jobId)) {
+        alert('Hai già accettato questo incarico. Vai nella sezione Messaggi per parlare con il committente.');
+        return;
+    }
+
+    acceptedContracts.push(jobId);
     localStorage.setItem('acceptedContracts', JSON.stringify(acceptedContracts));
+
+    // Messaggio di successo
+    alert('Contratto accettato! La chat è stata sbloccata nella sezione Messaggi Aziende.');
+
+    // Aggiorniamo subito la grafica
     renderBacheca();
     updateChatList();
-    alert('Contratto accettato!');
 }
 
 function updateChatList() {
     const list = document.getElementById('company-chat-list');
     if (!list) return;
     list.innerHTML = '';
-    const activeContracts = annunci.filter(a => acceptedContracts.includes(a.id) && a.authorType === 'azienda');
+
+    // Filtriamo gli annunci: prendiamo solo quelli i cui ID sono in acceptedContracts
+    const activeContracts = annunci.filter(a => acceptedContracts.includes(a.id));
+
     if (activeContracts.length === 0) {
         list.innerHTML = '<p style="padding:1rem; color:var(--text-dim);">Accetta un contratto per sbloccare la chat.</p>';
         return;
     }
+
     activeContracts.forEach(ann => {
         const item = document.createElement('div');
         item.className = 'chat-item';
-        item.innerHTML = `<strong>${ann.author}</strong><br><small>Progetto: ${ann.title}</small>`;
-        item.onclick = () => openCompanyChat({ id: ann.id, role: 'company', jobId: ann.id }); // Pass a chat object
+        // Usiamo "ann.author" che abbiamo caricato prima dal database
+        item.innerHTML = `
+            <strong>${ann.author}</strong><br>
+            <small>Progetto: ${ann.title}</small>
+        `;
+        // Quando clicchi, apri la chat specifica
+        item.onclick = () => openCompanyChat({ id: ann.id, role: 'author', jobId: ann.id, name: ann.author });
         list.appendChild(item);
     });
 }
@@ -717,16 +737,19 @@ function updateChatList() {
 function openCompanyChat(chat) {
     currentChatCompany = chat;
 
-    document.getElementById('company-chat-header').textContent = `Chat con ${chat.role === 'user' ? 'Lavoratore' : 'Azienda'}`;
-
-    // Mostra tasto release payment solo se sono io il committente (cioè ho creato l'annuncio)
-    const ann = annunci.find(a => a.id === chat.jobId);
-    const userData = JSON.parse(localStorage.getItem('userData'));
-    const isOwner = ann && ann.author === (userData ? userData.name : "Me");
-    document.getElementById('release-payment-btn').style.display = isOwner ? 'block' : 'none';
+    // Sezione Messaggi: cambiamo il titolo della finestra
+    const header = document.getElementById('company-chat-header');
+    if (header) header.textContent = `Chat con ${chat.name}`;
 
     const body = document.getElementById('company-chat-body');
-    body.innerHTML = '<div class="message company">Ciao! Grazie per aver accettato il contratto. Come possiamo iniziare?</div>';
+    body.innerHTML = `
+        <div class="message company glass">
+            Ciao! Hai accettato il lavoro per "${annunci.find(a => a.id === chat.jobId)?.title}". 
+            Come possiamo organizzarci?
+        </div>
+    `;
+
+    // Mostriamo l'area di input
     document.getElementById('company-chat-input-area').classList.remove('hidden');
 }
 
