@@ -23,6 +23,7 @@ let reviewViewMode = 'received'; // <--- Fondamentale per non far crashare il pr
 
 
 // --- 3. INIZIALIZZAZIONE ALL'AVVIO ---
+// --- 3. INIZIALIZZAZIONE ALL'AVVIO ---
 document.addEventListener('DOMContentLoaded', () => {
     console.log("App avviata...");
 
@@ -36,6 +37,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof renderChatHistory === 'function') {
         renderChatHistory();
     }
+
+    // --- AGGIUNGI DA QUI: ASCOLTA I MESSAGGI IN TEMPO REALE ---
+    supabaseClient
+        .channel('realtime-messages')
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages'
+        }, payload => {
+            console.log("Nuovo messaggio ricevuto:", payload.new);
+            // Se l'utente ha la chat aperta proprio su quel lavoro, ricarica i messaggi
+            if (currentChatCompany && payload.new.announcement_id === currentChatCompany.jobId) {
+                loadMessages(currentChatCompany.jobId);
+            }
+        })
+        .subscribe();
+    // --- FINE AGGIUNTA ---
 });
 
 // --- 4. FUNZIONE CHAT AI AGGIORNATA (Usa supabaseClient) ---
@@ -751,25 +769,37 @@ function openCompanyChat(chat) {
 
     // Mostriamo l'area di input
     document.getElementById('company-chat-input-area').classList.remove('hidden');
+    loadMessages(chat.jobId); // <--- Carica i messaggi veri!
 }
 
-function sendCompanyMessage() {
+async function sendCompanyMessage() {
     const input = document.getElementById('company-input');
-    const body = document.getElementById('company-chat-body');
-    if (!input.value.trim()) return;
-    const msg = document.createElement('div');
-    msg.className = 'message user';
-    msg.textContent = input.value;
-    body.appendChild(msg);
-    input.value = '';
-    body.scrollTop = body.scrollHeight;
-    setTimeout(() => {
-        const reply = document.createElement('div');
-        reply.className = 'message company';
-        reply.textContent = `Ricevuto! Un nostro responsabile ti contatterà a breve.`;
-        body.appendChild(reply);
-        body.scrollTop = body.scrollHeight;
-    }, 1500);
+    const userMsg = input.value.trim();
+    if (!userMsg || !currentChatCompany) return;
+
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    // Recuperiamo l'annuncio per sapere chi deve ricevere il messaggio
+    const ann = annunci.find(a => a.id === currentChatCompany.jobId);
+    if (!ann) return;
+
+    // 1. Salviamo il messaggio su Supabase
+    const { error } = await supabaseClient
+        .from('messages')
+        .insert([{
+            announcement_id: ann.id,
+            sender_id: user.id,
+            receiver_id: ann.authorId, // L'autore dell'annuncio
+            content: userMsg
+        }]);
+
+    if (error) {
+        alert("Errore invio: " + error.message);
+        return;
+    }
+
+    input.value = ''; // Pulisci l'input
+    loadMessages(ann.id); // Ricarichiamo la chat per vedere il nostro messaggio
 }
 
 // Suggerimenti Ghost Text
@@ -1282,4 +1312,28 @@ function updatePricePreview() {
     } else {
         previewElement.style.color = "var(--primary)";
     }
+}
+
+async function loadMessages(jobId) {
+    const body = document.getElementById('company-chat-body');
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    const { data: msgs, error } = await supabaseClient
+        .from('messages')
+        .select('*')
+        .eq('announcement_id', jobId)
+        .order('created_at', { ascending: true });
+
+    if (error) return;
+
+    body.innerHTML = ''; // Pulisci la finestra
+    msgs.forEach(m => {
+        const isMe = m.sender_id === user.id;
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${isMe ? 'user' : 'company'} glass`;
+        msgDiv.textContent = m.content; // textContent protegge da attacchi XSS
+        body.appendChild(msgDiv);
+    });
+
+    body.scrollTop = body.scrollHeight; // Scorrimento automatico in basso
 }
