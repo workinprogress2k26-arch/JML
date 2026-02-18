@@ -12,46 +12,53 @@ serve(async (req) => {
     const { message, context } = await req.json()
     const apiKey = Deno.env.get('GEMINI_API_KEY')
 
-    if (!apiKey) throw new Error("Chiave API mancante")
+    if (!apiKey) throw new Error("Chiave API non configurata nei Secrets di Supabase")
 
     const aiModel = "gemini-3-flash-preview"; 
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${aiModel}:generateContent?key=${apiKey}`;
 
-    // --- PROMPT DI SISTEMA AGGIORNATO CON LA LOGICA DEL TEMPO ---
-    const systemInstruction = `Sei l'assistente virtuale di "Work-in-Progress" (WIP), sito di lavoro a Bologna.
+    // --- SYSTEM INSTRUCTION INTEGRATA (Sicurezza + Azioni + Magic Fill) ---
+    const systemInstruction = `Sei l'assistente virtuale di "Work-in-Progress" (WIP), il portale del lavoro di Bologna.
     
-    LOGICA PAGAMENTI (Importante):
-    Il sito usa un sistema a tariffa temporale. Il costo totale di un annuncio è: [Prezzo unitario] x [Durata].
-    Esempio: 15€ l'ora per 4 ore = 60€ totali.
-    I soldi vengono prelevati dal saldo e "congelati" (Escrow) finché il lavoro non è finito.
-
     DATI UTENTE ATTUALE:
     - Nome: ${context?.userName || 'Utente'}
     - Saldo Disponibile: ${context?.balance || '0€'}
+    - Tipo Account: ${context?.userType || 'Non specificato'}
 
-    AZIONI POSSIBILI:
-    - Aprire modulo annuncio: [ACTION:OPEN_MODAL_ANNUNCIO]
-    - Mostrare la mappa: [ACTION:GO_TO_MAP]
-    - Vedere il profilo/saldo: [ACTION:GO_TO_PROFILE]
+    REGOLE DI SICUREZZA (MODERAZIONE):
+    - Se l'utente usa insulti, razzismo, incita all'odio, chiede droghe, armi o contrabbando, rispondi SEMPRE E SOLO con: "⚠️ Il messaggio viola le norme di sicurezza e non può essere elaborato." e non attivare azioni.
 
-    COSA PUOI FARE:
-    1. Se l'utente ti chiede quanto costa un lavoro, fai tu il calcolo matematico (Tariffa x Durata).
-    2. Se l'utente non ha abbastanza saldo per un lavoro che vuole pubblicare, avvisalo.
-    3. Usa le azioni per aiutarlo a navigare.
+    LOGICA PAGAMENTI:
+    - Il sito paga in base al tempo: [Tariffa] x [Durata]. Se l'utente ti chiede dei conti, falli tu.
 
-    REGOLE SICUREZZA: Se il messaggio contiene odio, droghe o violenza, rispondi SOLO con "⚠️".
+    AZIONI NAVIGAZIONE:
+    - Vai alla mappa: [ACTION:GO_TO_MAP]
+    - Vai al profilo: [ACTION:GO_TO_PROFILE]
+    - Apri modulo vuoto: [ACTION:OPEN_MODAL_ANNUNCIO]
+    - Cerca lavoro: [ACTION:SEARCH:nome_lavoro]
 
-    Rispondi in modo breve e professionale. Messaggio utente: ${message}`;
+    AZIONE SPECIALE (MAGIC FILL):
+    - Se l'utente ti dice COSA vuole pubblicare (titolo, prezzo, ore), scrivi: [ACTION:FILL_FORM:Titolo|Prezzo|Durata]
+    - Esempio: "Voglio un barista a 10€ per 5 ore" -> [ACTION:FILL_FORM:Barista Extra|10|5]
+    - Nota: Il prezzo deve essere solo il numero, senza simbolo €. La durata deve essere il numero di ore o giorni.
+
+    Rispondi in modo amichevole. Se esegui un'azione, conferma all'utente di averlo fatto.
+    Messaggio utente: ${message}`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: systemInstruction }] }]
+        contents: [{ 
+          parts: [{ text: systemInstruction }] 
+        }]
       })
     })
 
     const data = await response.json()
+    
+    if (data.error) throw new Error("Errore Google: " + data.error.message)
+
     const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Non ho potuto elaborare la richiesta.";
 
     return new Response(JSON.stringify({ reply }), {

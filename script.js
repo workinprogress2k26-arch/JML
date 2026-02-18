@@ -797,25 +797,20 @@ function handleAIKeyDown(e) {
 let isAIBusy = false; // Variabile di controllo per evitare invii multipli
 
 async function sendAIMessage() {
-    // Se stiamo già parlando, non fare nulla
-    if (isAIBusy) {
-        console.log("⏳ AI occupata, attendere...");
-        return;
-    }
-
     const input = document.getElementById('ai-input');
     const body = document.getElementById('ai-chat-body');
+    const modelSelect = document.getElementById('ai-model-select');
     const userMsg = input.value.trim();
-    if (!userMsg) return;
 
-    isAIBusy = true; // Blocca invii multipli
+    if (!userMsg || isAIBusy) return;
 
+    isAIBusy = true;
     appendMessage('user', userMsg, body);
     input.value = '';
 
     const thinking = document.createElement('div');
     thinking.className = 'message ai glass thinking';
-    thinking.textContent = `Worky-AI sta pensando...`;
+    thinking.textContent = `Worky-AI sta elaborando...`;
     body.appendChild(thinking);
 
     try {
@@ -826,38 +821,73 @@ async function sendAIMessage() {
                 message: userMsg,
                 context: {
                     userName: userData.name || "Utente",
-                    balance: (typeof userBalance !== 'undefined' ? userBalance : 0) + "€"
+                    balance: userBalance + "€",
+                    userType: userData.type || "private"
                 }
             }
         });
 
         if (body.contains(thinking)) body.removeChild(thinking);
-
-        // Se Supabase o Google rispondono con errore
-        if (error || (data && data.error)) {
-            const errorMsg = error?.message || data?.error;
-            if (errorMsg.includes("429") || errorMsg.includes("quota")) {
-                appendMessage('ai warning', "🛑 Troppi messaggi! Google mi ha bloccato per 60 secondi. Riprova tra un minuto.", body);
-            } else {
-                appendMessage('ai warning', "⚠️ Errore: " + errorMsg, body);
-            }
-            return;
-        }
+        if (error) throw error;
 
         if (data && data.reply) {
-            appendMessage('ai', data.reply, body);
+            let replyText = data.reply;
+
+            // --- AZIONE 1: MAGIC FILL (Compilazione Automatica) ---
+            if (replyText.includes("[ACTION:FILL_FORM:")) {
+                const match = replyText.match(/\[ACTION:FILL_FORM:(.*?)\]/);
+                if (match) {
+                    const params = match[1].split("|"); // Dividiamo Titolo|Prezzo|Durata
+
+                    // Riempire i campi dell'HTML
+                    document.getElementById('ann-title').value = params[0] || "";
+                    document.getElementById('ann-salary').value = params[1] || "";
+                    document.getElementById('ann-duration').value = params[2] || "1";
+
+                    // Aprire il modulo e calcolare il totale
+                    openCreateModal();
+                    if (typeof updatePricePreview === 'function') updatePricePreview();
+
+                    // Pulire il testo per l'utente
+                    replyText = replyText.replace(/\[ACTION:FILL_FORM:.*?\]/, "🪄 Ho preparato il modulo per te!");
+                }
+            }
+
+            // --- AZIONE 2: VAI ALLA MAPPA ---
+            if (replyText.includes("[ACTION:GO_TO_MAP]")) {
+                showSection('map-section');
+                replyText = replyText.replace("[ACTION:GO_TO_MAP]", "📍");
+            }
+
+            // --- AZIONE 3: VAI AL PROFILO ---
+            if (replyText.includes("[ACTION:GO_TO_PROFILE]")) {
+                showSection('profile-section');
+                replyText = replyText.replace("[ACTION:GO_TO_PROFILE]", "👤");
+            }
+
+            // --- AZIONE 4: RICERCA LAVORO ---
+            if (replyText.includes("[ACTION:SEARCH:")) {
+                const query = replyText.split("[ACTION:SEARCH:")[1].split("]")[0];
+                document.getElementById('search-input').value = query;
+                renderBacheca();
+                showSection('bacheca-section');
+                replyText = replyText.replace(`[ACTION:SEARCH:${query}]`, "🔍");
+            }
+
+            // --- AZIONE 5: APRI MODULO VUOTO ---
+            if (replyText.includes("[ACTION:OPEN_MODAL_ANNUNCIO]")) {
+                openCreateModal();
+                replyText = replyText.replace("[ACTION:OPEN_MODAL_ANNUNCIO]", "📝");
+            }
+
+            appendMessage('ai', replyText.trim(), body);
         }
 
     } catch (e) {
         if (body.contains(thinking)) body.removeChild(thinking);
-        console.error("Errore completo:", e);
-        appendMessage('ai warning', "🔌 Errore di connessione. Controlla la console (F12).", body);
+        appendMessage('ai warning', "Errore IA: " + e.message, body);
     } finally {
-        // Sblocca l'IA dopo 3 secondi per sicurezza
-        setTimeout(() => {
-            isAIBusy = false;
-            console.log("✅ AI pronta per nuovi messaggi");
-        }, 3000);
+        setTimeout(() => { isAIBusy = false; }, 1000);
     }
 }
 
@@ -1191,22 +1221,22 @@ function calculateTotalPreview() {
 }
 
 function updatePricePreview() {
-    const rate = parseFloat(document.getElementById('ann-salary').value) || 0;
-    const duration = parseFloat(document.getElementById('ann-duration').value) || 0;
+    const rateInput = document.getElementById('ann-salary');
+    const durationInput = document.getElementById('ann-duration');
+    const previewElement = document.getElementById('calc-preview');
+
+    if (!rateInput || !durationInput || !previewElement) return;
+
+    const rate = parseFloat(rateInput.value) || 0;
+    const duration = parseFloat(durationInput.value) || 0;
     const total = (rate * duration).toFixed(2);
 
-    const previewElement = document.getElementById('calc-preview');
-    if (previewElement) {
-        previewElement.textContent = `Totale da impegnare: € ${total}`;
+    previewElement.textContent = `Totale da impegnare: € ${total}`;
 
-        // Controllo se il totale supera il tuo saldo attuale (userBalance)
-        if (total > userBalance) {
-            previewElement.style.color = "#ff4757"; // Rosso errore
-            previewElement.style.borderColor = "#ff4757";
-            previewElement.textContent += " ⚠️ Saldo insufficiente!";
-        } else {
-            previewElement.style.color = "var(--primary)"; // Oro standard
-            previewElement.style.borderColor = "var(--primary)";
-        }
+    if (total > userBalance) {
+        previewElement.style.color = "#ff4757";
+        previewElement.textContent += " ⚠️ Saldo insufficiente!";
+    } else {
+        previewElement.style.color = "var(--primary)";
     }
 }
