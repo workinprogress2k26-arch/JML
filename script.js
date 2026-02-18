@@ -197,20 +197,13 @@ function handleGoogleLogin(response) {
 
 // Funzione di login con Google tramite Supabase OAuth
 async function loginWithGoogle() {
-    // Rileva automaticamente se sei su localhost o su Vercel
-    const redirectUrl = window.location.origin;
-
     const { data, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: redirectUrl
+            redirectTo: window.location.origin // Prende l'indirizzo corrente automaticamente
         }
     });
-
-    if (error) {
-        console.error("Errore OAuth:", error.message);
-        alert("Errore Login Google: " + error.message);
-    }
+    if (error) alert("Errore Google: " + error.message);
 }
 
 // Geocoding (Nominatim API)
