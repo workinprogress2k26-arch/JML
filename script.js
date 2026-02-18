@@ -264,6 +264,14 @@ function initMap() {
     syncMapMarkers(annunci);
 }
 
+// --- FUNZIONE HELPER DI SANITIZZAZIONE (Anti-XSS) ---
+function sanitizeInput(str) {
+    if (!str) return '';
+    const temp = document.createElement('div');
+    temp.textContent = str;
+    return temp.innerHTML; // Trasforma < > " ' & in entità sicure
+}
+
 // Bacheca e Annunci
 function renderBacheca() {
     const grid = document.getElementById('announcements-grid');
@@ -310,14 +318,14 @@ function renderBacheca() {
             ${ann.image ? `<img src="${ann.image}" class="annuncio-img">` : ''}
             <div class="card-content">
                 <div class="card-header">
-                    <span class="category-tag">${ann.category}</span>
+                    <span class="category-tag">${sanitizeInput(ann.category)}</span>
                     <div class="author-tag">
                         <img src="${ann.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100'}" class="author-logo">
-                        ${ann.author}
+                        ${sanitizeInput(ann.author)}
                     </div>
                 </div>
-                <h3>${ann.title}</h3>
-                <p>${ann.description}</p>
+                <h3>${sanitizeInput(ann.title)}</h3>
+                <p>${sanitizeInput(ann.description)}</p>
                 <div class="card-footer">
                     <strong>${userCurrency} ${ann.salary.replace(/[^0-9.]/g, '')}</strong>
                     <div style="display:flex; flex-direction:column; gap:0.5rem; align-items: flex-end;">
@@ -518,9 +526,14 @@ function openCreateModal() { document.getElementById('create-annuncio-modal').cl
 function closeCreateModal() { document.getElementById('create-annuncio-modal').classList.add('hidden'); }
 
 async function createAnnuncio() {
-    const title = document.getElementById('ann-title').value;
-    let category = document.getElementById('ann-category').value;
-    const desc = document.getElementById('ann-desc').value;
+    const rawTitle = document.getElementById('ann-title').value;
+    let rawCategory = document.getElementById('ann-category').value;
+    const rawDesc = document.getElementById('ann-desc').value;
+
+    // Sanitizzazione Anti-XSS: pulisce eventuali tag HTML/script
+    const title = sanitizeInput(rawTitle);
+    let category = sanitizeInput(rawCategory);
+    const desc = sanitizeInput(rawDesc);
 
     // --- NUOVI CAMPI PER IL CALCOLO TEMPORALE ---
     const rate = parseFloat(document.getElementById('ann-salary').value) || 0;      // Prezzo unitario
