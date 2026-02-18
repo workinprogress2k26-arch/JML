@@ -876,38 +876,18 @@ input:focus {
     background: var(--primary-dark);
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-    #app-view {
-        grid-template-columns: 1fr;
-    }
-
-    .sidebar {
-        display: none;
-    }
-}
-
-/* --- TRASFORMAZIONE SIDEBAR SLIM E OTTIMIZZAZIONE MOBILE --- */
-
-/* --- TRASFORMAZIONE SIDEBAR SLIM E OTTIMIZZAZIONE MOBILE --- */
-
-/* --- OTTIMIZZAZIONE FINALE MOBILE: SIDEBAR MINI, CHAT COMPATTA E FIX TASTO INVIA --- */
-
-/* --- OTTIMIZZAZIONE MOBILE: BARRA FULL-WIDTH E RIMOZIONE TASTO INVIO --- */
-
-/* --- UI MOBILE DEFINITIVA: SIDEBAR SLIM E FIX CHAT --- */
 /* --- UNIFICAZIONE MOBILE DEFINITIVA --- */
 @media (max-width: 1024px) {
     * {
         box-sizing: border-box;
     }
 
-    /* Forza la struttura: Sidebar fissa e Contenuto a destra */
     #app-view {
         display: block !important;
         position: relative !important;
         width: 100vw;
         height: 100vh;
+        overflow: hidden;
     }
 
     .sidebar {
@@ -925,11 +905,9 @@ input:focus {
         z-index: 9999;
     }
 
-    /* Nascondi scritte sidebar */
     .logo-container,
-    .nav-item,
     .user-info {
-        font-size: 0 !important;
+        display: none !important;
     }
 
     .logo-container span,
@@ -937,20 +915,28 @@ input:focus {
         font-size: 1.5rem !important;
     }
 
+    .nav-links {
+        width: 100% !important;
+        padding: 0 !important;
+    }
+
     .nav-item {
         padding: 15px 0 !important;
         width: 100%;
         justify-content: center;
+        font-size: 0 !important;
+        /* Nasconde il testo */
     }
 
-    /* Spazio per il contenuto */
     .main-content {
         margin-left: 60px !important;
         width: calc(100vw - 60px) !important;
         padding: 10px !important;
+        height: 100vh;
+        overflow-y: auto;
     }
 
-    /* FIX CHAT: Barra lunga senza tasto invio */
+    /* BARRA INPUT CHAT FISSA */
     .input-area,
     .chat-footer,
     #company-chat-input-area {
@@ -966,6 +952,7 @@ input:focus {
         z-index: 2000;
     }
 
+    /* Nascondi bottoni invio su mobile per allungare la barra */
     .input-area button,
     #company-chat-input-area button {
         display: none !important;
@@ -977,11 +964,22 @@ input:focus {
         font-size: 16px !important;
     }
 
-    /* Fix per non coprire i messaggi */
     #ai-chat-body,
     #company-chat-body {
-        padding-bottom: 80px !important;
+        padding-bottom: 100px !important;
     }
+}
+
+/* Fix per il modulo registrazione che usciva dallo schermo */
+#signup-form div[style*="grid-template-columns: 1fr 1fr"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+}
+
+.auth-card {
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 /* Blocca il login per non far scorrere il sito sotto */
