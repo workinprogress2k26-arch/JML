@@ -89,6 +89,7 @@ async function checkLoginStatus() {
 
         // 2. Mostra l'app e carica la bacheca dal DB
         showView('app-view');
+        updateChatList();
         loadAnnouncementsFromDB(); // Carica annunci dal cloud
         renderUserProfile();
     } else {
@@ -725,29 +726,52 @@ function toggleContract(id) {
     updateChatList();
 }
 
-function updateChatList() {
+async function updateChatList() {
     const list = document.getElementById('company-chat-list');
     if (!list) return;
-    list.innerHTML = '';
 
-    // Filtriamo gli annunci: prendiamo solo quelli i cui ID sono in acceptedContracts
-    const activeContracts = annunci.filter(a => acceptedContracts.includes(a.id));
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
 
-    if (activeContracts.length === 0) {
-        list.innerHTML = '<p style="padding:1rem; color:var(--text-dim);">Accetta un contratto per sbloccare la chat.</p>';
+    // 1. Cerchiamo tutti i messaggi dove l'utente è coinvolto (mittente o destinatario)
+    const { data: myMessages, error } = await supabaseClient
+        .from('messages')
+        .select('announcement_id')
+        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`);
+
+    if (error || !myMessages) return;
+
+    // 2. Prendiamo solo gli ID unici degli annunci
+    const involvedJobIds = [...new Set(myMessages.map(m => m.announcement_id))];
+
+    if (involvedJobIds.length === 0) {
+        list.innerHTML = '<p style="padding:1rem; color:var(--text-dim);">Nessun messaggio presente.</p>';
         return;
     }
 
-    activeContracts.forEach(ann => {
+    // 3. Scarichiamo i dettagli di questi annunci per mostrarli nella lista
+    const { data: chatJobs } = await supabaseClient
+        .from('announcements')
+        .select('id, title, author_id, profiles(display_name)')
+        .in('id', involvedJobIds);
+
+    list.innerHTML = '';
+    chatJobs.forEach(ann => {
+        // Determiniamo con chi stiamo parlando (se siamo l'autore, mostriamo 'Candidato', altrimenti l'autore)
+        const isOwner = ann.author_id === user.id;
+        const chatPartnerName = isOwner ? "Nuovo Candidato" : ann.profiles?.display_name || "Autore";
+
         const item = document.createElement('div');
-        item.className = 'chat-item';
-        // Usiamo "ann.author" che abbiamo caricato prima dal database
+        item.className = 'chat-item glass';
         item.innerHTML = `
-            <strong>${ann.author}</strong><br>
-            <small>Progetto: ${ann.title}</small>
+            <strong>${chatPartnerName}</strong><br>
+            <small>${ann.title}</small>
         `;
-        // Quando clicchi, apri la chat specifica
-        item.onclick = () => openCompanyChat({ id: ann.id, role: 'author', jobId: ann.id, name: ann.author });
+        item.onclick = () => openCompanyChat({
+            id: ann.id,
+            jobId: ann.id,
+            name: chatPartnerName
+        });
         list.appendChild(item);
     });
 }
