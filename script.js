@@ -197,13 +197,24 @@ function handleGoogleLogin(response) {
 
 // Funzione di login con Google tramite Supabase OAuth
 async function loginWithGoogle() {
+    // FISSIAAMO l'URL completo. Assicurati che sia .app e non .it
+    const siteUrl = "https://jml-gamma-v2.vercel.app";
+
+    console.log("Redirect configurato verso:", siteUrl);
+
     const { data, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: window.location.origin // Prende l'indirizzo corrente automaticamente
+            redirectTo: siteUrl,
+            queryParams: {
+                prompt: 'select_account'
+            }
         }
     });
-    if (error) alert("Errore Google: " + error.message);
+
+    if (error) {
+        alert("Errore Google: " + error.message);
+    }
 }
 
 // Geocoding (Nominatim API)
