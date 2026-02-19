@@ -1088,3 +1088,104 @@ body.auth-mode {
 .custom-marker:hover {
     transform: scale(1.2);
 }
+
+/* --- STILE CHAT AZIENDALE (PC + MOBILE) --- */
+
+/* Contenitore principale della barra */
+#company-chat-input-area {
+    /* Layout */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+
+    /* Estetica */
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border-top: 1px solid var(--border);
+}
+
+/* Quando c'è la classe .hidden, deve sparire TASSATIVAMENTE */
+#company-chat-input-area.hidden {
+    display: none !important;
+}
+
+/* Stile dell'input di testo */
+#company-input {
+    flex-grow: 1;
+    /* Occupa tutto lo spazio disponibile */
+    width: 100%;
+    padding: 15px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: white;
+    font-size: 1rem;
+    outline: none;
+    height: 50px;
+    transition: all 0.3s ease;
+}
+
+#company-input:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 15px rgba(220, 170, 37, 0.2);
+}
+
+/* Stile del bottone Invia */
+#company-chat-input-area button {
+    height: 50px;
+    padding: 0 25px;
+    border-radius: 12px;
+    font-weight: bold;
+    flex-shrink: 0;
+    /* Impedisce che si rimpicciolisca */
+}
+
+/* --- FIX BARRA SCRITTURA AZIENDALE --- */
+
+/* 1. Contenitore della barra */
+#company-chat-input-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 15px 20px;
+    background: rgba(255, 255, 255, 0.02);
+    /* Sfondo leggero */
+    border-top: 1px solid var(--border);
+    transition: all 0.3s ease;
+}
+
+/* 2. Assicura che sia nascosta quando non c'è chat */
+#company-chat-input-area.hidden {
+    display: none !important;
+}
+
+/* 3. Stile della casella di testo (uguale a quella AI) */
+#company-input {
+    flex-grow: 1;
+    /* Prende tutto lo spazio */
+    padding: 12px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    /* Arrotondata */
+    color: white;
+    font-size: 1rem;
+    outline: none;
+}
+
+/* Effetto quando scrivi */
+#company-input:focus {
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* 4. Tasto Invia (visibile su PC, nascosto su Mobile dal media query) */
+#company-chat-input-area button {
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+}
