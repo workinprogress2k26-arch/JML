@@ -664,25 +664,22 @@ async function activatePremium(planType = 'PRO') {
 
 // Contratti e Chat
 function toggleContract(id) {
-    // Trasformiamo l'ID in numero se necessario per il confronto
     const jobId = Number(id);
 
     if (acceptedContracts.includes(jobId)) {
-        alert('Hai già accettato questo incarico. Vai nella sezione Messaggi per parlare con il committente.');
+        alert('Contratto già accettato.');
         return;
     }
 
     acceptedContracts.push(jobId);
     localStorage.setItem('acceptedContracts', JSON.stringify(acceptedContracts));
 
-    // Messaggio di successo
-    alert('Contratto accettato! La chat è stata sbloccata nella sezione Messaggi Aziende.');
+    alert('Contratto accettato! Vai nella sezione Messaggi per parlare con il committente.');
 
-    // Aggiorniamo subito la grafica
+    // Forza l'aggiornamento della bacheca e della lista chat
     renderBacheca();
     updateChatList();
 }
-
 async function updateChatList() {
     const list = document.getElementById('company-chat-list');
     if (!list) return;
@@ -690,33 +687,40 @@ async function updateChatList() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
 
-    // 1. Cerchiamo tutti i messaggi dove l'utente è coinvolto (mittente o destinatario)
-    const { data: myMessages, error } = await supabaseClient
+    // 1. Prendiamo gli ID dei contratti accettati localmente (quelli appena cliccati)
+    const localAcceptedIds = acceptedContracts.map(id => Number(id));
+
+    // 2. Chiediamo a Supabase gli ID degli annunci dove ci sono già messaggi per noi
+    const { data: myMessages } = await supabaseClient
         .from('messages')
         .select('announcement_id')
         .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`);
 
-    if (error || !myMessages) return;
+    const messageJobIds = myMessages ? myMessages.map(m => m.announcement_id) : [];
 
-    // 2. Prendiamo solo gli ID unici degli annunci
-    const involvedJobIds = [...new Set(myMessages.map(m => m.announcement_id))];
+    // Uniamo gli ID (senza duplicati)
+    const allInvolvedIds = [...new Set([...localAcceptedIds, ...messageJobIds])];
 
-    if (involvedJobIds.length === 0) {
-        list.innerHTML = '<p style="padding:1rem; color:var(--text-dim);">Nessun messaggio presente.</p>';
+    if (allInvolvedIds.length === 0) {
+        list.innerHTML = '<p style="padding:1rem; color:var(--text-dim);">Accetta un contratto per sbloccare la chat.</p>';
         return;
     }
 
     // 3. Scarichiamo i dettagli di questi annunci per mostrarli nella lista
-    const { data: chatJobs } = await supabaseClient
+    const { data: chatJobs, error } = await supabaseClient
         .from('announcements')
-        .select('id, title, author_id, profiles(display_name)')
-        .in('id', involvedJobIds);
+        .select('id, title, author_id, profiles!announcements_author_id_fkey(display_name)')
+        .in('id', allInvolvedIds);
+
+    if (error) {
+        console.error("Errore caricamento lista chat:", error);
+        return;
+    }
 
     list.innerHTML = '';
     chatJobs.forEach(ann => {
-        // Determiniamo con chi stiamo parlando (se siamo l'autore, mostriamo 'Candidato', altrimenti l'autore)
         const isOwner = ann.author_id === user.id;
-        const chatPartnerName = isOwner ? "Nuovo Candidato" : ann.profiles?.display_name || "Autore";
+        const chatPartnerName = isOwner ? "Candidato Lavoratore" : (ann.profiles?.display_name || "Autore");
 
         const item = document.createElement('div');
         item.className = 'chat-item glass';
