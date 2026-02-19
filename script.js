@@ -623,44 +623,36 @@ async function createAnnuncio() {
 }
 
 // --- CREAZIONE ANNUNCIO (SALVATAGGIO SU SUPABASE) ---
-async function finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageBase64, userData) {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-
-    // Recuperiamo i valori grezzi per il database (serviranno per i calcoli futuri)
+async function finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageUrl, userData) {
     const rate = parseFloat(document.getElementById('ann-salary').value) || 0;
     const duration = parseFloat(document.getElementById('ann-duration').value) || 1;
     const unit = document.getElementById('ann-time-unit').value;
 
-    const { error: annError } = await supabaseClient
-        .from('announcements')
-        .insert([{
-            author_id: user.id,
-            title: title,
-            description: desc,
-            category: category,
-            salary: rate * duration, // Salviamo il totale come numero nel campo salary
-            rate: rate,             // Nuova colonna: tariffa singola
-            duration: duration,     // Nuova colonna: quantità
-            time_unit: unit,        // Nuova colonna: ora/giorno/min
-            address: address,
-            lat: coords.lat,
-            lng: coords.lng,
-            image_url: imageBase64
-        }]);
+    // Chiamiamo la funzione sicura sul server (RPC)
+    const { error } = await supabaseClient.rpc('create_announcement_safe', {
+        arg_title: title,
+        arg_description: desc,
+        arg_category: category,
+        arg_rate: rate,
+        arg_duration: duration,
+        arg_time_unit: unit,
+        arg_address: address,
+        arg_lat: coords.lat,
+        arg_lng: coords.lng,
+        arg_image_url: imageUrl
+    });
 
-    if (annError) {
-        alert("Errore salvataggio: " + annError.message);
+    if (error) {
+        alert("Errore durante la creazione: " + error.message);
         return;
     }
 
-    // Aggiorniamo il saldo reale nel cloud
-    await supabaseClient
-        .from('profiles')
-        .update({ balance: userBalance, frozen_balance: frozenBalance })
-        .eq('id', user.id);
-
-    alert('Annuncio creato! Il totale è stato calcolato e impegnato con successo. 🚀');
+    // Se l'operazione ha avuto successo, aggiorniamo la UI locale scaricando i dati nuovi
+    alert('Annuncio creato con successo! Il pagamento è garantito dal sistema. 🛡️');
     closeModal('create-annuncio-modal');
+
+    // Ricarichiamo il profilo e la bacheca per vedere il nuovo saldo aggiornato dal server
+    checkLoginStatus();
     loadAnnouncementsFromDB();
 }
 
