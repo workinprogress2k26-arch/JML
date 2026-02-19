@@ -201,13 +201,12 @@ function handleGoogleLogin(response) {
     checkLoginStatus();
 }
 
-// Funzione di login con Google tramite Supabase OAuth
+// 1. LOGIN CON INDIRIZZO FISSO (Come richiesto)
 async function loginWithGoogle() {
     const { data, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            // window.location.origin capisce da solo se sei su Vercel o su localhost
-            redirectTo: window.location.origin
+            redirectTo: 'https://jml-gamma-v2.vercel.app'
         }
     });
     if (error) alert("Errore Google: " + error.message);
