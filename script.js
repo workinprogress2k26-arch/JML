@@ -126,49 +126,36 @@ function initDashboard() {
     initMap();
 }
 
-// Carica annunci dal Database Cloud
 async function loadAnnouncementsFromDB() {
-    // Scarica tutti gli annunci dalla tabella che abbiamo creato su Supabase
+    // Carichiamo l'annuncio E i dati dell'autore (profiles) in un colpo solo
     const { data, error } = await supabaseClient
         .from('announcements')
-        .select('*')
+        .select('*, profiles(display_name, email)')
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error("Errore scaricamento annunci:", error);
+        console.error("Errore scaricamento:", error);
         return;
     }
 
-    // Trasforma i dati dal formato DB al formato atteso dal frontend
-    annunci = await Promise.all((data || []).map(async (ann) => {
-        // Scarica il profilo dell'autore per avere nome e avatar
-        const { data: authorProfile } = await supabaseClient
-            .from('profiles')
-            .select('display_name, email')
-            .eq('id', ann.author_id)
-            .single();
-
-        return {
-            id: ann.id,
-            title: ann.title,
-            description: ann.description,
-            category: ann.category,
-            salary: ann.salary + '€/ora', // Formato stringa con valuta
-            location: ann.address,
-            address: ann.address,
-            lat: ann.lat,
-            lng: ann.lng,
-            author: authorProfile?.display_name || 'Anonimo',
-            authorId: ann.author_id,
-            authorAvatar: '', // Da implementare se necessario
-            image: ann.image_url,
-            isPremium: false, // Da implementare se necessario
-            created_at: ann.created_at
-        };
+    // Trasformiamo i dati per il frontend
+    annunci = data.map(ann => ({
+        id: ann.id,
+        title: ann.title,
+        description: ann.description,
+        category: ann.category,
+        salary: ann.salary + '€/ora',
+        address: ann.address,
+        lat: ann.lat,
+        lng: ann.lng,
+        author: ann.profiles?.display_name || 'Anonimo',
+        authorId: ann.author_id,
+        image: ann.image_url,
+        created_at: ann.created_at
     }));
 
-    renderBacheca(); // Questa è la tua funzione che disegna le card
-    initMap(); // Aggiorna anche la mappa
+    renderBacheca();
+    initMap();
 }
 
 // --- LOGICA PAGAMENTI E RICEVUTE (CORRETTA) ---
@@ -216,24 +203,14 @@ function handleGoogleLogin(response) {
 
 // Funzione di login con Google tramite Supabase OAuth
 async function loginWithGoogle() {
-    // FISSIAAMO l'URL completo. Assicurati che sia .app e non .it
-    const siteUrl = "https://jml-gamma-v2.vercel.app";
-
-    console.log("Redirect configurato verso:", siteUrl);
-
     const { data, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: siteUrl,
-            queryParams: {
-                prompt: 'select_account'
-            }
+            // window.location.origin capisce da solo se sei su Vercel o su localhost
+            redirectTo: window.location.origin
         }
     });
-
-    if (error) {
-        alert("Errore Google: " + error.message);
-    }
+    if (error) alert("Errore Google: " + error.message);
 }
 
 // Geocoding (Nominatim API)
