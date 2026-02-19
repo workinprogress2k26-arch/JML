@@ -303,6 +303,7 @@
 
 
       <!-- SEZIONE MESSAGGI AZIENDE -->
+      <!-- SEZIONE MESSAGGI AZIENDE -->
       <section id="contracts-section" class="content-section hidden">
         <h2>Messaggi Aziende</h2>
         <div class="chat-container glass">
@@ -311,8 +312,18 @@
             <p style="padding:1rem; color:var(--text-dim);">Accetta un contratto per sbloccare la chat.</p>
           </div>
           <div class="chat-window" id="company-chat-window">
+
+            <!-- HEADER MODIFICATO: aggiunto id al testo e il tasto cestino -->
             <div id="company-chat-header"
-              style="padding:1rem; border-bottom:1px solid var(--border); font-weight:bold;">Seleziona una chat</div>
+              style="padding:1rem; border-bottom:1px solid var(--border); font-weight:bold; display:flex; justify-content:space-between; align-items:center;">
+              <span id="chat-partner-name">Seleziona una chat</span>
+              <button id="btn-clear-chat" class="hidden" onclick="clearChat(currentChatCompany.jobId)"
+                style="background:none; border:none; color:#ff4d4d; cursor:pointer; font-size:1.2rem;"
+                title="Svuota la tua cronologia">
+                🗑️
+              </button>
+            </div>
+
             <div id="company-chat-body"
               style="flex-grow:1; padding:1rem; overflow-y:auto; display:flex; flex-direction:column; gap:0.5rem;">
             </div>

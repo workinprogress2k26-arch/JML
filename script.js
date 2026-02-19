@@ -275,23 +275,21 @@ function sanitizeInput(str) {
 }
 
 // Bacheca e Annunci
-function renderBacheca() {
+async function renderBacheca() {
     const grid = document.getElementById('announcements-grid');
     if (!grid) return;
 
-    // Recupera valori filtri
+    // Recuperiamo l'ID dell'utente loggato per il controllo "Elimina"
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    const currentUserId = user ? user.id : null;
+
     const searchText = document.getElementById('search-input')?.value.toLowerCase() || "";
     const filterCat = document.getElementById('filter-category')?.value || "";
-
-    // Recupera dati utente per identificare autore e valuta
     const userData = JSON.parse(localStorage.getItem('userData'));
-    const userName = userData ? userData.name : "Me";
     const userCurrency = userData ? (userData.currency || '€') : '€';
 
-    // Filtra annunci (testo, categoria + annunci nascosti)
     const filtered = annunci.filter(ann => {
         if (hiddenAnnouncements.includes(ann.id)) return false;
-
         const matchesSearch = ann.title.toLowerCase().includes(searchText) ||
             ann.author.toLowerCase().includes(searchText) ||
             ann.description.toLowerCase().includes(searchText);
@@ -299,19 +297,17 @@ function renderBacheca() {
         return matchesSearch && matchesCat;
     });
 
-    const reviews = JSON.parse(localStorage.getItem('reviews')) || [];
-
     grid.innerHTML = '';
     if (filtered.length === 0) {
-        grid.innerHTML = '<p style="padding:2rem; color:var(--text-dim); text-align:center; width:100%;">Nessun annuncio trovato con questi filtri.</p>';
+        grid.innerHTML = '<p style="padding:2rem; color:var(--text-dim); text-align:center; width:100%;">Nessun annuncio trovato.</p>';
         syncMapMarkers(filtered);
         return;
     }
 
     filtered.forEach(ann => {
-        const isAuthor = ann.author === userName;
+        // --- LOGICA MODIFICATA: Controllo tramite ID per sicurezza totale ---
+        const isAuthor = ann.authorId === currentUserId;
         const isAccepted = acceptedContracts.includes(ann.id);
-        const hasReviewed = reviews.some(r => r.jobId === ann.id);
 
         const card = document.createElement('div');
         card.className = `annuncio-card glass ${isAccepted ? 'accepted' : ''}`;
@@ -333,7 +329,7 @@ function renderBacheca() {
                     <div style="display:flex; flex-direction:column; gap:0.5rem; align-items: flex-end;">
                         ${isAuthor ? `
                             <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem; background: #ff4d4d; color: white;" onclick="deleteAnnuncio(${ann.id})">
-                                🗑️ Elimina
+                                🗑️ Elimina Annuncio
                             </button>` : `
                             <div style="display:flex; gap: 0.5rem;">
                                 <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem;" onclick="toggleContract(${ann.id})">
@@ -343,11 +339,10 @@ function renderBacheca() {
                                 <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem; background: #ffb347; color: white;" onclick="openRevokeModal(${ann.id})" title="Revoca incarico">
                                     🚩 Revoca
                                 </button>` : `
-                                <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem; background: var(--text-dim); color: white;" onclick="hideAnnuncio(${ann.id})" title="Nascondi questo annuncio">
+                                <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem; background: var(--text-dim); color: white;" onclick="hideAnnuncio(${ann.id})" title="Nascondi">
                                     🚫
                                 </button>`}
                             </div>
-                            <small style="color:var(--text-dim); font-size:0.7rem;">${isAccepted ? 'Sblocca recensione dopo il pagamento' : ''}</small>
                         `}
                     </div>
                 </div>
@@ -359,25 +354,23 @@ function renderBacheca() {
     syncMapMarkers(filtered);
 }
 
-// ELIMINAZIONE ANNUNCIO: Rimborso fondi congelati
-function deleteAnnuncio(id) {
-    const ann = annunci.find(a => a.id === id);
-    if (!ann) return;
+async function deleteAnnuncio(id) {
+    if (!confirm("Sei sicuro di voler eliminare definitivamente questo annuncio? Verrà rimosso anche dal database Cloud.")) return;
 
-    if (confirm("Sei sicuro? Il compenso congelato verrà riaccreditato sul tuo saldo.")) {
-        const amount = parseFloat(ann.salary.replace(/[^0-9.]/g, '')) || 0;
+    // 1. Elimina da Supabase
+    const { error } = await supabaseClient
+        .from('announcements')
+        .delete()
+        .eq('id', id);
 
-        // Logica di rimborso
-        userBalance += amount;
-        frozenBalance -= amount;
-
-        annunci = annunci.filter(a => a.id !== id);
-        localStorage.setItem('annunci', JSON.stringify(annunci));
-
-        updateBalances();
-        renderBacheca();
-        initMap();
+    if (error) {
+        alert("Errore durante l'eliminazione: " + error.message);
+        return;
     }
+
+    // 2. Ricarica i dati dal DB per aggiornare la bacheca
+    alert("Annuncio rimosso con successo! 🗑️");
+    loadAnnouncementsFromDB();
 }
 
 function rechargeBalance() {
@@ -754,10 +747,18 @@ function openCompanyChat(chat) {
             Come possiamo organizzarci?
         </div>
     `;
+    // Aggiorna il nome della persona nell'header
+    document.getElementById('chat-partner-name').textContent = `Chat con ${chat.name}`;
 
+    // MOSTRA IL TASTO CESTINO
+    document.getElementById('btn-clear-chat').classList.remove('hidden');
     // Mostriamo l'area di input
     document.getElementById('company-chat-input-area').classList.remove('hidden');
     loadMessages(chat.jobId); // <--- Carica i messaggi veri!
+
+
+
+
 }
 
 async function sendCompanyMessage() {
@@ -1306,6 +1307,7 @@ async function loadMessages(jobId) {
     const body = document.getElementById('company-chat-body');
     const { data: { user } } = await supabaseClient.auth.getUser();
 
+    // Scarichiamo la cronologia completa dal Cloud
     const { data: msgs, error } = await supabaseClient
         .from('messages')
         .select('*')
@@ -1314,14 +1316,39 @@ async function loadMessages(jobId) {
 
     if (error) return;
 
-    body.innerHTML = ''; // Pulisci la finestra
+    body.innerHTML = '';
     msgs.forEach(m => {
         const isMe = m.sender_id === user.id;
+        const ora = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ${isMe ? 'user' : 'company'} glass`;
-        msgDiv.textContent = m.content; // textContent protegge da attacchi XSS
+
+        // Struttura stile WhatsApp con orario
+        msgDiv.innerHTML = `
+            <div class="msg-content">${sanitizeInput(m.content)}</div>
+            <span style="font-size: 0.6rem; opacity: 0.6; align-self: flex-end; margin-top: 5px;">${ora}</span>
+        `;
         body.appendChild(msgDiv);
     });
 
-    body.scrollTop = body.scrollHeight; // Scorrimento automatico in basso
+    body.scrollTop = body.scrollHeight;
+}
+
+async function clearChat(jobId) {
+    if (!confirm("Vuoi cancellare i tuoi messaggi in questa chat?")) return;
+
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    const { error } = await supabaseClient
+        .from('messages')
+        .delete()
+        .eq('announcement_id', jobId)
+        .eq('sender_id', user.id); // Cancella solo i messaggi inviati da me
+
+    if (error) {
+        alert("Errore: " + error.message);
+    } else {
+        loadMessages(jobId); // Aggiorna la finestra chat
+    }
 }
