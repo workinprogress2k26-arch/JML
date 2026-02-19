@@ -327,11 +327,10 @@
             <div id="company-chat-body"
               style="flex-grow:1; padding:1rem; overflow-y:auto; display:flex; flex-direction:column; gap:0.5rem;">
             </div>
-            <div id="company-chat-input-area" class="hidden"
-              style="padding:1rem; display:flex; gap:1rem; border-top:1px solid var(--border);">
-              <input type="text" id="company-input" placeholder="Scrivi all'azienda..."
+            <div id="company-chat-input-area" class="hidden">
+              <input type="text" id="company-input" placeholder="Scrivi un messaggio..."
                 onkeydown="if(event.key === 'Enter') sendCompanyMessage()">
-              <button class="btn-primary" style="width:100px;" onclick="sendCompanyMessage()">Invia</button>
+              <button class="btn-primary" onclick="sendCompanyMessage()">Invia</button>
             </div>
           </div>
         </div>
