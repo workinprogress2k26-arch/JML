@@ -200,22 +200,63 @@ async function checkLoginStatus() {
     if (session) {
         const user = session.user;
 
-        // 1. Scarica il profilo (Saldo, Nome, ecc.)
-        const { data: profile } = await supabaseClient
+        // 1. Scarica o crea il profilo (Saldo, Nome, ecc.)
+        let { data: profile } = await supabaseClient
             .from('profiles')
             .select('*')
             .eq('id', user.id)
             .single();
 
+        // Se l'utente è entrato con Google e non ha un profilo, o mancano info Google
+        if (user.app_metadata.provider === 'google') {
+            const googleName = user.user_metadata.full_name;
+            const googleAvatar = user.user_metadata.avatar_url;
+
+            if (!profile) {
+                // Primo accesso Google: Crea profilo
+                const { data: newProfile, error: insErr } = await supabaseClient
+                    .from('profiles')
+                    .insert([{
+                        id: user.id,
+                        display_name: googleName || user.email,
+                        email: user.email,
+                        avatar_url: googleAvatar,
+                        user_type: 'private',
+                        balance: 0,
+                        frozen_balance: 0
+                    }])
+                    .select()
+                    .single();
+                if (!insErr) profile = newProfile;
+            } else if (!profile.avatar_url || profile.display_name === profile.email) {
+                // Aggiorna info Google se mancanti o di default
+                const { data: updProfile } = await supabaseClient
+                    .from('profiles')
+                    .update({
+                        avatar_url: profile.avatar_url || googleAvatar,
+                        display_name: (profile.display_name === profile.email) ? googleName : profile.display_name
+                    })
+                    .eq('id', user.id)
+                    .select()
+                    .single();
+                if (updProfile) profile = updProfile;
+            }
+        }
+
         if (profile) {
             userBalance = parseFloat(profile.balance) || 0;
             frozenBalance = parseFloat(profile.frozen_balance) || 0;
 
-            // Salva i dati dell'utente per la UI
+            // Salva i dati dell'utente per la UI (Inclusi i nuovi campi)
             const userData = {
                 name: profile.display_name,
+                surname: profile.display_name?.split(' ')[1] || "",
                 email: profile.email,
-                type: profile.user_type
+                type: profile.user_type,
+                avatar: profile.avatar_url,
+                is_premium: profile.is_premium,
+                cv: profile.cv,
+                certifications: profile.certifications
             };
             localStorage.setItem('userData', JSON.stringify(userData));
         }
@@ -1281,7 +1322,18 @@ function renderUserProfile() {
     if (cvBox) cvBox.textContent = data.cv || "Nessun curriculum inserito. Aggiungilo dalle impostazioni.";
     if (certBox) certBox.textContent = data.certifications || "Nessuna certificazione inserita.";
 
-    if (data.avatar) document.getElementById('profile-avatar-big').src = data.avatar;
+    // Aggiornamento Immagini Profilo (Avatar)
+    const avatarUrl = data.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150';
+
+    const profileImgBig = document.getElementById('profile-avatar-big');
+    const sidebarAvatar = document.getElementById('user-avatar');
+
+    if (profileImgBig) profileImgBig.src = avatarUrl;
+    if (sidebarAvatar) sidebarAvatar.src = avatarUrl;
+
+    // Aggiornamento Nome in Sidebar
+    const sideName = document.getElementById('user-display-name');
+    if (sideName) sideName.textContent = data.name || "Utente";
 
     // Mostra saldo con valuta corretta
     const cur = data.currency || '€';
