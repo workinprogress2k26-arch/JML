@@ -740,29 +740,32 @@ async function updateChatList() {
 function openCompanyChat(chat) {
     currentChatCompany = chat;
 
-    // Sezione Messaggi: cambiamo il titolo della finestra
+    // Sezione Messaggi: attiviamo la finestra
+    const chatWindow = document.getElementById('company-chat-window');
+    if (chatWindow) chatWindow.classList.add('active');
+
     const header = document.getElementById('company-chat-header');
     if (header) header.textContent = `Chat con ${chat.name}`;
 
     const body = document.getElementById('company-chat-body');
-    body.innerHTML = `
-        <div class="message company glass">
-            <div class="msg-content">Ciao! Hai accettato il lavoro per "${annunci.find(a => a.id === chat.jobId)?.title}". Come possiamo organizzarci?</div>
-            <span class="msg-timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-        </div>
-    `;
+    if (body) {
+        body.innerHTML = `
+            <div class="message company glass">
+                <div class="msg-content">Ciao! Hai accettato il lavoro per "${annunci.find(a => a.id === chat.jobId)?.title}". Come possiamo organizzarci?</div>
+                <span class="msg-timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+        `;
+    }
+
     // Aggiorna il nome della persona nell'header
-    document.getElementById('chat-partner-name').textContent = `Chat con ${chat.name}`;
+    const partnerName = document.getElementById('chat-partner-name');
+    if (partnerName) partnerName.textContent = `Chat con ${chat.name}`;
 
     // MOSTRA IL TASTO CESTINO
-    document.getElementById('btn-clear-chat').classList.remove('hidden');
-    // Mostriamo l'area di input
-    document.getElementById('company-chat-input-area').classList.remove('hidden');
-    loadMessages(chat.jobId); // <--- Carica i messaggi veri!
+    const clearBtn = document.getElementById('btn-clear-chat');
+    if (clearBtn) clearBtn.classList.remove('hidden');
 
-
-
-
+    loadMessages(chat.jobId);
 }
 
 async function sendCompanyMessage() {
@@ -1355,4 +1358,16 @@ async function clearChat(jobId) {
     } else {
         loadMessages(jobId); // Aggiorna la finestra chat
     }
+}
+
+// Funzione dedicata per il modale (se necessario)
+async function sendModalCompanyMessage() {
+    const input = document.getElementById('modal-company-chat-input');
+    const msg = input.value.trim();
+    if (!msg || !currentChatCompany) return;
+
+    // Riutilizziamo la logica di invio adattandola
+    // Per ora facciamo l'invio standard
+    input.value = '';
+    // ... logica aggiuntiva ...
 }

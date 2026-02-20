@@ -984,8 +984,7 @@ input:focus {
 
     /* BARRA INPUT CHAT FISSA */
     .input-area,
-    .chat-footer,
-    #company-chat-input-area {
+    .chat-footer {
         position: fixed !important;
         bottom: 0 !important;
         left: 60px !important;
@@ -996,6 +995,10 @@ input:focus {
         border-top: 1px solid var(--border);
         display: flex !important;
         z-index: 2000;
+    }
+
+    #company-chat-window:not(.active) #company-chat-input-area {
+        display: none !important;
     }
 
     /* Nascondi bottoni invio su mobile per allungare la barra */
@@ -1146,27 +1149,39 @@ body.auth-mode {
     font-weight: 400;
 }
 
+/* Nascondi la barra di input se non c'è una chat attiva */
+#company-chat-window:not(.active) #company-chat-input-area {
+    display: none;
+}
+
 #company-input {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.08);
+    /* Più visibile */
+    border: 1px solid rgba(33, 150, 243, 0.3);
     border-radius: 12px;
     color: white;
     padding: 12px 15px;
     flex-grow: 1;
     outline: none;
-    transition: border-color 0.3s;
+    transition: all 0.3s;
 }
 
 #company-input:focus {
     border-color: #2196F3;
-    box-shadow: 0 0 10px rgba(33, 150, 243, 0.2);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 15px rgba(33, 150, 243, 0.3);
 }
 
 .company-chat-header {
     padding: 1rem;
     border-bottom: 1px solid var(--border);
-    background: rgba(33, 150, 243, 0.05);
+    background: rgba(33, 150, 243, 0.08);
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+/* Fix per assicurare che il display flex del window funzioni correttamente */
+.chat-window.active {
+    display: flex !important;
 }

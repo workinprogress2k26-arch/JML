@@ -326,7 +326,7 @@
             </div>
 
             <!-- AREA INPUT -->
-            <div id="company-chat-input-area" class="input-area hidden">
+            <div id="company-chat-input-area" class="input-area">
               <div class="chat-input-area">
                 <input type="text" id="company-input" placeholder="Scrivi un messaggio..."
                   onkeydown="if(event.key === 'Enter') sendCompanyMessage()">
@@ -418,7 +418,7 @@
       <div id="company-chat-modal" class="modal hidden">
         <div class="modal-content glass chat-modal">
           <div class="chat-header">
-            <h2 id="company-chat-header">Chat con Azienda</h2>
+            <h2 id="modal-company-chat-header">Chat con Azienda</h2>
             <div style="display: flex; gap: 0.5rem;">
               <button id="release-payment-btn" class="btn-primary"
                 style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #4CAF50; display: none;"
@@ -426,10 +426,11 @@
               <button class="close-btn" onclick="closeCompanyChat()">×</button>
             </div>
           </div>
-          <div class="chat-body" id="company-chat-body"></div>
+          <div class="chat-body" id="modal-company-chat-body"></div>
           <div class="chat-footer">
-            <input type="text" id="company-chat-input" placeholder="Scrivi un messaggio...">
-            <button onclick="sendCompanyMessage()">Invia</button>
+            <input type="text" id="modal-company-chat-input" placeholder="Scrivi un messaggio..."
+              onkeydown="if(event.key === 'Enter') sendModalCompanyMessage()">
+            <button onclick="sendModalCompanyMessage()">Invia</button>
           </div>
         </div>
       </div>
