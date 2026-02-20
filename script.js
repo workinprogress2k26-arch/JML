@@ -668,8 +668,13 @@ async function openAnnuncioDetails(annId) {
                 confirmBtn.style.flex = '2';
                 confirmBtn.textContent = '✅ Conferma e Paga';
                 confirmBtn.onclick = () => {
-                    currentChatCompany = { jobId: ann.id, partnerId: 'N/A', name: 'Lavoratore' };
-                    releasePayment();
+                    // Se siamo qui e il lavoro è accettato, cerchiamo se c'è un partner in una chat esistente
+                    // Altrimenti dobbiamo passare per la sezione messaggi
+                    if (currentChatCompany && currentChatCompany.jobId === ann.id && currentChatCompany.partnerId !== 'N/A') {
+                        releasePayment();
+                    } else {
+                        showToast("Per rilasciare il pagamento, apri la chat con il lavoratore nella sezione Messaggi.", "warning");
+                    }
                     closeModal('annuncio-details-modal');
                 };
                 actionsCont.appendChild(confirmBtn);
@@ -819,32 +824,6 @@ function confirmRevocation() {
     renderBacheca();
 }
 
-function releasePayment() {
-    if (!currentChatCompany) return;
-    const ann = annunci.find(a => a.id === currentChatCompany.jobId);
-    if (!ann) return;
-
-    const amount = parseFloat(ann.salary.replace(/[^0-9.]/g, ''));
-    if (confirm(`Confermi il rilascio di €${amount} per il lavoro "${ann.title}"?`)) {
-        frozenBalance -= amount;
-        localStorage.setItem('frozenBalance', frozenBalance);
-
-        // Simula pagamento effettuato rimuovendo l'annuncio o segnandolo come completato
-        // Sposta l'annuncio nei completati invece di eliminarlo definitivamente
-        completedContracts.push(ann.id);
-        localStorage.setItem('completedContracts', JSON.stringify(completedContracts));
-
-        // Rimuovi dagli attivi
-        acceptedContracts = acceptedContracts.filter(cid => cid !== ann.id);
-        localStorage.setItem('acceptedContracts', JSON.stringify(acceptedContracts));
-
-        showToast('Pagamento rilasciato con successo! Ora puoi lasciare una recensione dal tuo profilo.', 'success');
-        closeCompanyChat();
-        renderBacheca();
-        renderUserProfile();
-        initMap();
-    }
-}
 
 function syncMapMarkers(filteredAnnunci) {
     if (!map) return;
@@ -1172,14 +1151,22 @@ function openCompanyChat(chat) {
 }
 
 async function releasePayment() {
-    if (!currentChatCompany) return;
+    if (!currentChatCompany || !currentChatCompany.jobId) {
+        showToast("Seleziona una chat valida prima di pagare.", "error");
+        return;
+    }
 
     const jobId = currentChatCompany.jobId;
     const workerId = currentChatCompany.partnerId;
 
+    if (!workerId || workerId === 'N/A') {
+        showToast("Identità del lavoratore non trovata. Apri la chat Messaggi.", "error");
+        return;
+    }
+
     const ann = annunci.find(a => a.id === jobId);
     if (!ann) {
-        showToast("Impossibile trovare l'annuncio relativo.", "error");
+        showToast("Impossibile trovare l'annuncio.", "error");
         return;
     }
 
@@ -1190,7 +1177,7 @@ async function releasePayment() {
     try {
         const { data: { user } } = await supabaseClient.auth.getUser();
 
-        // 1. Sottrai dai fondi congelati dell'azienda
+        // 1. Esegui il pagamento sicuro tramite RPC (Escrow)
         const { error: err1 } = await supabaseClient.rpc('release_escrow_payment', {
             employer_id: user.id,
             worker_id: workerId,
@@ -1198,27 +1185,34 @@ async function releasePayment() {
             p_amount: amount
         });
 
-        // Se RPC fallisce o non esiste, usiamo logica manuale (fallback)
         if (err1) {
-            console.warn("RPC fallito, uso logica manuale:", err1.message);
-            // Qui andrebbe una transazione transazionale su Supabase
-            // Per ora simuliamo il successo se siamo in ambiente demo/sviluppo
+            console.error("Errore RPC:", err1);
+            if (err1.message.includes("is_premium")) {
+                showToast("Errore Database: Manca la colonna 'is_premium'. Esegui il comando SQL suggerito in precedenza.", "error");
+            } else {
+                showToast("Errore durante il rilascio: " + err1.message, "error");
+            }
+            return;
         }
 
         // 2. Registra Transazioni
         await logTransaction(-amount, `Pagamento rilasciato per: ${ann.title}`);
-        // Nota: Nel mondo reale il log per il lavoratore verrebbe fatto dal server/trigger
 
         showToast("Pagamento rilasciato con successo! Grazie per aver collaborato.", "success");
 
-        // 3. Mark job as completed localmente e aggiorna UI
+        // 3. Mark job as completed
         completedContracts.push(jobId);
         localStorage.setItem('completedContracts', JSON.stringify(completedContracts));
 
+        // 4. Pulizia locale se necessario
+        acceptedContracts = acceptedContracts.filter(id => id !== jobId);
+        localStorage.setItem('acceptedContracts', JSON.stringify(acceptedContracts));
+
         closeCompanyChat();
-        checkLoginStatus(); // Aggiorna i saldi
+        checkLoginStatus(); // Ricarica saldi e bacheca
     } catch (err) {
-        showToast("Errore durante il rilascio: " + err.message, "error");
+        console.error("Eccezione durante il rilascio:", err);
+        showToast("Errore critico: " + err.message, "error");
     }
 }
 
