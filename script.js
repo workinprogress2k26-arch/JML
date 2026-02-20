@@ -298,6 +298,12 @@ function initDashboard() {
     renderBacheca();
     updateSidebar();
     initMap();
+
+    // Inizializza messaggio AI se presente e vuoto (nuova integrazione bacheca)
+    const aiBody = document.getElementById('ai-chat-body');
+    if (aiBody && aiBody.innerHTML.trim() === '') {
+        appendMessage('ai', "Ciao! Sono Worky-AI. Come posso aiutarti oggi? Prova a scrivere 'Cerca lavoro' o 'Crea un annuncio per un barista'.", aiBody);
+    }
 }
 
 async function loadAnnouncementsFromDB() {
@@ -432,6 +438,10 @@ function showSection(sectionId) {
     }
 }
 
+function renderBachecaFromAI() {
+    renderBacheca();
+}
+
 
 function showModal(modalId) {
     const modal = document.getElementById(modalId);
@@ -499,7 +509,8 @@ async function renderBacheca() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     const currentUserId = user ? user.id : null;
 
-    const searchText = document.getElementById('search-input')?.value.toLowerCase() || "";
+    // SOURCE DI RICERCA: prioritizziamo la nuova barra AI integrata
+    const searchText = (document.getElementById('ai-input')?.value || "").toLowerCase();
     const filterCat = document.getElementById('filter-category')?.value || "";
     const userData = JSON.parse(localStorage.getItem('userData'));
     const userCurrency = userData ? (userData.currency || '€') : '€';
@@ -1308,36 +1319,31 @@ function handleAIKeyDown(e) {
 }
 
 
-let isAIBusy = false; // Variabile di controllo per evitare invii multipli
+let isAIBusy = false;
 
 function closeChatArea(type) {
     if (type === 'company') {
         const win = document.getElementById('company-chat-window');
         if (win) win.classList.remove('active');
-    } else {
-        const aiWin = document.getElementById('ai-chat-window');
-        if (aiWin) aiWin.classList.remove('active');
-    }
-}
-
-function openAIChatOnMobile() {
-    if (window.innerWidth <= 1024) {
-        const aiWin = document.getElementById('ai-chat-window');
-        if (aiWin) aiWin.classList.add('active');
     }
 }
 
 async function sendAIMessage() {
     const input = document.getElementById('ai-input');
+    const responseCont = document.getElementById('ai-bacheca-response');
     const body = document.getElementById('ai-chat-body');
     const userMsg = input.value.trim();
 
     if (!userMsg || isAIBusy) return;
 
-    // Se siamo su mobile e cliccano invio ma la finestra non è attiva (difficile ma possibile)
-    openAIChatOnMobile();
-
     isAIBusy = true;
+
+    // Mostra l'area risposta nella bacheca
+    if (responseCont) responseCont.classList.remove('hidden');
+
+    // Puliamo la risposta precedente per focus sul nuovo comando
+    body.innerHTML = '';
+
     appendMessage('user', userMsg, body);
     input.value = '';
 
@@ -1370,18 +1376,12 @@ async function sendAIMessage() {
             if (replyText.includes("[ACTION:FILL_FORM:")) {
                 const match = replyText.match(/\[ACTION:FILL_FORM:(.*?)\]/);
                 if (match) {
-                    const params = match[1].split("|"); // Dividiamo Titolo|Prezzo|Durata
-
-                    // Riempire i campi dell'HTML
+                    const params = match[1].split("|");
                     document.getElementById('ann-title').value = params[0] || "";
                     document.getElementById('ann-salary').value = params[1] || "";
                     document.getElementById('ann-duration').value = params[2] || "1";
-
-                    // Aprire il modulo e calcolare il totale
                     openCreateModal();
                     if (typeof updatePricePreview === 'function') updatePricePreview();
-
-                    // Pulire il testo per l'utente
                     replyText = replyText.replace(/\[ACTION:FILL_FORM:.*?\]/, "🪄 Ho preparato il modulo per te!");
                 }
             }
@@ -1401,7 +1401,7 @@ async function sendAIMessage() {
             // --- AZIONE 4: RICERCA LAVORO ---
             if (replyText.includes("[ACTION:SEARCH:")) {
                 const query = replyText.split("[ACTION:SEARCH:")[1].split("]")[0];
-                document.getElementById('search-input').value = query;
+                document.getElementById('ai-input').value = query;
                 renderBacheca();
                 showSection('bacheca-section');
                 replyText = replyText.replace(`[ACTION:SEARCH:${query}]`, "🔍");

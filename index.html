@@ -182,9 +182,6 @@
         <li class="nav-item" onclick="showSection('map-section')">
           <span>📍</span> Mappa Lavori
         </li>
-        <li class="nav-item" onclick="showSection('chat-ai-section')">
-          <span>🤖</span> AI Assistant
-        </li>
         <li class="nav-item" onclick="showSection('contracts-section')">
           <span>🤝</span> Messaggi Aziende
         </li>
@@ -225,18 +222,37 @@
             <button class="btn-primary" style="width: auto;" onclick="openCreateModal()">+ Crea Annuncio</button>
           </div>
 
-          <!-- FILTRI DI RICERCA -->
+          <!-- WORKY-AI INPUT BAR (Integrazione Diretta) -->
           <div class="filters-bar glass"
-            style="width: 100%; padding: 1rem; border-radius: 12px; display: flex; gap: 1rem; flex-wrap: wrap;">
-            <input type="text" id="search-input" placeholder="Cerca per titolo, autore..."
-              style="flex: 2; min-width: 200px;" oninput="renderBacheca()">
-            <select id="filter-category" style="flex: 1; min-width: 150px;" onchange="renderBacheca()">
-              <option value="">Tutte le categorie</option>
-              <option value="ristorazione">Ristorazione</option>
-              <option value="tecnologia">Tecnologia</option>
-              <option value="servizi">Servizi</option>
-              <option value="altro">Altro</option>
-            </select>
+            style="width: 100%; padding: 0.5rem; border-radius: 12px; display: flex; flex-direction: column; gap: 0.5rem; border: 1px solid var(--primary);">
+            <div style="display: flex; gap: 1rem; width: 100%;">
+              <div class="suggestion-wrapper" style="flex: 2; position: relative; min-width: 200px;">
+                <div id="ai-suggestion-ghost" class="suggestion-ghost"
+                  style="position: absolute; top: 12px; left: 13px; color: rgba(255,255,255,0.3); pointer-events: none; font-family: inherit; font-size: 1rem;">
+                </div>
+                <input type="text" id="ai-input"
+                  placeholder="Chiedi a Worky-AI (es: 'Cerca cameriere' o 'Crea annuncio')..."
+                  style="width: 100%; height: 45px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; color: white; padding-left: 13px; font-size: 1rem;"
+                  oninput="updateAIWithGhostText(); renderBachecaFromAI();" onkeydown="handleAIKeyDown(event)">
+              </div>
+              <select id="filter-category"
+                style="flex: 1; min-width: 150px; height: 45px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; color: white;"
+                onchange="renderBacheca()">
+                <option value="">Tutte le categorie</option>
+                <option value="ristorazione">Ristorazione</option>
+                <option value="tecnologia">Tecnologia</option>
+                <option value="servizi">Servizi</option>
+                <option value="altro">Altro</option>
+              </select>
+            </div>
+
+            <!-- AREA RISPOSTA AI (Appare solo quando Worky risponde) -->
+            <div id="ai-bacheca-response" class="hidden" style="width: 100%; margin-top: 0.5rem;">
+              <div id="ai-chat-body" class="chat-body glass"
+                style="max-height: 200px; padding: 1rem; border-radius: 10px; border: 1px solid var(--primary); font-size: 0.9rem; overflow-y: auto; background: rgba(220, 170, 37, 0.05);">
+                <!-- Risposta AI apparirà qui -->
+              </div>
+            </div>
           </div>
         </div>
         <div class="announcements-grid" id="announcements-grid">
@@ -255,66 +271,6 @@
         <div id="map-content" class="glass" style="height: 500px; margin-top: 1rem;"></div>
       </section>
 
-      <!-- SEZIONE CHAT AI -->
-      <section id="chat-ai-section" class="content-section hidden">
-        <div
-          style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-          <h2>Worky-AI Assistant</h2>
-
-          <!-- SELETTORE VERSIONE AI -->
-          <div style="display: flex; align-items: center; gap: 0.8rem;">
-            <label style="font-size: 0.8rem; color: var(--text-dim);">Modello:</label>
-            <select id="ai-model-select" class="glass">
-              <option value="gemini-3.0-flash-exp">Gemini 2.0 Flash (Potente)</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="chat-container glass">
-          <div class="chat-list">
-            <div class="chat-item active" onclick="openAIChatOnMobile()">
-              <strong>🤖 Worky-AI</strong><br>
-              <small id="ai-status-label">Modello standard attivo</small>
-            </div>
-          </div>
-
-          <div class="chat-window glass" id="ai-chat-window">
-            <!-- HEADER MOBILE -->
-            <div class="company-chat-header ai-header">
-              <div style="display: flex; align-items: center; gap: 0.8rem;">
-                <button class="back-chat-btn" onclick="closeChatArea('ai')">←</button>
-                <div style="display: flex; flex-direction: column;">
-                  <span style="font-size: 1.1rem; font-weight: 700;">Worky-AI Assistente</span>
-                  <small style="color: #4CAF50; font-size: 0.8rem;">Online • Risponde istantaneamente</small>
-                </div>
-              </div>
-            </div>
-            <!-- Area dove compaiono i messaggi -->
-            <div id="ai-chat-body" class="chat-body">
-              <div class="message ai glass">
-                Ciao! Sono il tuo assistente Worky-AI. Come posso aiutarti oggi nella tua ricerca di lavoro a Bologna?
-              </div>
-            </div>
-
-            <!-- Area Input -->
-            <div class="input-area">
-              <div class="chat-input-area">
-                <div class="suggestion-wrapper" style="flex-grow: 1; position: relative;">
-                  <div id="ai-suggestion-ghost" class="suggestion-ghost"
-                    style="position: absolute; top: 12px; left: 13px; color: rgba(255,255,255,0.3); pointer-events: none; font-family: inherit;">
-                  </div>
-                  <input type="text" id="ai-input"
-                    style="background: transparent !important; position: relative; z-index: 1; padding-left: 13px;"
-                    placeholder="Chiedi a Worky-AI..." oninput="updateAIWithGhostText()"
-                    onkeydown="handleAIKeyDown(event)">
-                </div>
-                <button class="btn-primary" style="width: auto; padding: 0 1.5rem; height: 45px;"
-                  onclick="sendAIMessage()">Invia</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
 
       <!-- SEZIONE MESSAGGI AZIENDE -->
