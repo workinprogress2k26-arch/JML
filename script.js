@@ -1699,79 +1699,86 @@ function renderUserProfile() {
 // --- 11. SISTEMA MODIFICA PROFILO ---
 
 async function openEditAccountModal() {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) return;
+    console.log("Apertura modale modifica profilo...");
+    try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) {
+            showToast("Devi essere loggato per modificare il profilo.", "error");
+            return;
+        }
 
-    // Recuperiamo il profilo
-    const { data: profile } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+        // Recuperiamo il profilo
+        const { data: profile, error } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
 
-    if (!profile) return;
+        if (error || !profile) {
+            console.error("Errore recupero profilo:", error);
+            showToast("Errore nel caricamento del profilo.", "error");
+            return;
+        }
 
-    // Metadata per tracciare le modifiche (Supabase Auth Metadata)
-    const metadata = user.user_metadata || {};
-    const editedFields = metadata.edited_fields || {};
+        const metadata = user.user_metadata || {};
+        const socials = metadata.socials || {};
 
-    const nameInput = document.getElementById('edit-name');
-    const surnameInput = document.getElementById('edit-surname');
-    const cityInput = document.getElementById('edit-city');
-    const bizNameInput = document.getElementById('edit-company-name');
-    const bizAddrInput = document.getElementById('edit-company-address');
-    const passInput = document.getElementById('edit-password');
-    const cvInput = document.getElementById('edit-cv');
-    const certInput = document.getElementById('edit-certifications');
+        // Inizializzazione input
+        const nameInput = document.getElementById('edit-name');
+        const surnameInput = document.getElementById('edit-surname');
+        const cityInput = document.getElementById('edit-city');
+        const cvInput = document.getElementById('edit-cv');
+        const certInput = document.getElementById('edit-certifications');
+        const passInput = document.getElementById('edit-password');
+        const bizNameInput = document.getElementById('edit-company-name');
+        const bizAddrInput = document.getElementById('edit-company-address');
 
-    // Popola i campi (Sbloccati per modifiche illimitate)
-    nameInput.value = profile.display_name?.split(' ')[0] || "";
-    nameInput.disabled = false;
-    nameInput.style.opacity = "1";
+        if (!nameInput || !surnameInput || !cityInput || !cvInput || !certInput) {
+            console.error("Elementi del modale non trovati nel DOM.");
+            return;
+        }
 
-    surnameInput.value = profile.display_name?.split(' ')[1] || "";
-    surnameInput.disabled = false;
-    surnameInput.style.opacity = "1";
+        // Popola i campi (Sbloccati per modifiche illimitate)
+        const nameParts = (profile.display_name || "").split(' ');
+        nameInput.value = nameParts[0] || "";
+        surnameInput.value = nameParts.slice(1).join(' ') || "";
 
-    cityInput.value = profile.city || "";
-    cityInput.disabled = false;
-    cityInput.style.opacity = "1";
+        nameInput.disabled = false;
+        surnameInput.disabled = false;
+        cityInput.value = profile.city || "";
+        cityInput.disabled = false;
+        cvInput.value = profile.cv || "";
+        cvInput.disabled = false;
+        certInput.value = profile.certifications || "";
+        certInput.disabled = false;
 
-    cvInput.value = profile.cv || "";
-    cvInput.disabled = false;
-    cvInput.style.opacity = "1";
+        // Business fields
+        if (profile.user_type === 'business') {
+            document.getElementById('edit-biz-fields').classList.remove('hidden');
+            if (bizNameInput) bizNameInput.value = profile.company_name || "";
+            if (bizAddrInput) bizAddrInput.value = profile.company_address || "";
+        } else {
+            document.getElementById('edit-biz-fields').classList.add('hidden');
+        }
 
-    certInput.value = profile.certifications || "";
-    certInput.disabled = false;
-    certInput.style.opacity = "1";
+        // Socials - usiamo i metadata di auth
+        if (document.getElementById('edit-instagram')) document.getElementById('edit-instagram').value = socials.instagram || "";
+        if (document.getElementById('edit-x')) document.getElementById('edit-x').value = socials.x || "";
+        if (document.getElementById('edit-facebook')) document.getElementById('edit-facebook').value = socials.facebook || "";
+        if (document.getElementById('edit-pinterest')) document.getElementById('edit-pinterest').value = socials.pinterest || "";
 
-    if (profile.user_type === 'business') {
-        document.getElementById('edit-biz-fields').classList.remove('hidden');
-        bizNameInput.value = profile.company_name || "";
-        bizNameInput.disabled = false;
-        bizNameInput.style.opacity = "1";
+        // Password
+        if (passInput) {
+            passInput.value = "";
+            passInput.disabled = false;
+            passInput.placeholder = "••••••••";
+        }
 
-        bizAddrInput.value = profile.company_address || "";
-        bizAddrInput.disabled = false;
-        bizAddrInput.style.opacity = "1";
-    } else {
-        document.getElementById('edit-biz-fields').classList.add('hidden');
+        showModal('edit-account-modal');
+    } catch (err) {
+        console.error("Eccezione in openEditAccountModal:", err);
+        showToast("Errore critico durante l'apertura: " + err.message, "error");
     }
-
-    // Socials
-    const socials = metadata.socials || {};
-    document.getElementById('edit-instagram').value = socials.instagram || "";
-    document.getElementById('edit-x').value = socials.x || "";
-    document.getElementById('edit-facebook').value = socials.facebook || "";
-    document.getElementById('edit-pinterest').value = socials.pinterest || "";
-
-    // Password
-    passInput.value = "";
-    passInput.disabled = false;
-    passInput.placeholder = "••••••••";
-    passInput.style.opacity = "1";
-
-    showModal('edit-account-modal');
 }
 
 async function updateAccountData() {
