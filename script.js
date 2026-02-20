@@ -417,9 +417,19 @@ function showSection(sectionId) {
     const activeLink = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick')?.includes(sectionId));
     if (activeLink) activeLink.classList.add('active');
 
-    // FIX PER MOBILE: Torna in alto e ricalcola mappa
+    // FIX PER MOBILE: Torna in alto
     document.querySelector('.main-content').scrollTop = 0;
-    if (sectionId === 'map-section' && map) setTimeout(() => map.invalidateSize(), 200);
+
+    // Ricalcola o Inizializza Mappa solo se visibile
+    if (sectionId === 'map-section') {
+        if (!map) {
+            initMap();
+        } else {
+            setTimeout(() => {
+                if (map) map.invalidateSize();
+            }, 300);
+        }
+    }
 }
 
 
@@ -435,19 +445,34 @@ function closeModal(modalId) {
 
 // Mappa
 function initMap() {
-    if (!document.getElementById('map-content')) return;
-    if (map) { map.remove(); map = null; }
-    map = L.map('map-content', {
-        worldCopyJump: false,
-        maxBoundsViscosity: 1.0
-    }).setView([44.4949, 11.3426], 13);
+    const container = document.getElementById('map-content');
+    if (!container) return;
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        noWrap: true,
-        bounds: [[-90, -180], [90, 180]]
-    }).addTo(map);
+    // Pulizia se esiste già una mappa
+    if (map) {
+        map.off();
+        map.remove();
+        map = null;
+    }
 
-    syncMapMarkers(annunci);
+    // Inizializzazione standard con ritardo per attendere che il CSS faccia il suo lavoro
+    setTimeout(() => {
+        if (!document.getElementById('map-content')) return;
+
+        map = L.map('map-content', {
+            zoomControl: true,
+            worldCopyJump: false
+        }).setView([44.4949, 11.3426], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        syncMapMarkers(annunci);
+
+        // Forza il ricalcolo finale
+        map.invalidateSize();
+    }, 100);
 }
 
 // --- FUNZIONE HELPER DI SANITIZZAZIONE (Anti-XSS) ---
@@ -561,97 +586,102 @@ async function openAnnuncioDetails(annId) {
     document.getElementById('ann-details-category').textContent = ann.category;
     document.getElementById('ann-details-salary').textContent = ann.salary;
     document.getElementById('ann-details-address').textContent = ann.address || "Bologna (Centro)";
-    document.getElementById('ann-details-author-name').innerHTML = `
-        ${sanitizeInput(ann.author)} 
-        ${ann.isPremium ? '<span class="premium-badge-profile" style="font-size:0.6rem; padding: 2px 6px;">💎 ELITE</span>' : ''}
-    `;
-    document.getElementById('ann-details-author-logo').src = ann.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100';
+
+    const authorNameLabel = document.getElementById('ann-details-author-name');
+    if (authorNameLabel) {
+        authorNameLabel.innerHTML = `
+            ${sanitizeInput(ann.author)} 
+            ${ann.isPremium ? '<span class="premium-badge-profile" style="font-size:0.6rem; padding: 2px 6px;">💎 ELITE</span>' : ''}
+        `;
+    }
+
+    const authorImg = document.getElementById('ann-details-author-logo');
+    if (authorImg) {
+        authorImg.src = ann.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100';
+    }
 
     const bgImg = document.getElementById('ann-details-image');
-    bgImg.style.backgroundImage = ann.image ? `url(${ann.image})` : "linear-gradient(45deg, #1a1c24, #2a2d3a)";
+    if (bgImg) {
+        bgImg.style.backgroundImage = ann.image ? `url(${ann.image})` : "linear-gradient(45deg, #1a1c24, #2a2d3a)";
+    }
 
     // Gestione Azioni Dinamiche
     const actionsCont = document.getElementById('ann-details-actions');
-    actionsCont.innerHTML = '';
+    if (actionsCont) {
+        actionsCont.innerHTML = '';
 
-    if (isAuthor) {
-        // --- VISTA CHI COMMISSIONA (Autore) ---
-        if (isAccepted) {
-            // Gestione del lavoro accettato
-            const confirmBtn = document.createElement('button');
-            confirmBtn.className = 'btn-primary';
-            confirmBtn.style.background = '#4CAF50';
-            confirmBtn.style.flex = '2';
-            confirmBtn.textContent = '✅ Conferma e Paga';
-            confirmBtn.onclick = () => {
-                currentChatCompany = { jobId: ann.id, partnerId: 'N/A', name: 'Lavoratore' }; // Fallback se non siamo in chat
-                releasePayment();
-                closeModal('annuncio-details-modal');
-            };
-            actionsCont.appendChild(confirmBtn);
+        if (isAuthor) {
+            if (isAccepted) {
+                const confirmBtn = document.createElement('button');
+                confirmBtn.className = 'btn-primary';
+                confirmBtn.style.background = '#4CAF50';
+                confirmBtn.style.flex = '2';
+                confirmBtn.textContent = '✅ Conferma e Paga';
+                confirmBtn.onclick = () => {
+                    currentChatCompany = { jobId: ann.id, partnerId: 'N/A', name: 'Lavoratore' };
+                    releasePayment();
+                    closeModal('annuncio-details-modal');
+                };
+                actionsCont.appendChild(confirmBtn);
 
-            const reportBtn = document.createElement('button');
-            reportBtn.className = 'btn-primary';
-            reportBtn.style.background = '#ff4d4d';
-            reportBtn.style.flex = '1';
-            reportBtn.textContent = '⚠️ Segnala';
-            reportBtn.onclick = () => { openReportModal(); closeModal('annuncio-details-modal'); };
-            actionsCont.appendChild(reportBtn);
+                const reportBtn = document.createElement('button');
+                reportBtn.className = 'btn-primary';
+                reportBtn.style.background = '#ff4d4d';
+                reportBtn.style.flex = '1';
+                reportBtn.textContent = '⚠️ Segnala';
+                reportBtn.onclick = () => { openReportModal(); closeModal('annuncio-details-modal'); };
+                actionsCont.appendChild(reportBtn);
 
-            const chatBtn = document.createElement('button');
-            chatBtn.className = 'btn-primary';
-            chatBtn.style.background = 'var(--secondary)';
-            chatBtn.style.flex = '1';
-            chatBtn.textContent = '💬 Vai alla Chat';
-            chatBtn.onclick = () => {
-                showView('contracts-section');
-                closeModal('annuncio-details-modal');
-                // Qui cerchiamo se esiste già una chat attiva per questo annuncio
-                updateChatList().then(() => {
-                    // La funzione updateChatList caricherà le chat, openCompanyChat verrà chiamata dall'utente cliccando sulla lista
-                });
-            };
-            actionsCont.appendChild(chatBtn);
+                const chatBtn = document.createElement('button');
+                chatBtn.className = 'btn-primary';
+                chatBtn.style.background = 'var(--secondary)';
+                chatBtn.style.flex = '1';
+                chatBtn.textContent = '💬 Vai alla Chat';
+                chatBtn.onclick = () => {
+                    showView('contracts-section');
+                    closeModal('annuncio-details-modal');
+                    updateChatList();
+                };
+                actionsCont.appendChild(chatBtn);
+            } else {
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn-primary';
+                delBtn.style.background = '#ff4d4d';
+                delBtn.style.flex = '1';
+                delBtn.textContent = '🗑️ Elimina Annuncio';
+                delBtn.onclick = () => { deleteAnnuncio(ann.id); closeModal('annuncio-details-modal'); };
+                actionsCont.appendChild(delBtn);
+            }
         } else {
-            // Se non accettato, solo eliminazione
-            const delBtn = document.createElement('button');
-            delBtn.className = 'btn-primary';
-            delBtn.style.background = '#ff4d4d';
-            delBtn.style.flex = '1';
-            delBtn.textContent = '🗑️ Elimina Annuncio';
-            delBtn.onclick = () => { deleteAnnuncio(ann.id); closeModal('annuncio-details-modal'); };
-            actionsCont.appendChild(delBtn);
-        }
-    } else {
-        // --- VISTA CHI SVOLGE (Lavoratore) ---
-        const toggleBtn = document.createElement('button');
-        toggleBtn.className = 'btn-primary';
-        toggleBtn.style.flex = '2';
-        toggleBtn.textContent = isAccepted ? '✅ Contratto Attivo' : '🤝 Accetta Lavoro ora';
-        toggleBtn.onclick = () => { toggleContract(ann.id); openAnnuncioDetails(ann.id); };
-        actionsCont.appendChild(toggleBtn);
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = 'btn-primary';
+            toggleBtn.style.flex = '2';
+            toggleBtn.textContent = isAccepted ? '✅ Contratto Attivo' : '🤝 Accetta Lavoro ora';
+            toggleBtn.onclick = () => { toggleContract(ann.id); openAnnuncioDetails(ann.id); };
+            actionsCont.appendChild(toggleBtn);
 
-        if (isAccepted) {
-            const chatBtn = document.createElement('button');
-            chatBtn.className = 'btn-primary';
-            chatBtn.style.background = 'var(--secondary)';
-            chatBtn.style.flex = '1';
-            chatBtn.textContent = '💬 Messaggio';
-            chatBtn.onclick = () => {
-                currentChatCompany = { jobId: ann.id, partnerId: ann.authorId, name: ann.author, jobTitle: ann.title };
-                showView('contracts-section');
-                closeModal('annuncio-details-modal');
-                openCompanyChat(currentChatCompany);
-            };
-            actionsCont.appendChild(chatBtn);
-        } else {
-            const hideBtn = document.createElement('button');
-            hideBtn.className = 'btn-primary';
-            hideBtn.style.background = 'var(--text-dim)';
-            hideBtn.style.flex = '1';
-            hideBtn.textContent = '🚫 Nascondi';
-            hideBtn.onclick = () => { hideAnnuncio(ann.id); closeModal('annuncio-details-modal'); };
-            actionsCont.appendChild(hideBtn);
+            if (isAccepted) {
+                const chatBtn = document.createElement('button');
+                chatBtn.className = 'btn-primary';
+                chatBtn.style.background = 'var(--secondary)';
+                chatBtn.style.flex = '1';
+                chatBtn.textContent = '💬 Messaggio';
+                chatBtn.onclick = () => {
+                    currentChatCompany = { jobId: ann.id, partnerId: ann.authorId, name: ann.author, jobTitle: ann.title };
+                    showView('contracts-section');
+                    closeModal('annuncio-details-modal');
+                    openCompanyChat(currentChatCompany);
+                };
+                actionsCont.appendChild(chatBtn);
+            } else {
+                const hideBtn = document.createElement('button');
+                hideBtn.className = 'btn-primary';
+                hideBtn.style.background = 'var(--text-dim)';
+                hideBtn.style.flex = '1';
+                hideBtn.textContent = '🚫 Nascondi';
+                hideBtn.onclick = () => { hideAnnuncio(ann.id); closeModal('annuncio-details-modal'); };
+                actionsCont.appendChild(hideBtn);
+            }
         }
     }
 
@@ -758,7 +788,7 @@ function releasePayment() {
         acceptedContracts = acceptedContracts.filter(cid => cid !== ann.id);
         localStorage.setItem('acceptedContracts', JSON.stringify(acceptedContracts));
 
-        alert('Pagamento rilasciato e lavoro segnato come completato! Ora puoi lasciare una recensione dal tuo profilo.');
+        showToast('Pagamento rilasciato con successo! Ora puoi lasciare una recensione dal tuo profilo.', 'success');
         closeCompanyChat();
         renderBacheca();
         renderUserProfile();
@@ -773,52 +803,25 @@ function syncMapMarkers(filteredAnnunci) {
     markers.forEach(m => map.removeLayer(m));
     markers = [];
 
-    // Aggiungi solo marker filtrati
     filteredAnnunci.forEach(ann => {
         const isPremium = ann.isPremium;
         const markerColor = isPremium ? '#dcaa25' : '#3498db';
+        const iconEmoji = isPremium ? '💎' : '📍';
 
-        const categoryIcons = {
-            ristorazione: '🍴',
-            tecnologia: '💻',
-            assistenza: '🤝',
-            altro: '📦'
-        };
-        const iconEmoji = isPremium ? '💎' : (categoryIcons[ann.category] || '📍');
-
-        // 2. Creiamo l'icona con HTML personalizzato
         const customIcon = L.divIcon({
-            html: `
-                <div class="custom-marker" style="
-                    background: ${markerColor}; 
-                    border: 2px solid white; 
-                    box-shadow: 0 4px 15px ${isPremium ? 'rgba(220,170,37,0.5)' : 'rgba(0,0,0,0.3)'};
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    width: 35px;
-                    height: 35px;
-                    border-radius: 50% 50% 50% 0;
-                    transform: rotate(-45deg);
-                ">
-                    <div style="transform: rotate(45deg); font-size: 16px;">${iconEmoji}</div>
-                </div>`,
+            html: `<div class="custom-marker" style="background:${markerColor}; width:30px; height:30px; border-radius:30px; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.4); color:white;">${iconEmoji}</div>`,
             className: 'custom-div-icon',
-            iconSize: [35, 35],
-            iconAnchor: [17, 35]
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
         });
 
         const marker = L.marker([ann.lat, ann.lng], { icon: customIcon }).addTo(map)
             .bindPopup(`
-            <div style="text-align: center; color: black; font-family: inherit; min-width: 150px;">
-                <strong style="font-size: 1rem; color: ${markerColor}">${isPremium ? '🏆 ' : ''}${sanitizeInput(ann.title)}</strong><br>
-                <span style="color: #666; font-size: 0.8rem;">${sanitizeInput(ann.author)}</span><br>
-                <strong style="color: var(--primary); font-size: 1rem; display: block; margin: 4px 0;">${ann.salary}</strong>
-                <button class="btn-primary" style="padding: 6px 12px; font-size: 12px; width: 100%;" 
-                    onclick="openAnnuncioDetails(${ann.id})">Vedi Dettagli</button>
-            </div>
-        `);
-
+                <div style="text-align: center; color: black; min-width:120px;">
+                    <strong style="color:${markerColor}">${sanitizeInput(ann.title)}</strong><br>
+                    <button class="btn-primary" style="margin-top:5px; padding:2px 8px; font-size:10px; width:100%;" onclick="openAnnuncioDetails(${ann.id})">Dettagli</button>
+                </div>
+            `);
         markers.push(marker);
     });
 }
@@ -1207,31 +1210,37 @@ async function submitReport() {
 async function sendCompanyMessage() {
     const input = document.getElementById('company-input');
     const userMsg = input.value.trim();
-    if (!userMsg || !currentChatCompany) return;
+
+    if (!userMsg) return;
+
+    if (!currentChatCompany || !currentChatCompany.jobId) {
+        showToast("Seleziona una chat prima di inviare.", "error");
+        return;
+    }
 
     const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+        showToast("Devi aver effettuato il login per inviare messaggi.", "error");
+        return;
+    }
 
-    // Recuperiamo l'annuncio per sapere chi deve ricevere il messaggio
-    const ann = annunci.find(a => a.id === currentChatCompany.jobId);
-    if (!ann) return;
-
-    // 1. Salviamo il messaggio su Supabase
+    // 1. Salviamo il messaggio
     const { error } = await supabaseClient
         .from('messages')
         .insert([{
-            announcement_id: ann.id,
+            announcement_id: currentChatCompany.jobId,
             sender_id: user.id,
-            receiver_id: currentChatCompany.partnerId, // USIAMO IL PARTNER CORRETTO!
+            receiver_id: currentChatCompany.partnerId,
             content: userMsg
         }]);
 
     if (error) {
-        alert("Errore invio: " + error.message);
+        showToast("Impossibile inviare il messaggio: " + error.message, "error");
         return;
     }
 
-    input.value = ''; // Pulisci l'input
-    loadMessages(ann.id); // Ricarichiamo la chat per vedere il nostro messaggio
+    input.value = '';
+    loadMessages(currentChatCompany.jobId);
 }
 
 // Suggerimenti Ghost Text
@@ -1752,7 +1761,7 @@ async function updateAccountData() {
     // Password (via Auth)
     if (!editedFields.password && newPassword) {
         if (newPassword.length < 6) {
-            alert("La password deve avere almeno 6 caratteri.");
+            showToast("La password deve avere almeno 6 caratteri.", "warning");
             return;
         }
         authUpdates.password = newPassword;
@@ -1803,7 +1812,7 @@ function handleAvatarUpload(input) {
             if (document.getElementById('user-avatar')) {
                 document.getElementById('user-avatar').src = base64;
             }
-            alert('Foto profilo aggiornata con successo!');
+            showToast('Foto profilo aggiornata con successo!', 'success');
         };
         reader.readAsDataURL(input.files[0]);
     }
@@ -1835,7 +1844,7 @@ function setRating(val) {
 
 function submitReview() {
     const text = document.getElementById('review-text').value;
-    if (currentRating === 0) { alert('Inserisci un voto con le stelle!'); return; }
+    if (currentRating === 0) { showToast('Inserisci un voto con le stelle!', 'warning'); return; }
 
     const reviews = JSON.parse(localStorage.getItem('reviews')) || [];
 
@@ -1864,7 +1873,7 @@ function submitReview() {
 
     closeReviewModal();
     renderReviews();
-    alert('Recensione salvata con successo!');
+    showToast('Recensione salvata con successo!', 'success');
 }
 
 function switchReviewView(mode) {
@@ -2023,7 +2032,7 @@ async function clearChat(jobId) {
         .eq('sender_id', user.id); // Cancella solo i messaggi inviati da me
 
     if (error) {
-        alert("Errore: " + error.message);
+        showToast("Errore: " + error.message, "error");
     } else {
         loadMessages(jobId); // Aggiorna la finestra chat
     }

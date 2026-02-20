@@ -10,6 +10,99 @@
     --text-dim: #a0a0b0;
     --accent-gradient: linear-gradient(135deg, #DCAA25 0%, #FFD700 100%);
     --glass: blur(12px);
+    --secondary: #3498db;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* --- MOBILE CHAT FIX (WHATSAPP STYLE REFINED) --- */
+@media (max-width: 1024px) {
+    .chat-container {
+        display: block !important;
+        height: calc(100vh - 80px) !important;
+        /* Spazio per nav/header */
+        position: relative !important;
+        overflow: hidden !important;
+        margin-top: 0 !important;
+    }
+
+    .chat-list,
+    .chat-window {
+        position: absolute !important;
+        top: 0;
+        left: 0;
+        width: 100% !important;
+        height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        transition: transform 0.3s cubic-bezier(0.1, 0.7, 1.0, 0.1) !important;
+        background: var(--bg-dark) !important;
+    }
+
+    .chat-list {
+        z-index: 10;
+        transform: translateX(0);
+    }
+
+    .chat-window {
+        z-index: 20;
+        transform: translateX(100%);
+    }
+
+    .chat-window.active {
+        transform: translateX(0) !important;
+    }
+
+    .chat-body {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        padding: 10px !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* AREA INPUT FISSA AL FONDO */
+    .input-area,
+    .chat-footer {
+        flex-shrink: 0 !important;
+        position: sticky !important;
+        bottom: 0 !important;
+        background: #111218 !important;
+        padding: 12px !important;
+        border-top: 1px solid var(--border) !important;
+        z-index: 30;
+    }
+
+    .chat-input-area {
+        gap: 0.5rem !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
+    input[type="text"] {
+        height: 45px !important;
+        font-size: 16px !important;
+        padding: 0 15px !important;
+    }
+
+    .ai-header {
+        display: none;
+    }
+
+    .chat-window.active .ai-header {
+        display: flex !important;
+    }
 }
 
 /* WORKY ACADEMY STYLES */
