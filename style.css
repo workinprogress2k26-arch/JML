@@ -1181,6 +1181,92 @@ body.auth-mode {
     align-items: center;
 }
 
+/* --- SISTEMA TOAST --- */
+#toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    padding: 12px 24px;
+    border-radius: 12px;
+    background: rgba(13, 14, 20, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    color: white;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 250px;
+    transform: translateX(120%);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.toast.show {
+    transform: translateX(0);
+}
+
+.toast.success {
+    border-left: 4px solid #4CAF50;
+}
+
+.toast.error {
+    border-left: 4px solid #ff4d4d;
+}
+
+.toast.info {
+    border-left: 4px solid var(--primary);
+}
+
+/* --- CRONOLOGIA TRANSAZIONI --- */
+.transaction-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 1rem;
+}
+
+.transaction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    font-size: 0.9rem;
+}
+
+.transaction-amount.plus {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.transaction-amount.minus {
+    color: #ff4d4d;
+    font-weight: bold;
+}
+
+/* --- BADGES --- */
+.premium-badge-profile {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: linear-gradient(45deg, #dcaa25, #f1c40f);
+    color: #000;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    box-shadow: 0 0 15px rgba(220, 170, 37, 0.4);
+}
+
 /* Fix per assicurare che il display flex del window funzioni correttamente */
 .chat-window.active {
     display: flex !important;

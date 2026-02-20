@@ -21,6 +21,139 @@ let map = null;
 let markers = [];
 let reviewViewMode = 'received'; // <--- Fondamentale per non far crashare il profilo
 
+// --- SISTEMA TOAST (UX PROFESSIONALE) ---
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    let icon = "🔔";
+    if (type === 'success') icon = "✅";
+    if (type === 'error') icon = "❌";
+    if (type === 'warning') icon = "⚠️";
+
+    toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+    container.appendChild(toast);
+
+    // Fade in
+    setTimeout(() => toast.classList.add('show'), 100);
+
+    // Auto remove after 5s
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => container.removeChild(toast), 400);
+    }, 5000);
+}
+
+// --- RICERCA PROSSIMITÀ (SMART MAPS) ---
+async function findJobsNearMe() {
+    if (!navigator.geolocation) {
+        showToast("Il tuo browser non supporta la geolocalizzazione", "error");
+        return;
+    }
+
+    showToast("Ricerca della tua posizione...", "info");
+
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        if (map) map.setView([latitude, longitude], 14);
+
+        showToast("Mappa aggiornata alla tua posizione!", "success");
+        renderBacheca();
+    }, (err) => {
+        showToast("Impossibile ottenere la tua posizione", "error");
+    });
+}
+
+// --- SISTEMA TRANSAZIONI & GAMIFICATION ---
+async function logTransaction(amount, desc) {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabaseClient
+        .from('transactions')
+        .insert([{
+            user_id: user.id,
+            amount: amount,
+            description: desc
+        }]);
+
+    if (error) console.error("Errore log transazione:", error);
+}
+
+async function selectPlan(planName, price) {
+    if (userBalance < price) {
+        showToast("Saldo insufficiente! Ricarica il tuo profilo.", "error");
+        return;
+    }
+
+    if (!confirm(`Sottoscrivere il piano ${planName} per €${price}?`)) return;
+
+    try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+
+        userBalance -= price;
+
+        const { error: pErr } = await supabaseClient.auth.updateUser({
+            data: {
+                ...user.user_metadata,
+                is_premium: true,
+                badge: "ELITE"
+            }
+        });
+        if (pErr) throw pErr;
+
+        await logTransaction(-price, `Abbonamento Academy: Piano ${planName}`);
+
+        showToast(`Congratulazioni! Ora sei un membro ${planName} 💎`, "success");
+        renderUserProfile();
+        checkLoginStatus();
+    } catch (err) {
+        showToast("Errore durante l'acquisto: " + err.message, "error");
+    }
+}
+
+async function renderTransactions() {
+    const list = document.getElementById('transaction-history');
+    if (!list) return;
+
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+
+    const { data: trans, error } = await supabaseClient
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+    if (error || !trans || trans.length === 0) {
+        list.innerHTML = '<p style="color: var(--text-dim); font-size: 0.8rem; padding: 10px;">Nessun movimento recente.</p>';
+        return;
+    }
+
+    list.innerHTML = '';
+    trans.forEach(t => {
+        const item = document.createElement('div');
+        item.className = 'transaction-item glass';
+        const date = new Date(t.created_at).toLocaleDateString();
+        const isPlus = t.amount > 0;
+
+        item.innerHTML = `
+            <div>
+                <div style="font-weight: 500;">${sanitizeInput(t.description)}</div>
+                <div style="font-size: 0.7rem; color: var(--text-dim);">${date}</div>
+            </div>
+            <div class="transaction-amount ${isPlus ? 'plus' : 'minus'}">
+                ${isPlus ? '+' : ''}${t.amount.toFixed(2)}€
+            </div>
+        `;
+        list.appendChild(item);
+    });
+}
+
 
 // --- 3. INIZIALIZZAZIONE ALL'AVVIO ---
 // --- 3. INIZIALIZZAZIONE ALL'AVVIO ---
@@ -1125,7 +1258,7 @@ function renderUserProfile() {
     display.innerHTML = `
         <div class="profile-info">
             <strong>Nome:</strong> ${sanitizeInput(data.name) || '---'} 
-            ${data.isPremium ? '<span class="verified-badge gold" style="margin-left: 5px;" title="Membro Premium">✔</span>' : ''}
+            ${data.isPremium || data.is_premium ? '<span class="premium-badge-profile" title="Membro Academy Unlimited">💎 ELITE Member</span>' : ''}
         </div>
         <div class="profile-info"><strong>Cognome:</strong> ${sanitizeInput(data.surname) || '---'}</div>
         <div class="profile-info"><strong>Email:</strong> ${sanitizeInput(data.email) || '---'}</div>
@@ -1138,6 +1271,9 @@ function renderUserProfile() {
             <div class="company-tag">Account Aziendale Verificato</div>
         ` : ''}
     `;
+
+    // Carichiamo anche i movimenti
+    renderTransactions();
 
     // Curriculum e Certificazioni
     const cvBox = document.getElementById('profile-cv-data');
