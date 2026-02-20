@@ -301,10 +301,18 @@ function initDashboard() {
 }
 
 async function loadAnnouncementsFromDB() {
-    // Carichiamo l'annuncio E i dati dell'autore (profiles) in un colpo solo
+    // Carichiamo l'annuncio E i dati complessi dell'autore
     const { data, error } = await supabaseClient
         .from('announcements')
-        .select('*, profiles(display_name, email)')
+        .select(`
+            *,
+            profiles:author_id (
+                display_name, 
+                email, 
+                avatar_url, 
+                is_premium
+            )
+        `)
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -324,6 +332,8 @@ async function loadAnnouncementsFromDB() {
         lng: ann.lng,
         author: ann.profiles?.display_name || 'Anonimo',
         authorId: ann.author_id,
+        authorAvatar: ann.profiles?.avatar_url,
+        isPremium: ann.profiles?.is_premium,
         image: ann.image_url,
         created_at: ann.created_at
     }));
@@ -493,6 +503,8 @@ async function renderBacheca() {
         const card = document.createElement('div');
         card.className = `annuncio-card glass ${isAccepted ? 'accepted' : ''}`;
         card.id = `annuncio-${ann.id}`;
+        card.onclick = () => openAnnuncioDetails(ann.id);
+
         card.innerHTML = `
             ${ann.image ? `<img src="${ann.image}" class="annuncio-img">` : ''}
             <div class="card-content">
@@ -504,23 +516,23 @@ async function renderBacheca() {
                     </div>
                 </div>
                 <h3>${sanitizeInput(ann.title)}</h3>
-                <p>${sanitizeInput(ann.description)}</p>
+                <p style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${sanitizeInput(ann.description)}</p>
                 <div class="card-footer">
                     <strong>${userCurrency} ${ann.salary.replace(/[^0-9.]/g, '')}</strong>
                     <div style="display:flex; flex-direction:column; gap:0.5rem; align-items: flex-end;">
                         ${isAuthor ? `
-                            <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem; background: #ff4d4d; color: white;" onclick="deleteAnnuncio(${ann.id})">
-                                🗑️ Elimina Annuncio
+                            <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem; background: #ff4d4d; color: white;" onclick="event.stopPropagation(); deleteAnnuncio(${ann.id})">
+                                🗑️ Elimina
                             </button>` : `
                             <div style="display:flex; gap: 0.5rem;">
-                                <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem;" onclick="toggleContract(${ann.id})">
-                                    ${isAccepted ? 'Contratto Attivo' : 'Accetta Contratto'}
+                                <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem;" onclick="event.stopPropagation(); toggleContract(${ann.id})">
+                                    ${isAccepted ? 'Attivo' : 'Accetta'}
                                 </button>
                                 ${isAccepted ? `
-                                <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem; background: #ffb347; color: white;" onclick="openRevokeModal(${ann.id})" title="Revoca incarico">
-                                    🚩 Revoca
+                                <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem; background: #ffb347; color: white;" onclick="event.stopPropagation(); openRevokeModal(${ann.id})" title="Revoca">
+                                    🚩
                                 </button>` : `
-                                <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem; background: var(--text-dim); color: white;" onclick="hideAnnuncio(${ann.id})" title="Nascondi">
+                                <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem; background: var(--text-dim); color: white;" onclick="event.stopPropagation(); hideAnnuncio(${ann.id})" title="Nascondi">
                                     🚫
                                 </button>`}
                             </div>
@@ -535,6 +547,87 @@ async function renderBacheca() {
     syncMapMarkers(filtered);
 }
 
+async function openAnnuncioDetails(annId) {
+    const ann = annunci.find(a => a.id === annId);
+    if (!ann) return;
+
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    const isAuthor = ann.authorId === user?.id;
+    const isAccepted = acceptedContracts.includes(ann.id);
+
+    // Popola campi base
+    document.getElementById('ann-details-title').textContent = ann.title;
+    document.getElementById('ann-details-description').textContent = ann.description;
+    document.getElementById('ann-details-category').textContent = ann.category;
+    document.getElementById('ann-details-salary').textContent = ann.salary;
+    document.getElementById('ann-details-address').textContent = ann.address || "Bologna (Centro)";
+    document.getElementById('ann-details-author-name').innerHTML = `
+        ${sanitizeInput(ann.author)} 
+        ${ann.isPremium ? '<span class="premium-badge-profile" style="font-size:0.6rem; padding: 2px 6px;">💎 ELITE</span>' : ''}
+    `;
+    document.getElementById('ann-details-author-logo').src = ann.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100';
+
+    const bgImg = document.getElementById('ann-details-image');
+    bgImg.style.backgroundImage = ann.image ? `url(${ann.image})` : "linear-gradient(45deg, #1a1c24, #2a2d3a)";
+
+    // Gestione Azioni Dinamiche
+    const actionsCont = document.getElementById('ann-details-actions');
+    actionsCont.innerHTML = '';
+
+    if (isAuthor) {
+        // --- VISTA CHI COMMISSIONA (Azienda/Privato) ---
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn-primary';
+        delBtn.style.background = '#ff4d4d';
+        delBtn.style.flex = '1';
+        delBtn.textContent = '🗑️ Elimina Annuncio';
+        delBtn.onclick = () => { deleteAnnuncio(ann.id); closeModal('annuncio-details-modal'); };
+        actionsCont.appendChild(delBtn);
+
+        // Se il lavoro è accettato da qualcuno, mostra pulsante per andare in chat
+        if (isAccepted) {
+            const chatBtn = document.createElement('button');
+            chatBtn.className = 'btn-primary';
+            chatBtn.style.flex = '1';
+            chatBtn.textContent = '💬 Vai alla Chat Lavoratore';
+            chatBtn.onclick = () => {
+                showView('contracts-section');
+                closeModal('annuncio-details-modal');
+                // Qui andrebbe aperta la chat specifica
+            };
+            actionsCont.appendChild(chatBtn);
+        }
+    } else {
+        // --- VISTA CHI SVOLGE (Lavoratore) ---
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'btn-primary';
+        toggleBtn.style.flex = '2';
+        toggleBtn.textContent = isAccepted ? '✅ Contratto Attivo' : '🤝 Accetta Lavoro ora';
+        toggleBtn.onclick = () => { toggleContract(ann.id); openAnnuncioDetails(ann.id); };
+        actionsCont.appendChild(toggleBtn);
+
+        if (isAccepted) {
+            const chatBtn = document.createElement('button');
+            chatBtn.className = 'btn-primary';
+            chatBtn.style.background = 'var(--secondary)';
+            chatBtn.style.flex = '1';
+            chatBtn.textContent = '💬 Messaggio';
+            chatBtn.onclick = () => { showView('contracts-section'); closeModal('annuncio-details-modal'); };
+            actionsCont.appendChild(chatBtn);
+        } else {
+            const hideBtn = document.createElement('button');
+            hideBtn.className = 'btn-primary';
+            hideBtn.style.background = 'var(--text-dim)';
+            hideBtn.style.flex = '1';
+            hideBtn.textContent = '🚫 Nascondi';
+            hideBtn.onclick = () => { hideAnnuncio(ann.id); closeModal('annuncio-details-modal'); };
+            actionsCont.appendChild(hideBtn);
+        }
+    }
+
+    showModal('annuncio-details-modal');
+}
+
 async function deleteAnnuncio(id) {
     if (!confirm("Sei sicuro di voler eliminare definitivamente questo annuncio? Verrà rimosso anche dal database Cloud.")) return;
 
@@ -545,12 +638,12 @@ async function deleteAnnuncio(id) {
         .eq('id', id);
 
     if (error) {
-        alert("Errore durante l'eliminazione: " + error.message);
+        showToast("Errore durante l'eliminazione: " + error.message, "error");
         return;
     }
 
     // 2. Ricarica i dati dal DB per aggiornare la bacheca
-    alert("Annuncio rimosso con successo! 🗑️");
+    showToast("Annuncio rimosso con successo! 🗑️", "success");
     loadAnnouncementsFromDB();
 }
 
@@ -1171,6 +1264,16 @@ function handleAIKeyDown(e) {
 
 let isAIBusy = false; // Variabile di controllo per evitare invii multipli
 
+function closeChatArea(type) {
+    if (type === 'company') {
+        const win = document.getElementById('company-chat-window');
+        if (win) win.classList.remove('active');
+    } else {
+        const aiWin = document.querySelector('#ai-section .chat-window');
+        if (aiWin) aiWin.classList.remove('active');
+    }
+}
+
 async function sendAIMessage() {
     const input = document.getElementById('ai-input');
     const body = document.getElementById('ai-chat-body');
@@ -1316,13 +1419,13 @@ async function signup() {
     });
 
     if (error) {
-        alert("Errore registrazione: " + error.message);
+        showToast("Errore registrazione: " + error.message, "error");
         return;
     }
 
     // Se "Confirm Email" è disattivato, data.session sarà già pieno!
     if (data.session) {
-        alert("Registrazione riuscita! Benvenuto in Worky.");
+        showToast("Registrazione riuscita! Benvenuto in Worky.", "success");
 
         // Salviamo i dati per la tua UI
         localStorage.setItem('isLoggedIn', 'true');
@@ -1335,7 +1438,7 @@ async function signup() {
         // Entriamo direttamente nella dashboard
         checkLoginStatus();
     } else {
-        alert("Registrazione completata, ma devi confermare l'email o fare il login manuale.");
+        showToast("Controlla la tua email per confermare l'account.", "info");
         toggleForms();
     }
 }
@@ -1362,7 +1465,7 @@ async function login() {
     });
 
     if (error) {
-        alert("Email o Password errati: " + error.message);
+        showToast("Email o Password errati.", "error");
         return;
     }
 

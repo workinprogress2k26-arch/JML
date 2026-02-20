@@ -601,6 +601,28 @@ input:focus {
 }
 
 /* Chat Styles Unified */
+/* Bottoni Indietro Chat Mobile */
+.back-chat-btn {
+    display: none;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border);
+    color: white;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+@media (max-width: 1024px) {
+    .back-chat-btn {
+        display: flex !important;
+    }
+}
+
 .chat-window {
     display: flex;
     flex-direction: column;
@@ -982,40 +1004,65 @@ input:focus {
         overflow-y: auto;
     }
 
-    /* BARRA INPUT CHAT FISSA */
+    /* --- MOBILE CHAT FIX --- */
+    .chat-container {
+        display: flex !important;
+        flex-direction: column !important;
+        height: calc(100vh - 70px) !important;
+        position: relative;
+    }
+
+    /* Su mobile, mostriamo o la lista o la finestra di chat, non entrambe */
+    .chat-list {
+        width: 100% !important;
+        height: 100% !important;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 10;
+        background: var(--bg-dark);
+        transition: transform 0.3s ease;
+    }
+
+    .chat-window {
+        width: 100% !important;
+        height: 100% !important;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 20;
+        background: var(--bg-dark);
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        display: none;
+        /* Default nascosta */
+    }
+
+    /* Classe per mostrare la finestra di chat slittando dalla destra */
+    .chat-window.active {
+        display: flex !important;
+        transform: translateX(0) !important;
+    }
+
+    /* Se la chat è attiva, nascondi la lista per non farla "pesare" sotto */
+    .chat-window.active~.chat-list {
+        transform: translateX(-100%);
+    }
+
+    /* Header speciale per tornare indietro su mobile */
+    .company-chat-header {
+        padding: 10px !important;
+    }
+
+    /* Riduciamo i padding per massimizzare lo spazio */
+    .chat-body {
+        padding: 10px !important;
+    }
+
+    /* Input area fissa su mobile */
     .input-area,
     .chat-footer {
-        position: fixed !important;
-        bottom: 0 !important;
-        left: 60px !important;
-        right: 0 !important;
-        width: calc(100vw - 60px) !important;
-        background: #0d0e14 !important;
-        padding: 10px 15px !important;
-        border-top: 1px solid var(--border);
-        display: flex !important;
-        z-index: 2000;
-    }
-
-    #company-chat-window:not(.active) #company-chat-input-area {
-        display: none !important;
-    }
-
-    /* Nascondi bottoni invio su mobile per allungare la barra */
-    .input-area button,
-    #company-chat-input-area button {
-        display: none !important;
-    }
-
-    input[type="text"] {
-        flex: 1 !important;
-        height: 45px !important;
-        font-size: 16px !important;
-    }
-
-    #ai-chat-body,
-    #company-chat-body {
-        padding-bottom: 100px !important;
+        padding: 5px 10px !important;
     }
 }
 
