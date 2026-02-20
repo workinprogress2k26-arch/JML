@@ -1208,7 +1208,7 @@ async function releasePayment() {
         acceptedContracts = acceptedContracts.filter(id => id !== jobId);
         localStorage.setItem('acceptedContracts', JSON.stringify(acceptedContracts));
 
-        closeCompanyChat();
+        closeChatArea('company');
         checkLoginStatus(); // Ricarica saldi e bacheca
     } catch (err) {
         console.error("Eccezione durante il rilascio:", err);
