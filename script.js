@@ -309,7 +309,8 @@ function initDashboard() {
 async function loadAnnouncementsFromDB() {
     try {
         console.log("Tentativo scaricamento annunci...");
-        const { data, error } = await supabaseClient
+        // Tentativo query semplice se quella complessa fallisce
+        let { data, error } = await supabaseClient
             .from('announcements')
             .select(`
                 *,
@@ -324,22 +325,29 @@ async function loadAnnouncementsFromDB() {
 
         if (error) {
             console.error("Errore scaricamento annunci:", error);
-            showToast("Errore nel caricamento degli annunci.", "error");
-            return;
+            showToast("Errore database: " + error.message, "error");
+
+            // Prova fallback senza join se l'errore riguarda i profili
+            const { data: fallbackData, error: fbError } = await supabaseClient
+                .from('announcements')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (fbError) return;
+            data = fallbackData;
         }
 
-        if (!data) {
-            console.warn("Nessun dato ricevuto dal database");
+        if (!data || data.length === 0) {
+            console.warn("Nessun annuncio trovato nel DB.");
             annunci = [];
             renderBacheca();
             return;
         }
 
-        console.log(`Scaricati ${data.length} annunci`);
+        showToast(`Caricati ${data.length} annunci con successo!`, "success");
 
         // Trasformiamo i dati per il frontend con fallback sicuri
         annunci = data.map(ann => {
-            // Se profiles è un array (succede se select non riconosce la relazione 1:1), prendiamo il primo
             const profile = Array.isArray(ann.profiles) ? ann.profiles[0] : ann.profiles;
 
             return {
@@ -347,8 +355,7 @@ async function loadAnnouncementsFromDB() {
                 title: ann.title || 'Senza titolo',
                 description: ann.description || '',
                 category: ann.category || 'altro',
-                // Gestiamo sia la vecchia colonna salary che il nuovo rate dell'RPC
-                salary: (ann.salary || ann.rate || '0') + '€/ora',
+                salary: (ann.salary || ann.rate || '0').toString() + '€/ora', // Assicuriamoci sia stringa
                 address: ann.address || 'Bologna',
                 lat: ann.lat || 44.4949,
                 lng: ann.lng || 11.3426,
@@ -366,6 +373,7 @@ async function loadAnnouncementsFromDB() {
 
     } catch (err) {
         console.error("Eccezione durante loadAnnouncementsFromDB:", err);
+        showToast("Errore critico durante il caricamento.", "error");
     }
 }
 
