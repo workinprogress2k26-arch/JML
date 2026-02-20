@@ -384,6 +384,22 @@
           </div>
 
           <div style="width: 100%; text-align: left; margin-top: 2rem;">
+            <h3>Curriculum e Competenze</h3>
+            <div id="profile-cv-data" class="glass"
+              style="padding: 1rem; border-radius: 12px; margin-top: 0.5rem; font-size: 0.9rem; white-space: pre-wrap;">
+              <!-- Popolato via JS -->
+            </div>
+          </div>
+
+          <div style="width: 100%; text-align: left; margin-top: 1rem;">
+            <h3>Certificazioni 🎓</h3>
+            <div id="profile-certifications-data" class="glass"
+              style="padding: 1rem; border-radius: 12px; margin-top: 0.5rem; font-size: 0.9rem; white-space: pre-wrap;">
+              <!-- Popolato via JS -->
+            </div>
+          </div>
+
+          <div style="width: 100%; text-align: left; margin-top: 2rem;">
             <h3>Lavori Completati</h3>
             <div id="completed-jobs-list" style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem;">
               <!-- Popolato via JS -->
@@ -682,6 +698,27 @@
             <label>Città</label>
             <input type="text" id="edit-city">
           </div>
+
+          <div class="input-group">
+            <label>Nuova Password (Lascia vuoto per non cambiare)</label>
+            <input type="password" id="edit-password" placeholder="••••••••">
+          </div>
+
+          <div class="input-group">
+            <label>Curriculum / Esperienze (Max 1 modifica)</label>
+            <textarea id="edit-cv" placeholder="Descrivi il tuo percorso lavorativo..."
+              style="height: 100px;"></textarea>
+          </div>
+
+          <div class="input-group">
+            <label>Certificazioni / Abilità (Max 1 modifica)</label>
+            <textarea id="edit-certifications" placeholder="Elenca le tue certificazioni e competenze..."
+              style="height: 80px;"></textarea>
+          </div>
+
+          <p style="font-size: 0.8rem; color: #ff4757; margin-bottom: 1rem; font-style: italic;">
+            ⚠️ Attenzione: Ogni campo può essere modificato solo UNA volta nella vita dell'account.
+          </p>
 
           <div id="edit-biz-fields" class="hidden">
             <div class="input-group">

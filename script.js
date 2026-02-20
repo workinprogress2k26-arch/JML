@@ -269,9 +269,16 @@ function initMap() {
 // --- FUNZIONE HELPER DI SANITIZZAZIONE (Anti-XSS) ---
 function sanitizeInput(str) {
     if (!str) return '';
-    const temp = document.createElement('div');
-    temp.textContent = str;
-    return temp.innerHTML; // Trasforma < > " ' & in entità sicure
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#x27;',
+        "/": '&#x2F;',
+    };
+    const reg = /[&<>"'/]/ig;
+    return str.replace(reg, (match) => (map[match]));
 }
 
 // Bacheca e Annunci
@@ -777,7 +784,7 @@ function openCompanyChat(chat) {
     if (body) {
         body.innerHTML = `
             <div class="message company glass">
-                <div class="msg-content">Ciao! Hai accettato il lavoro per "${chat.jobTitle}". Come possiamo organizzarci?</div>
+                <div class="msg-content">Ciao! Hai accettato il lavoro per "${sanitizeInput(chat.jobTitle)}". Come possiamo organizzarci?</div>
                 <span class="msg-timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
         `;
@@ -999,7 +1006,8 @@ function renderChatHistory() {
 function appendMessage(role, text, container) {
     const msg = document.createElement('div');
     msg.className = `message ${role} ${role === 'ai' ? 'glass' : ''}`;
-    msg.innerHTML = text.replace(/\n/g, '<br>');
+    // Sanitizziamo tutto il testo PRIMA di rimpiazzare i \n con <br>
+    msg.innerHTML = sanitizeInput(text).replace(/\n/g, '<br>');
     container.appendChild(msg);
     container.scrollTop = container.scrollHeight;
 }
@@ -1116,20 +1124,27 @@ function renderUserProfile() {
 
     display.innerHTML = `
         <div class="profile-info">
-            <strong>Nome:</strong> ${data.name || '---'} 
+            <strong>Nome:</strong> ${sanitizeInput(data.name) || '---'} 
             ${data.isPremium ? '<span class="verified-badge gold" style="margin-left: 5px;" title="Membro Premium">✔</span>' : ''}
         </div>
-        <div class="profile-info"><strong>Cognome:</strong> ${data.surname || '---'}</div>
-        <div class="profile-info"><strong>Email:</strong> ${data.email || '---'}</div>
-        <div class="profile-info"><strong>Città:</strong> ${data.city || '---'}</div>
+        <div class="profile-info"><strong>Cognome:</strong> ${sanitizeInput(data.surname) || '---'}</div>
+        <div class="profile-info"><strong>Email:</strong> ${sanitizeInput(data.email) || '---'}</div>
+        <div class="profile-info"><strong>Città:</strong> ${sanitizeInput(data.city) || '---'}</div>
         ${data.type === 'business' ? `
             <div class="profile-info" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border);">
-                <strong>🏢 Azienda:</strong> ${data.companyName || '---'}
+                <strong>🏢 Azienda:</strong> ${sanitizeInput(data.companyName) || '---'}
             </div>
-            <div class="profile-info"><strong>📍 Sede:</strong> ${data.companyAddress || '---'}</div>
+            <div class="profile-info"><strong>📍 Sede:</strong> ${sanitizeInput(data.companyAddress) || '---'}</div>
             <div class="company-tag">Account Aziendale Verificato</div>
         ` : ''}
     `;
+
+    // Curriculum e Certificazioni
+    const cvBox = document.getElementById('profile-cv-data');
+    const certBox = document.getElementById('profile-certifications-data');
+    if (cvBox) cvBox.textContent = data.cv || "Nessun curriculum inserito. Aggiungilo dalle impostazioni.";
+    if (certBox) certBox.textContent = data.certifications || "Nessuna certificazione inserita.";
+
     if (data.avatar) document.getElementById('profile-avatar-big').src = data.avatar;
 
     // Mostra saldo con valuta corretta
@@ -1140,6 +1155,198 @@ function renderUserProfile() {
     if (fro) fro.textContent = `${cur} ${frozenBalance.toFixed(2)}`;
 
     renderReviews();
+}
+
+// --- 11. SISTEMA MODIFICA PROFILO (Max 1 volta) ---
+
+async function openEditAccountModal() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+
+    // Recuperiamo il profilo
+    const { data: profile } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+    if (!profile) return;
+
+    // Metadata per tracciare le modifiche (Supabase Auth Metadata)
+    const metadata = user.user_metadata || {};
+    const editedFields = metadata.edited_fields || {};
+
+    const nameInput = document.getElementById('edit-name');
+    const surnameInput = document.getElementById('edit-surname');
+    const cityInput = document.getElementById('edit-city');
+    const bizNameInput = document.getElementById('edit-company-name');
+    const bizAddrInput = document.getElementById('edit-company-address');
+    const passInput = document.getElementById('edit-password');
+    const cvInput = document.getElementById('edit-cv');
+    const certInput = document.getElementById('edit-certifications');
+
+    // Popola e Blocca se già modificati
+    nameInput.value = profile.display_name?.split(' ')[0] || "";
+    if (editedFields.name) {
+        nameInput.disabled = true;
+        nameInput.style.opacity = "0.5";
+    } else {
+        nameInput.disabled = false;
+        nameInput.style.opacity = "1";
+    }
+
+    surnameInput.value = profile.display_name?.split(' ')[1] || "";
+    if (editedFields.surname) {
+        surnameInput.disabled = true;
+        surnameInput.style.opacity = "0.5";
+    } else {
+        surnameInput.disabled = false;
+        surnameInput.style.opacity = "1";
+    }
+
+    cityInput.value = profile.city || "";
+    if (editedFields.city) {
+        cityInput.disabled = true;
+        cityInput.style.opacity = "0.5";
+    } else {
+        cityInput.disabled = false;
+        cityInput.style.opacity = "1";
+    }
+
+    cvInput.value = profile.cv || "";
+    if (editedFields.cv) {
+        cvInput.disabled = true;
+        cvInput.style.opacity = "0.5";
+    } else {
+        cvInput.disabled = false;
+        cvInput.style.opacity = "1";
+    }
+
+    certInput.value = profile.certifications || "";
+    if (editedFields.certifications) {
+        certInput.disabled = true;
+        certInput.style.opacity = "0.5";
+    } else {
+        certInput.disabled = false;
+        certInput.style.opacity = "1";
+    }
+
+    if (profile.user_type === 'business') {
+        document.getElementById('edit-biz-fields').classList.remove('hidden');
+        bizNameInput.value = profile.company_name || "";
+        if (editedFields.company_name) bizNameInput.disabled = true;
+
+        bizAddrInput.value = profile.company_address || "";
+        if (editedFields.company_address) bizAddrInput.disabled = true;
+    } else {
+        document.getElementById('edit-biz-fields').classList.add('hidden');
+    }
+
+    // Password
+    passInput.value = "";
+    if (editedFields.password) {
+        passInput.disabled = true;
+        passInput.placeholder = "Password bloccata (già cambiata)";
+        passInput.style.opacity = "0.5";
+    } else {
+        passInput.disabled = false;
+        passInput.placeholder = "••••••••";
+        passInput.style.opacity = "1";
+    }
+
+    showModal('edit-account-modal');
+}
+
+async function updateAccountData() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+
+    const metadata = user.user_metadata || {};
+    const editedFields = { ...(metadata.edited_fields || {}) };
+
+    const newName = document.getElementById('edit-name').value;
+    const newSurname = document.getElementById('edit-surname').value;
+    const newCity = document.getElementById('edit-city').value;
+    const newPassword = document.getElementById('edit-password').value;
+    const newCv = document.getElementById('edit-cv').value;
+    const newCertifications = document.getElementById('edit-certifications').value;
+
+    let profileUpdates = {};
+    let authUpdates = {};
+
+    // Controllo Nome
+    if (!editedFields.name && newName) {
+        profileUpdates.display_name = `${newName} ${newSurname}`;
+        editedFields.name = true;
+    }
+    // Controllo Cognome
+    if (!editedFields.surname && newSurname) {
+        editedFields.surname = true;
+    }
+    // Controllo Città
+    if (!editedFields.city && newCity) {
+        profileUpdates.city = newCity;
+        editedFields.city = true;
+    }
+    // Controllo CV
+    if (!editedFields.cv && newCv) {
+        profileUpdates.cv = newCv;
+        editedFields.cv = true;
+    }
+    // Controllo Certificazioni
+    if (!editedFields.certifications && newCertifications) {
+        profileUpdates.certifications = newCertifications;
+        editedFields.certifications = true;
+    }
+
+    // Business fields
+    if (user.user_metadata.user_type === 'business') {
+        const newBizName = document.getElementById('edit-company-name').value;
+        const newBizAddr = document.getElementById('edit-company-address').value;
+        if (!editedFields.company_name && newBizName) {
+            profileUpdates.company_name = newBizName;
+            editedFields.company_name = true;
+        }
+        if (!editedFields.company_address && newBizAddr) {
+            profileUpdates.company_address = newBizAddr;
+            editedFields.company_address = true;
+        }
+    }
+
+    // Password (via Auth)
+    if (!editedFields.password && newPassword) {
+        if (newPassword.length < 6) {
+            alert("La password deve avere almeno 6 caratteri.");
+            return;
+        }
+        authUpdates.password = newPassword;
+        editedFields.password = true;
+    }
+
+    // Esegui aggiornamenti
+    try {
+        // 1. Aggiorna Tabella Profiles
+        if (Object.keys(profileUpdates).length > 0) {
+            const { error: pErr } = await supabaseClient
+                .from('profiles')
+                .update(profileUpdates)
+                .eq('id', user.id);
+            if (pErr) throw pErr;
+        }
+
+        // 2. Aggiorna Metadata e Password su Auth
+        const { error: aErr } = await supabaseClient.auth.updateUser({
+            password: authUpdates.password,
+            data: { ...metadata, edited_fields: editedFields }
+        });
+        if (aErr) throw aErr;
+
+        alert("Profilo aggiornato con successo! Nota: i campi modificati ora sono bloccati.");
+        closeModal('edit-account-modal');
+        checkLoginStatus(); // Ricarica dati UI
+    } catch (err) {
+        alert("Errore durante l'aggiornamento: " + err.message);
+    }
 }
 
 function updateAvatar() {
@@ -1278,10 +1485,10 @@ function renderReviews() {
         card.className = 'review-card glass';
         card.innerHTML = `
             <div class="review-stars">${'★'.repeat(rev.rating)}${'☆'.repeat(5 - rev.rating)}</div>
-            <p style="font-size: 0.95rem; margin-bottom: 0.5rem;">"${rev.text || 'Nessun commento'}"</p>
+            <p style="font-size: 0.95rem; margin-bottom: 0.5rem;">"${sanitizeInput(rev.text) || 'Nessun commento'}"</p>
             <div style="font-size: 0.8rem; color: var(--text-dim);">
-                <strong>${rev.type === 'received' ? 'Da: ' : 'Per: '}${rev.author}</strong> - ${rev.jobTitle}<br>
-                <span>${rev.date}</span>
+                <strong>${rev.type === 'received' ? 'Da: ' : 'Per: '}${sanitizeInput(rev.author)}</strong> - ${sanitizeInput(rev.jobTitle)}<br>
+                <span>${sanitizeInput(rev.date)}</span>
             </div>
         `;
         list.appendChild(card);
