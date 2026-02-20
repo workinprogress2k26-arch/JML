@@ -69,18 +69,28 @@ async function findJobsNearMe() {
 
 // --- SISTEMA TRANSAZIONI & GAMIFICATION ---
 async function logTransaction(amount, desc) {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) return;
+    try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) return;
 
-    const { error } = await supabaseClient
-        .from('transactions')
-        .insert([{
-            user_id: user.id,
-            amount: amount,
-            description: desc
-        }]);
+        const { error } = await supabaseClient
+            .from('transactions')
+            .insert([{
+                user_id: user.id,
+                amount: amount,
+                description: desc
+            }]);
 
-    if (error) console.error("Errore log transazione:", error);
+        if (error) {
+            console.error("Errore log transazione:", error);
+        } else {
+            console.log("Transazione registrata:", desc);
+            // Forza il refresh della lista transazioni se visibile
+            renderTransactions();
+        }
+    } catch (e) {
+        console.error("Eccezione logTransaction:", e);
+    }
 }
 
 async function selectPlan(planName, price) {
@@ -544,7 +554,7 @@ async function renderBacheca() {
     const userCurrency = userData ? (userData.currency || '€') : '€';
 
     const filtered = annunci.filter(ann => {
-        if (hiddenAnnouncements.includes(ann.id)) return false;
+        if (hiddenAnnouncements.includes(ann.id) || completedContracts.includes(ann.id)) return false;
 
         // Se searchText è vuoto, vogliamo vedere tutto
         if (!searchText) {
@@ -959,6 +969,10 @@ async function finalizeAnnuncioCreation(title, category, desc, displaySalary, ad
         return;
     }
 
+    // Se l'operazione ha avuto successo, registriamo la transazione di impegno fondi
+    const totalAmount = rate * duration;
+    await logTransaction(-totalAmount, `Fondi impegnati per: ${title}`);
+
     // Se l'operazione ha avuto successo, aggiorniamo la UI locale scaricando i dati nuovi
     showToast('Annuncio creato con successo! Il pagamento è garantito dal sistema. 🛡️', 'success');
     closeModal('create-annuncio-modal');
@@ -1200,16 +1214,24 @@ async function releasePayment() {
 
         showToast("Pagamento rilasciato con successo! Grazie per aver collaborato.", "success");
 
-        // 3. Mark job as completed
+        // 3. Elimina l'annuncio dal database (Lavoro completato)
+        await supabaseClient
+            .from('announcements')
+            .delete()
+            .eq('id', jobId);
+
+        // 4. Mark job as completed localmente
         completedContracts.push(jobId);
         localStorage.setItem('completedContracts', JSON.stringify(completedContracts));
 
-        // 4. Pulizia locale se necessario
+        // 5. Pulizia locale
         acceptedContracts = acceptedContracts.filter(id => id !== jobId);
         localStorage.setItem('acceptedContracts', JSON.stringify(acceptedContracts));
+        annunci = annunci.filter(a => a.id !== jobId); // Rimuovi dai dati correnti
 
         closeChatArea('company');
-        checkLoginStatus(); // Ricarica saldi e bacheca
+        renderBacheca(); // Aggiorna subito la UI (Bacheca e Mappa)
+        checkLoginStatus(); // Ricarica saldi
     } catch (err) {
         console.error("Eccezione durante il rilascio:", err);
         showToast("Errore critico: " + err.message, "error");
