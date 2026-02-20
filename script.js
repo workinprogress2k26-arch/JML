@@ -307,45 +307,66 @@ function initDashboard() {
 }
 
 async function loadAnnouncementsFromDB() {
-    // Carichiamo l'annuncio E i dati complessi dell'autore
-    const { data, error } = await supabaseClient
-        .from('announcements')
-        .select(`
-            *,
-            profiles:author_id (
-                display_name, 
-                email, 
-                avatar_url, 
-                is_premium
-            )
-        `)
-        .order('created_at', { ascending: false });
+    try {
+        console.log("Tentativo scaricamento annunci...");
+        const { data, error } = await supabaseClient
+            .from('announcements')
+            .select(`
+                *,
+                profiles (
+                    display_name, 
+                    email, 
+                    avatar_url, 
+                    is_premium
+                )
+            `)
+            .order('created_at', { ascending: false });
 
-    if (error) {
-        console.error("Errore scaricamento:", error);
-        return;
+        if (error) {
+            console.error("Errore scaricamento annunci:", error);
+            showToast("Errore nel caricamento degli annunci.", "error");
+            return;
+        }
+
+        if (!data) {
+            console.warn("Nessun dato ricevuto dal database");
+            annunci = [];
+            renderBacheca();
+            return;
+        }
+
+        console.log(`Scaricati ${data.length} annunci`);
+
+        // Trasformiamo i dati per il frontend con fallback sicuri
+        annunci = data.map(ann => {
+            // Se profiles è un array (succede se select non riconosce la relazione 1:1), prendiamo il primo
+            const profile = Array.isArray(ann.profiles) ? ann.profiles[0] : ann.profiles;
+
+            return {
+                id: ann.id,
+                title: ann.title || 'Senza titolo',
+                description: ann.description || '',
+                category: ann.category || 'altro',
+                // Gestiamo sia la vecchia colonna salary che il nuovo rate dell'RPC
+                salary: (ann.salary || ann.rate || '0') + '€/ora',
+                address: ann.address || 'Bologna',
+                lat: ann.lat || 44.4949,
+                lng: ann.lng || 11.3426,
+                author: profile?.display_name || 'Anonimo',
+                authorId: ann.author_id,
+                authorAvatar: profile?.avatar_url,
+                isPremium: profile?.is_premium,
+                image: ann.image_url,
+                created_at: ann.created_at
+            };
+        });
+
+        renderBacheca();
+        if (typeof initMap === 'function') initMap();
+
+    } catch (err) {
+        console.error("Eccezione durante loadAnnouncementsFromDB:", err);
     }
-
-    // Trasformiamo i dati per il frontend
-    annunci = data.map(ann => ({
-        id: ann.id,
-        title: ann.title,
-        description: ann.description,
-        category: ann.category,
-        salary: ann.salary + '€/ora',
-        address: ann.address,
-        lat: ann.lat,
-        lng: ann.lng,
-        author: ann.profiles?.display_name || 'Anonimo',
-        authorId: ann.author_id,
-        authorAvatar: ann.profiles?.avatar_url,
-        isPremium: ann.profiles?.is_premium,
-        image: ann.image_url,
-        created_at: ann.created_at
-    }));
-
-    renderBacheca();
-    initMap();
 }
 
 // --- LOGICA PAGAMENTI E RICEVUTE (CORRETTA) ---
@@ -517,16 +538,27 @@ async function renderBacheca() {
 
     const filtered = annunci.filter(ann => {
         if (hiddenAnnouncements.includes(ann.id)) return false;
-        const matchesSearch = ann.title.toLowerCase().includes(searchText) ||
-            ann.author.toLowerCase().includes(searchText) ||
-            ann.description.toLowerCase().includes(searchText);
+
+        // Se searchText è vuoto, vogliamo vedere tutto
+        if (!searchText) {
+            const matchesCat = filterCat === "" || ann.category === filterCat;
+            return matchesCat;
+        }
+
+        // Se c'è testo cercato, controlliamo i campi
+        const matchesSearch = (ann.title || "").toLowerCase().includes(searchText) ||
+            (ann.author || "").toLowerCase().includes(searchText) ||
+            (ann.description || "").toLowerCase().includes(searchText);
+
         const matchesCat = filterCat === "" || ann.category === filterCat;
         return matchesSearch && matchesCat;
     });
 
     grid.innerHTML = '';
     if (filtered.length === 0) {
-        grid.innerHTML = '<p style="padding:2rem; color:var(--text-dim); text-align:center; width:100%;">Nessun annuncio trovato.</p>';
+        grid.innerHTML = '<div style="grid-column: 1/-1; padding:3rem; color:var(--text-dim); text-align:center; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed var(--border);">' +
+            '<h3>Nessun annuncio trovato</h3>' +
+            '<p>Prova a cambiare i filtri o scrivi un comando a Worky-AI</p></div>';
         syncMapMarkers(filtered);
         return;
     }
@@ -937,12 +969,12 @@ async function finalizeAnnuncioCreation(title, category, desc, displaySalary, ad
     });
 
     if (error) {
-        alert("Errore durante la creazione: " + error.message);
+        showToast("Errore durante la creazione: " + error.message, "error");
         return;
     }
 
     // Se l'operazione ha avuto successo, aggiorniamo la UI locale scaricando i dati nuovi
-    alert('Annuncio creato con successo! Il pagamento è garantito dal sistema. 🛡️');
+    showToast('Annuncio creato con successo! Il pagamento è garantito dal sistema. 🛡️', 'success');
     closeModal('create-annuncio-modal');
 
     // Ricarichiamo il profilo e la bacheca per vedere il nuovo saldo aggiornato dal server
