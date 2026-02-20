@@ -687,54 +687,80 @@ async function updateChatList() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
 
-    // 1. Prendiamo gli ID dei contratti accettati localmente (quelli appena cliccati)
-    const localAcceptedIds = acceptedContracts.map(id => Number(id));
-
-    // 2. Chiediamo a Supabase gli ID degli annunci dove ci sono già messaggi per noi
-    const { data: myMessages } = await supabaseClient
+    // 1. Recuperiamo tutti i messaggi connessi all'utente per trovare i partner
+    const { data: allMessages, error: msgErr } = await supabaseClient
         .from('messages')
-        .select('announcement_id')
+        .select('announcement_id, sender_id, receiver_id')
         .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`);
 
-    const messageJobIds = myMessages ? myMessages.map(m => m.announcement_id) : [];
+    if (msgErr) {
+        console.error("Errore recupero messaggi:", msgErr);
+        return;
+    }
 
-    // Uniamo gli ID (senza duplicati)
-    const allInvolvedIds = [...new Set([...localAcceptedIds, ...messageJobIds])];
+    // 2. Mappa delle conversazioni (jobId + partnerId)
+    const activeChats = new Map();
 
-    if (allInvolvedIds.length === 0) {
+    // Aggiungiamo chat dai messaggi esistenti
+    if (allMessages) {
+        allMessages.forEach(m => {
+            const partnerId = m.sender_id === user.id ? m.receiver_id : m.sender_id;
+            const key = `${m.announcement_id}_${partnerId}`;
+            if (!activeChats.has(key)) {
+                activeChats.set(key, { jobId: m.announcement_id, partnerId: partnerId });
+            }
+        });
+    }
+
+    // Aggiungiamo contratti accettati localmente (se non già presenti)
+    acceptedContracts.forEach(jobId => {
+        const ann = annunci.find(a => a.id === Number(jobId));
+        if (ann && ann.authorId !== user.id) {
+            const key = `${ann.id}_${ann.authorId}`;
+            if (!activeChats.has(key)) {
+                activeChats.set(key, { jobId: ann.id, partnerId: ann.authorId });
+            }
+        }
+    });
+
+    if (activeChats.size === 0) {
         list.innerHTML = '<p style="padding:1rem; color:var(--text-dim);">Accetta un contratto per sbloccare la chat.</p>';
         return;
     }
 
-    // 3. Scarichiamo i dettagli di questi annunci per mostrarli nella lista
-    const { data: chatJobs, error } = await supabaseClient
-        .from('announcements')
-        .select('id, title, author_id, profiles!announcements_author_id_fkey(display_name)')
-        .in('id', allInvolvedIds);
-
-    if (error) {
-        console.error("Errore caricamento lista chat:", error);
-        return;
-    }
-
     list.innerHTML = '';
-    chatJobs.forEach(ann => {
-        const isOwner = ann.author_id === user.id;
-        const chatPartnerName = isOwner ? "Candidato Lavoratore" : (ann.profiles?.display_name || "Autore");
+
+    // 3. Per ogni chat, scarichiamo i dettagli (titolo annuncio + nome partner)
+    for (const [key, info] of activeChats) {
+        const { data: annData } = await supabaseClient
+            .from('announcements')
+            .select('title')
+            .eq('id', info.jobId)
+            .single();
+
+        const { data: partnerData } = await supabaseClient
+            .from('profiles')
+            .select('display_name')
+            .eq('id', info.partnerId)
+            .single();
+
+        const chatName = partnerData?.display_name || "Utente";
+        const jobTitle = annData?.title || "Lavoro";
 
         const item = document.createElement('div');
         item.className = 'chat-item glass';
         item.innerHTML = `
-            <strong>${chatPartnerName}</strong><br>
-            <small>${ann.title}</small>
+            <strong>${sanitizeInput(chatName)}</strong><br>
+            <small>${sanitizeInput(jobTitle)}</small>
         `;
         item.onclick = () => openCompanyChat({
-            id: ann.id,
-            jobId: ann.id,
-            name: chatPartnerName
+            jobId: info.jobId,
+            partnerId: info.partnerId,
+            name: chatName,
+            jobTitle: jobTitle
         });
         list.appendChild(item);
-    });
+    }
 }
 
 function openCompanyChat(chat) {
@@ -751,7 +777,7 @@ function openCompanyChat(chat) {
     if (body) {
         body.innerHTML = `
             <div class="message company glass">
-                <div class="msg-content">Ciao! Hai accettato il lavoro per "${annunci.find(a => a.id === chat.jobId)?.title}". Come possiamo organizzarci?</div>
+                <div class="msg-content">Ciao! Hai accettato il lavoro per "${chat.jobTitle}". Come possiamo organizzarci?</div>
                 <span class="msg-timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
         `;
@@ -785,7 +811,7 @@ async function sendCompanyMessage() {
         .insert([{
             announcement_id: ann.id,
             sender_id: user.id,
-            receiver_id: ann.authorId, // L'autore dell'annuncio
+            receiver_id: currentChatCompany.partnerId, // USIAMO IL PARTNER CORRETTO!
             content: userMsg
         }]);
 
