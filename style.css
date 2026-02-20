@@ -1004,65 +1004,75 @@ input:focus {
         overflow-y: auto;
     }
 
-    /* --- MOBILE CHAT FIX --- */
+    /* --- MOBILE CHAT FIX (WHATSAPP STYLE) --- */
     .chat-container {
-        display: flex !important;
-        flex-direction: column !important;
-        height: calc(100vh - 70px) !important;
-        position: relative;
+        display: block !important;
+        height: calc(100vh - 20px) !important;
+        position: relative !important;
+        overflow: hidden !important;
     }
 
-    /* Su mobile, mostriamo o la lista o la finestra di chat, non entrambe */
-    .chat-list {
-        width: 100% !important;
-        height: 100% !important;
-        position: absolute;
+    .chat-list,
+    .chat-window {
+        position: absolute !important;
         top: 0;
         left: 0;
+        width: 100% !important;
+        height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        transition: transform 0.3s cubic-bezier(0.1, 0.7, 1.0, 0.1) !important;
+        background: var(--bg-dark) !important;
+    }
+
+    .chat-list {
         z-index: 10;
-        background: var(--bg-dark);
-        transition: transform 0.3s ease;
+        transform: translateX(0);
     }
 
     .chat-window {
-        width: 100% !important;
-        height: 100% !important;
-        position: absolute;
-        top: 0;
-        left: 0;
         z-index: 20;
-        background: var(--bg-dark);
         transform: translateX(100%);
-        transition: transform 0.3s ease;
-        display: none;
-        /* Default nascosta */
     }
 
-    /* Classe per mostrare la finestra di chat slittando dalla destra */
     .chat-window.active {
-        display: flex !important;
         transform: translateX(0) !important;
     }
 
-    /* Se la chat è attiva, nascondi la lista per non farla "pesare" sotto */
-    .chat-window.active~.chat-list {
-        transform: translateX(-100%);
-    }
-
-    /* Header speciale per tornare indietro su mobile */
-    .company-chat-header {
-        padding: 10px !important;
-    }
-
-    /* Riduciamo i padding per massimizzare lo spazio */
     .chat-body {
-        padding: 10px !important;
+        flex: 1 !important;
+        overflow-y: auto !important;
     }
 
-    /* Input area fissa su mobile */
+    /* AREA INPUT FISSA AL FONDO */
     .input-area,
     .chat-footer {
-        padding: 5px 10px !important;
+        flex-shrink: 0 !important;
+        position: relative !important;
+        bottom: 0 !important;
+        background: rgba(13, 14, 20, 0.98) !important;
+        backdrop-filter: blur(10px) !important;
+        padding: 10px !important;
+        border-top: 1px solid var(--border) !important;
+        z-index: 30;
+    }
+
+    .chat-input-area {
+        gap: 0.5rem !important;
+    }
+
+    input[type="text"] {
+        height: 50px !important;
+        font-size: 16px !important;
+    }
+
+    /* Header AI visibile sempre se window active */
+    .ai-header {
+        display: none;
+    }
+
+    .chat-window.active .ai-header {
+        display: flex !important;
     }
 }
 

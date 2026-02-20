@@ -575,27 +575,52 @@ async function openAnnuncioDetails(annId) {
     actionsCont.innerHTML = '';
 
     if (isAuthor) {
-        // --- VISTA CHI COMMISSIONA (Azienda/Privato) ---
-        const delBtn = document.createElement('button');
-        delBtn.className = 'btn-primary';
-        delBtn.style.background = '#ff4d4d';
-        delBtn.style.flex = '1';
-        delBtn.textContent = '🗑️ Elimina Annuncio';
-        delBtn.onclick = () => { deleteAnnuncio(ann.id); closeModal('annuncio-details-modal'); };
-        actionsCont.appendChild(delBtn);
-
-        // Se il lavoro è accettato da qualcuno, mostra pulsante per andare in chat
+        // --- VISTA CHI COMMISSIONA (Autore) ---
         if (isAccepted) {
+            // Gestione del lavoro accettato
+            const confirmBtn = document.createElement('button');
+            confirmBtn.className = 'btn-primary';
+            confirmBtn.style.background = '#4CAF50';
+            confirmBtn.style.flex = '2';
+            confirmBtn.textContent = '✅ Conferma e Paga';
+            confirmBtn.onclick = () => {
+                currentChatCompany = { jobId: ann.id, partnerId: 'N/A', name: 'Lavoratore' }; // Fallback se non siamo in chat
+                releasePayment();
+                closeModal('annuncio-details-modal');
+            };
+            actionsCont.appendChild(confirmBtn);
+
+            const reportBtn = document.createElement('button');
+            reportBtn.className = 'btn-primary';
+            reportBtn.style.background = '#ff4d4d';
+            reportBtn.style.flex = '1';
+            reportBtn.textContent = '⚠️ Segnala';
+            reportBtn.onclick = () => { openReportModal(); closeModal('annuncio-details-modal'); };
+            actionsCont.appendChild(reportBtn);
+
             const chatBtn = document.createElement('button');
             chatBtn.className = 'btn-primary';
+            chatBtn.style.background = 'var(--secondary)';
             chatBtn.style.flex = '1';
-            chatBtn.textContent = '💬 Vai alla Chat Lavoratore';
+            chatBtn.textContent = '💬 Vai alla Chat';
             chatBtn.onclick = () => {
                 showView('contracts-section');
                 closeModal('annuncio-details-modal');
-                // Qui andrebbe aperta la chat specifica
+                // Qui cerchiamo se esiste già una chat attiva per questo annuncio
+                updateChatList().then(() => {
+                    // La funzione updateChatList caricherà le chat, openCompanyChat verrà chiamata dall'utente cliccando sulla lista
+                });
             };
             actionsCont.appendChild(chatBtn);
+        } else {
+            // Se non accettato, solo eliminazione
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn-primary';
+            delBtn.style.background = '#ff4d4d';
+            delBtn.style.flex = '1';
+            delBtn.textContent = '🗑️ Elimina Annuncio';
+            delBtn.onclick = () => { deleteAnnuncio(ann.id); closeModal('annuncio-details-modal'); };
+            actionsCont.appendChild(delBtn);
         }
     } else {
         // --- VISTA CHI SVOLGE (Lavoratore) ---
@@ -612,7 +637,12 @@ async function openAnnuncioDetails(annId) {
             chatBtn.style.background = 'var(--secondary)';
             chatBtn.style.flex = '1';
             chatBtn.textContent = '💬 Messaggio';
-            chatBtn.onclick = () => { showView('contracts-section'); closeModal('annuncio-details-modal'); };
+            chatBtn.onclick = () => {
+                currentChatCompany = { jobId: ann.id, partnerId: ann.authorId, name: ann.author, jobTitle: ann.title };
+                showView('contracts-section');
+                closeModal('annuncio-details-modal');
+                openCompanyChat(currentChatCompany);
+            };
             actionsCont.appendChild(chatBtn);
         } else {
             const hideBtn = document.createElement('button');
@@ -745,43 +775,50 @@ function syncMapMarkers(filteredAnnunci) {
 
     // Aggiungi solo marker filtrati
     filteredAnnunci.forEach(ann => {
-        // 1. Definiamo l'icona in base alla categoria
+        const isPremium = ann.isPremium;
+        const markerColor = isPremium ? '#dcaa25' : '#3498db';
+
         const categoryIcons = {
             ristorazione: '🍴',
             tecnologia: '💻',
             assistenza: '🤝',
             altro: '📦'
         };
-        const iconEmoji = categoryIcons[ann.category] || '🚀';
+        const iconEmoji = isPremium ? '💎' : (categoryIcons[ann.category] || '📍');
 
-        // 2. Creiamo l'icona con HTML invece che con un file immagine
+        // 2. Creiamo l'icona con HTML personalizzato
         const customIcon = L.divIcon({
-            html: `<div class="custom-marker">${iconEmoji}</div>`,
-            className: 'custom-div-icon', // Classe neutra
+            html: `
+                <div class="custom-marker" style="
+                    background: ${markerColor}; 
+                    border: 2px solid white; 
+                    box-shadow: 0 4px 15px ${isPremium ? 'rgba(220,170,37,0.5)' : 'rgba(0,0,0,0.3)'};
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 35px;
+                    height: 35px;
+                    border-radius: 50% 50% 50% 0;
+                    transform: rotate(-45deg);
+                ">
+                    <div style="transform: rotate(45deg); font-size: 16px;">${iconEmoji}</div>
+                </div>`,
+            className: 'custom-div-icon',
             iconSize: [35, 35],
-            iconAnchor: [17, 17] // Centra l'icona sulle coordinate
+            iconAnchor: [17, 35]
         });
 
-        // 3. Creiamo il marker sulla mappa usando la nostra nuova icona
         const marker = L.marker([ann.lat, ann.lng], { icon: customIcon }).addTo(map)
             .bindPopup(`
-            <div style="text-align: center; color: black;">
-                <strong style="font-size: 1rem;">${ann.title}</strong><br>
-                <span style="color: #666;">${ann.author}</span><br>
-                <strong style="color: var(--primary);">${ann.salary}</strong>
+            <div style="text-align: center; color: black; font-family: inherit; min-width: 150px;">
+                <strong style="font-size: 1rem; color: ${markerColor}">${isPremium ? '🏆 ' : ''}${sanitizeInput(ann.title)}</strong><br>
+                <span style="color: #666; font-size: 0.8rem;">${sanitizeInput(ann.author)}</span><br>
+                <strong style="color: var(--primary); font-size: 1rem; display: block; margin: 4px 0;">${ann.salary}</strong>
+                <button class="btn-primary" style="padding: 6px 12px; font-size: 12px; width: 100%;" 
+                    onclick="openAnnuncioDetails(${ann.id})">Vedi Dettagli</button>
             </div>
         `);
 
-        // Al click sul marker, porta l'utente all'annuncio in bacheca
-        marker.on('click', () => {
-            showSection('bacheca-section');
-            const target = document.getElementById(`annuncio-${ann.id}`);
-            if (target) {
-                target.scrollIntoView({ behavior: 'smooth' });
-                target.classList.add('highlight');
-                setTimeout(() => target.classList.remove('highlight'), 2000);
-            }
-        });
         markers.push(marker);
     });
 }
@@ -1269,18 +1306,27 @@ function closeChatArea(type) {
         const win = document.getElementById('company-chat-window');
         if (win) win.classList.remove('active');
     } else {
-        const aiWin = document.querySelector('#ai-section .chat-window');
+        const aiWin = document.getElementById('ai-chat-window');
         if (aiWin) aiWin.classList.remove('active');
+    }
+}
+
+function openAIChatOnMobile() {
+    if (window.innerWidth <= 1024) {
+        const aiWin = document.getElementById('ai-chat-window');
+        if (aiWin) aiWin.classList.add('active');
     }
 }
 
 async function sendAIMessage() {
     const input = document.getElementById('ai-input');
     const body = document.getElementById('ai-chat-body');
-    const modelSelect = document.getElementById('ai-model-select');
     const userMsg = input.value.trim();
 
     if (!userMsg || isAIBusy) return;
+
+    // Se siamo su mobile e cliccano invio ma la finestra non è attiva (difficile ma possibile)
+    openAIChatOnMobile();
 
     isAIBusy = true;
     appendMessage('user', userMsg, body);

@@ -272,13 +272,23 @@
 
         <div class="chat-container glass">
           <div class="chat-list">
-            <div class="chat-item active">
+            <div class="chat-item active" onclick="openAIChatOnMobile()">
               <strong>🤖 Worky-AI</strong><br>
               <small id="ai-status-label">Modello standard attivo</small>
             </div>
           </div>
 
-          <div class="chat-window glass">
+          <div class="chat-window glass" id="ai-chat-window">
+            <!-- HEADER MOBILE -->
+            <div class="company-chat-header ai-header">
+              <div style="display: flex; align-items: center; gap: 0.8rem;">
+                <button class="back-chat-btn" onclick="closeChatArea('ai')">←</button>
+                <div style="display: flex; flex-direction: column;">
+                  <span style="font-size: 1.1rem; font-weight: 700;">Worky-AI Assistente</span>
+                  <small style="color: #4CAF50; font-size: 0.8rem;">Online • Risponde istantaneamente</small>
+                </div>
+              </div>
+            </div>
             <!-- Area dove compaiono i messaggi -->
             <div id="ai-chat-body" class="chat-body">
               <div class="message ai glass">
