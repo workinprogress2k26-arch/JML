@@ -257,7 +257,7 @@ async function checkLoginStatus() {
             userBalance = parseFloat(profile.balance) || 0;
             frozenBalance = parseFloat(profile.frozen_balance) || 0;
 
-            // Salva i dati dell'utente per la UI (Inclusi i nuovi campi)
+            // Salva i dati dell'utente per la UI (Inclusi i nuovi campi e social)
             const userData = {
                 name: profile.display_name,
                 surname: profile.display_name?.split(' ')[1] || "",
@@ -266,7 +266,8 @@ async function checkLoginStatus() {
                 avatar: profile.avatar_url,
                 is_premium: profile.is_premium,
                 cv: profile.cv,
-                certifications: profile.certifications
+                certifications: profile.certifications,
+                socials: user.user_metadata.socials || {}
             };
             localStorage.setItem('userData', JSON.stringify(userData));
         }
@@ -1625,6 +1626,44 @@ function renderUserProfile() {
         ` : ''}
     `;
 
+    // Render Social Links
+    const socialCont = document.getElementById('profile-social-links');
+    if (socialCont) {
+        socialCont.innerHTML = '';
+        const socials = data.socials || {};
+        const platforms = [
+            { id: 'instagram', icon: '📸', label: 'Instagram' },
+            { id: 'x', icon: '🐦', label: 'X (Twitter)' },
+            { id: 'facebook', icon: '👥', label: 'Facebook' },
+            { id: 'pinterest', icon: '📌', label: 'Pinterest' }
+        ];
+
+        let hasSocials = false;
+        platforms.forEach(p => {
+            if (socials[p.id]) {
+                hasSocials = true;
+                const link = document.createElement('a');
+                link.href = socials[p.id];
+                link.target = '_blank';
+                link.className = 'glass';
+                link.style.padding = '0.5rem 1rem';
+                link.style.borderRadius = '10px';
+                link.style.textDecoration = 'none';
+                link.style.color = 'var(--text)';
+                link.style.fontSize = '0.9rem';
+                link.style.display = 'flex';
+                link.style.alignItems = 'center';
+                link.style.gap = '0.5rem';
+                link.innerHTML = `<span>${p.icon}</span> ${p.label}`;
+                socialCont.appendChild(link);
+            }
+        });
+
+        if (!hasSocials) {
+            socialCont.innerHTML = '<p style="color: var(--text-dim); font-size: 0.8rem;">Nessun social collegato.</p>';
+        }
+    }
+
     // Carichiamo anche i movimenti
     renderTransactions();
 
@@ -1742,6 +1781,13 @@ async function openEditAccountModal() {
         document.getElementById('edit-biz-fields').classList.add('hidden');
     }
 
+    // Socials
+    const socials = metadata.socials || {};
+    document.getElementById('edit-instagram').value = socials.instagram || "";
+    document.getElementById('edit-x').value = socials.x || "";
+    document.getElementById('edit-facebook').value = socials.facebook || "";
+    document.getElementById('edit-pinterest').value = socials.pinterest || "";
+
     // Password
     passInput.value = "";
     if (editedFields.password) {
@@ -1823,6 +1869,14 @@ async function updateAccountData() {
         editedFields.password = true;
     }
 
+    // Socials (sempre modificabili)
+    const newSocials = {
+        instagram: document.getElementById('edit-instagram').value,
+        x: document.getElementById('edit-x').value,
+        facebook: document.getElementById('edit-facebook').value,
+        pinterest: document.getElementById('edit-pinterest').value
+    };
+
     // Esegui aggiornamenti
     try {
         // 1. Aggiorna Tabella Profiles
@@ -1836,16 +1890,16 @@ async function updateAccountData() {
 
         // 2. Aggiorna Metadata e Password su Auth
         const { error: aErr } = await supabaseClient.auth.updateUser({
-            password: authUpdates.password,
-            data: { ...metadata, edited_fields: editedFields }
+            password: authUpdates.password || undefined,
+            data: { ...metadata, edited_fields: editedFields, socials: newSocials }
         });
         if (aErr) throw aErr;
 
-        alert("Profilo aggiornato con successo! Nota: i campi modificati ora sono bloccati.");
+        showToast("Profilo aggiornato con successo!", "success");
         closeModal('edit-account-modal');
         checkLoginStatus(); // Ricarica dati UI
     } catch (err) {
-        alert("Errore durante l'aggiornamento: " + err.message);
+        showToast("Errore durante l'aggiornamento: " + err.message, "error");
     }
 }
 

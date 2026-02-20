@@ -347,7 +347,14 @@
             <p>Caricamento dati...</p>
           </div>
 
-          <div style="width: 100%; text-align: left; margin-top: 2rem;">
+          <div style="width: 100%; text-align: left; margin-top: 1.5rem;">
+            <h3 style="margin-bottom: 0.8rem;">Social Media</h3>
+            <div id="profile-social-links" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+              <!-- Popolato via JS -->
+            </div>
+          </div>
+
+          <div style="width: 100%; text-align: left; margin-top: 1.5rem;">
             <h3>Cronologia Movimenti</h3>
             <div id="transaction-history" class="transaction-list">
               <!-- Popolato via JS -->
@@ -750,6 +757,26 @@
             <label>Certificazioni / Abilità (Max 1 modifica)</label>
             <textarea id="edit-certifications" placeholder="Elenca le tue certificazioni e competenze..."
               style="height: 80px;"></textarea>
+          </div>
+
+          <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+            <h4 style="margin-bottom: 1rem;">Link Social</h4>
+            <div class="input-group">
+              <label>Instagram (URL)</label>
+              <input type="url" id="edit-instagram" placeholder="https://instagram.com/tuonome">
+            </div>
+            <div class="input-group">
+              <label>X (ex Twitter - URL)</label>
+              <input type="url" id="edit-x" placeholder="https://x.com/tuonome">
+            </div>
+            <div class="input-group">
+              <label>Facebook (URL)</label>
+              <input type="url" id="edit-facebook" placeholder="https://facebook.com/tuonome">
+            </div>
+            <div class="input-group">
+              <label>Pinterest (URL)</label>
+              <input type="url" id="edit-pinterest" placeholder="https://pinterest.com/tuonome">
+            </div>
           </div>
 
           <p style="font-size: 0.8rem; color: #ff4757; margin-bottom: 1rem; font-style: italic;">
