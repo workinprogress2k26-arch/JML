@@ -747,8 +747,8 @@ function openCompanyChat(chat) {
     const body = document.getElementById('company-chat-body');
     body.innerHTML = `
         <div class="message company glass">
-            Ciao! Hai accettato il lavoro per "${annunci.find(a => a.id === chat.jobId)?.title}". 
-            Come possiamo organizzarci?
+            <div class="msg-content">Ciao! Hai accettato il lavoro per "${annunci.find(a => a.id === chat.jobId)?.title}". Come possiamo organizzarci?</div>
+            <span class="msg-timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
     `;
     // Aggiorna il nome della persona nell'header
@@ -1331,7 +1331,7 @@ async function loadMessages(jobId) {
         // Struttura stile WhatsApp con orario
         msgDiv.innerHTML = `
             <div class="msg-content">${sanitizeInput(m.content)}</div>
-            <span style="font-size: 0.6rem; opacity: 0.6; align-self: flex-end; margin-top: 5px;">${ora}</span>
+            <span class="msg-timestamp">${ora}</span>
         `;
         body.appendChild(msgDiv);
     });
