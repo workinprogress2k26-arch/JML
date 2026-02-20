@@ -1696,7 +1696,7 @@ function renderUserProfile() {
     renderReviews();
 }
 
-// --- 11. SISTEMA MODIFICA PROFILO (Max 1 volta) ---
+// --- 11. SISTEMA MODIFICA PROFILO ---
 
 async function openEditAccountModal() {
     const { data: { user } } = await supabaseClient.auth.getUser();
@@ -1724,59 +1724,36 @@ async function openEditAccountModal() {
     const cvInput = document.getElementById('edit-cv');
     const certInput = document.getElementById('edit-certifications');
 
-    // Popola e Blocca se già modificati
+    // Popola i campi (Sbloccati per modifiche illimitate)
     nameInput.value = profile.display_name?.split(' ')[0] || "";
-    if (editedFields.name) {
-        nameInput.disabled = true;
-        nameInput.style.opacity = "0.5";
-    } else {
-        nameInput.disabled = false;
-        nameInput.style.opacity = "1";
-    }
+    nameInput.disabled = false;
+    nameInput.style.opacity = "1";
 
     surnameInput.value = profile.display_name?.split(' ')[1] || "";
-    if (editedFields.surname) {
-        surnameInput.disabled = true;
-        surnameInput.style.opacity = "0.5";
-    } else {
-        surnameInput.disabled = false;
-        surnameInput.style.opacity = "1";
-    }
+    surnameInput.disabled = false;
+    surnameInput.style.opacity = "1";
 
     cityInput.value = profile.city || "";
-    if (editedFields.city) {
-        cityInput.disabled = true;
-        cityInput.style.opacity = "0.5";
-    } else {
-        cityInput.disabled = false;
-        cityInput.style.opacity = "1";
-    }
+    cityInput.disabled = false;
+    cityInput.style.opacity = "1";
 
     cvInput.value = profile.cv || "";
-    if (editedFields.cv) {
-        cvInput.disabled = true;
-        cvInput.style.opacity = "0.5";
-    } else {
-        cvInput.disabled = false;
-        cvInput.style.opacity = "1";
-    }
+    cvInput.disabled = false;
+    cvInput.style.opacity = "1";
 
     certInput.value = profile.certifications || "";
-    if (editedFields.certifications) {
-        certInput.disabled = true;
-        certInput.style.opacity = "0.5";
-    } else {
-        certInput.disabled = false;
-        certInput.style.opacity = "1";
-    }
+    certInput.disabled = false;
+    certInput.style.opacity = "1";
 
     if (profile.user_type === 'business') {
         document.getElementById('edit-biz-fields').classList.remove('hidden');
         bizNameInput.value = profile.company_name || "";
-        if (editedFields.company_name) bizNameInput.disabled = true;
+        bizNameInput.disabled = false;
+        bizNameInput.style.opacity = "1";
 
         bizAddrInput.value = profile.company_address || "";
-        if (editedFields.company_address) bizAddrInput.disabled = true;
+        bizAddrInput.disabled = false;
+        bizAddrInput.style.opacity = "1";
     } else {
         document.getElementById('edit-biz-fields').classList.add('hidden');
     }
@@ -1790,15 +1767,9 @@ async function openEditAccountModal() {
 
     // Password
     passInput.value = "";
-    if (editedFields.password) {
-        passInput.disabled = true;
-        passInput.placeholder = "Password bloccata (già cambiata)";
-        passInput.style.opacity = "0.5";
-    } else {
-        passInput.disabled = false;
-        passInput.placeholder = "••••••••";
-        passInput.style.opacity = "1";
-    }
+    passInput.disabled = false;
+    passInput.placeholder = "••••••••";
+    passInput.style.opacity = "1";
 
     showModal('edit-account-modal');
 }
@@ -1808,7 +1779,6 @@ async function updateAccountData() {
     if (!user) return;
 
     const metadata = user.user_metadata || {};
-    const editedFields = { ...(metadata.edited_fields || {}) };
 
     const newName = document.getElementById('edit-name').value;
     const newSurname = document.getElementById('edit-surname').value;
@@ -1820,56 +1790,30 @@ async function updateAccountData() {
     let profileUpdates = {};
     let authUpdates = {};
 
-    // Controllo Nome
-    if (!editedFields.name && newName) {
-        profileUpdates.display_name = `${newName} ${newSurname}`;
-        editedFields.name = true;
-    }
-    // Controllo Cognome
-    if (!editedFields.surname && newSurname) {
-        editedFields.surname = true;
-    }
-    // Controllo Città
-    if (!editedFields.city && newCity) {
-        profileUpdates.city = newCity;
-        editedFields.city = true;
-    }
-    // Controllo CV
-    if (!editedFields.cv && newCv) {
-        profileUpdates.cv = newCv;
-        editedFields.cv = true;
-    }
-    // Controllo Certificazioni
-    if (!editedFields.certifications && newCertifications) {
-        profileUpdates.certifications = newCertifications;
-        editedFields.certifications = true;
-    }
+    // Sincronizzazione Campi
+    if (newName) profileUpdates.display_name = `${newName} ${newSurname}`.trim();
+    if (newCity) profileUpdates.city = newCity;
+    if (newCv) profileUpdates.cv = newCv;
+    if (newCertifications) profileUpdates.certifications = newCertifications;
 
     // Business fields
     if (user.user_metadata.user_type === 'business') {
         const newBizName = document.getElementById('edit-company-name').value;
         const newBizAddr = document.getElementById('edit-company-address').value;
-        if (!editedFields.company_name && newBizName) {
-            profileUpdates.company_name = newBizName;
-            editedFields.company_name = true;
-        }
-        if (!editedFields.company_address && newBizAddr) {
-            profileUpdates.company_address = newBizAddr;
-            editedFields.company_address = true;
-        }
+        if (newBizName) profileUpdates.company_name = newBizName;
+        if (newBizAddr) profileUpdates.company_address = newBizAddr;
     }
 
-    // Password (via Auth)
-    if (!editedFields.password && newPassword) {
+    // Password (con validazione minima)
+    if (newPassword) {
         if (newPassword.length < 6) {
             showToast("La password deve avere almeno 6 caratteri.", "warning");
             return;
         }
         authUpdates.password = newPassword;
-        editedFields.password = true;
     }
 
-    // Socials (sempre modificabili)
+    // Socials
     const newSocials = {
         instagram: document.getElementById('edit-instagram').value,
         x: document.getElementById('edit-x').value,
@@ -1891,7 +1835,7 @@ async function updateAccountData() {
         // 2. Aggiorna Metadata e Password su Auth
         const { error: aErr } = await supabaseClient.auth.updateUser({
             password: authUpdates.password || undefined,
-            data: { ...metadata, edited_fields: editedFields, socials: newSocials }
+            data: { ...metadata, socials: newSocials }
         });
         if (aErr) throw aErr;
 
