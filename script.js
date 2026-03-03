@@ -1,11 +1,30 @@
-// --- 1. CONFIGURAZIONE SUPABASE ---
-// Sostituisci con i tuoi dati reali dal pannello Supabase (Settings -> API)
+// --- 1. CONFIGURAZIONE SUPABASE (SECURE) ---
 const SUPABASE_URL = 'https://qtmfgmrigldgodxrecue.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0bWZnbXJpZ2xkZ29keHJlY3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNzMwMDYsImV4cCI6MjA4NTk0OTAwNn0.sHywE9mS6HU5-GOEt5_riL_9aywsNZE8iplVAQsGMf8';
 
-// Assicurati che sia scritto esattamente così (senza window. davanti se vuoi essere più sicuro)
-// Riga 7 di script.js
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Initialize Supabase with fallback
+let supabaseClient = null;
+function initSupabase() {
+  if (!window.supabase) {
+    console.error('❌ Supabase library non caricata. Verifica che supabase-js sia incluso in index.html');
+    return false;
+  }
+  try {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('✅ Supabase inizializzato correttamente');
+    return true;
+  } catch (err) {
+    console.error('❌ Errore caricamento Supabase:', err);
+    return false;
+  }
+}
+
+// Initialize on page load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initSupabase);
+} else {
+  initSupabase();
+}
 
 // --- 2. VARIABILI GLOBALI (Caricate da Supabase) ---
 
@@ -70,39 +89,59 @@ async function findJobsNearMe() {
 // --- SISTEMA TRANSAZIONI & GAMIFICATION ---
 async function logTransaction(amount, desc) {
     try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) return;
+        if (!supabaseClient) {
+            console.error("❌ Supabase non inizializzato");
+            return false;
+        }
+
+        const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
+        if (userErr || !user) {
+            console.error("❌ Errore recupero utente:", userErr);
+            return false;
+        }
 
         const { error } = await supabaseClient
             .from('transactions')
             .insert([{
                 user_id: user.id,
                 amount: amount,
-                description: desc
+                description: desc,
+                created_at: new Date().toISOString()
             }]);
 
         if (error) {
-            console.error("Errore log transazione:", error);
+            console.error("❌ Errore log transazione:", error);
+            return false;
         } else {
-            console.log("Transazione registrata:", desc);
+            console.log("✅ Transazione registrata:", desc);
             // Forza il refresh della lista transazioni se visibile
-            renderTransactions();
+            if (typeof renderTransactions === 'function') {
+                renderTransactions();
+            }
+            return true;
         }
     } catch (e) {
-        console.error("Eccezione logTransaction:", e);
+        console.error("❌ Eccezione logTransaction:", e);
+        return false;
     }
 }
 
 async function selectPlan(planName, price) {
+    if (!supabaseClient) {
+        showToast("❌ Errore: Sistema non inizializzato", "error");
+        return;
+    }
+
     if (userBalance < price) {
-        showToast("Saldo insufficiente! Ricarica il tuo profilo.", "error");
+        showToast("❌ Saldo insufficiente! Ricarica il tuo profilo.", "error");
         return;
     }
 
     if (!confirm(`Sottoscrivere il piano ${planName} per €${price}?`)) return;
 
     try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
+        const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
+        if (userErr || !user) throw new Error("Utente non trovato");
 
         userBalance -= price;
 
@@ -115,13 +154,19 @@ async function selectPlan(planName, price) {
         });
         if (pErr) throw pErr;
 
-        await logTransaction(-price, `Abbonamento Academy: Piano ${planName}`);
+        const transactionLogged = await logTransaction(-price, `Abbonamento Academy: Piano ${planName}`);
+        if (!transactionLogged) throw new Error("Errore durante il log della transazione");
 
-        showToast(`Congratulazioni! Ora sei un membro ${planName} 💎`, "success");
-        renderUserProfile();
-        checkLoginStatus();
+        showToast(`✅ Congratulazioni! Ora sei un membro ${planName} 💎`, "success");
+        if (typeof renderUserProfile === 'function') {
+            renderUserProfile();
+        }
+        if (typeof checkLoginStatus === 'function') {
+            checkLoginStatus();
+        }
     } catch (err) {
-        showToast("Errore durante l'acquisto: " + err.message, "error");
+        showToast("❌ Errore durante l'acquisto: " + err.message, "error");
+        console.error("Errore selectPlan:", err);
     }
 }
 
@@ -129,39 +174,64 @@ async function renderTransactions() {
     const list = document.getElementById('transaction-history');
     if (!list) return;
 
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) return;
-
-    const { data: trans, error } = await supabaseClient
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-    if (error || !trans || trans.length === 0) {
-        list.innerHTML = '<p style="color: var(--text-dim); font-size: 0.8rem; padding: 10px;">Nessun movimento recente.</p>';
+    if (!supabaseClient) {
+        list.innerHTML = '<p style="color: var(--text-dim);">❌ Sistema non inizializzato</p>';
         return;
     }
 
-    list.innerHTML = '';
-    trans.forEach(t => {
-        const item = document.createElement('div');
-        item.className = 'transaction-item glass';
-        const date = new Date(t.created_at).toLocaleDateString();
-        const isPlus = t.amount > 0;
+    try {
+        const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
+        if (userErr) {
+            console.error("❌ Errore recupero utente:", userErr);
+            list.innerHTML = '<p style="color: var(--text-dim);">Errore caricamento transazioni</p>';
+            return;
+        }
 
-        item.innerHTML = `
-            <div>
-                <div style="font-weight: 500;">${sanitizeInput(t.description)}</div>
-                <div style="font-size: 0.7rem; color: var(--text-dim);">${date}</div>
-            </div>
-            <div class="transaction-amount ${isPlus ? 'plus' : 'minus'}">
-                ${isPlus ? '+' : ''}${t.amount.toFixed(2)}€
-            </div>
-        `;
-        list.appendChild(item);
-    });
+        if (!user) {
+            list.innerHTML = '<p style="color: var(--text-dim);">Effettua il login per visualizzare le transazioni</p>';
+            return;
+        }
+
+        const { data: trans, error } = await supabaseClient
+            .from('transactions')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(10);
+
+        if (error) {
+            console.error("❌ Errore query transazioni:", error);
+            list.innerHTML = '<p style="color: var(--text-dim);">Errore caricamento</p>';
+            return;
+        }
+
+        if (!trans || trans.length === 0) {
+            list.innerHTML = '<p style="color: var(--text-dim); font-size: 0.8rem; padding: 10px;">Nessun movimento recente.</p>';
+            return;
+        }
+
+        list.innerHTML = '';
+        trans.forEach(t => {
+            const item = document.createElement('div');
+            item.className = 'transaction-item glass';
+            const date = new Date(t.created_at).toLocaleDateString();
+            const isPlus = t.amount > 0;
+
+            item.innerHTML = `
+                <div>
+                    <div style="font-weight: 500;">${sanitizeInput(t.description)}</div>
+                    <div style="font-size: 0.7rem; color: var(--text-dim);">${date}</div>
+                </div>
+                <div class="transaction-amount ${isPlus ? 'plus' : 'minus'}">
+                    ${isPlus ? '+' : ''}${t.amount.toFixed(2)}€
+                </div>
+            `;
+            list.appendChild(item);
+        });
+    } catch (e) {
+        console.error("❌ Eccezione renderTransactions:", e);
+        list.innerHTML = '<p style="color: var(--text-dim);">Errore sconosciuto</p>';
+    }
 }
 
 
