@@ -25,6 +25,8 @@ body {
     color: var(--text-main);
     line-height: 1.6;
     overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
 }
 
 /* --- MOBILE CHAT FIX (WHATSAPP STYLE REFINED) --- */
@@ -1166,6 +1168,301 @@ input:focus {
 
     .chat-window.active .ai-header {
         display: flex !important;
+    }
+
+    /* Annunci grid tablet */
+    .announcements-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+        gap: 1rem !important;
+    }
+
+    /* Premium banner mobile */
+    .premium-banner {
+        padding: 1.5rem !important;
+        flex-direction: column !important;
+        text-align: center !important;
+    }
+
+    .premium-content h3 {
+        font-size: 1.5rem !important;
+    }
+
+    .premium-badge-showcase {
+        font-size: 3rem !important;
+    }
+
+    /* Plans su tablet */
+    .subscription-plans {
+        grid-template-columns: 1fr !important;
+    }
+
+    .plan-card .price {
+        font-size: 2rem !important;
+    }
+
+    /* Stats su tablet */
+    .stats-grid-proportional {
+        grid-template-columns: 1fr !important;
+    }
+
+    .stats-card-large h3 {
+        font-size: 2.5rem !important;
+    }
+
+    /* Auth card tablet */
+    .auth-card h1 {
+        font-size: 2rem !important;
+    }
+
+    /* Modal su tablet */
+    .modal-content {
+        width: 90vw !important;
+        max-width: 600px !important;
+    }
+}
+
+/* --- MOBILE EXTRA SMALL (< 480px) --- */
+@media (max-width: 600px) {
+    /* Padding drasticamente ridotto */
+    .main-content {
+        padding: 5px !important;
+    }
+
+    .auth-card {
+        padding: 1.5rem !important;
+        max-width: 95vw !important;
+    }
+
+    .auth-card h1 {
+        font-size: 1.8rem !important;
+        margin-bottom: 0.3rem !important;
+    }
+
+    .auth-card p {
+        font-size: 0.9rem !important;
+        margin-bottom: 1.5rem !important;
+    }
+
+    .input-group {
+        margin-bottom: 1rem !important;
+    }
+
+    .input-group label {
+        font-size: 0.8rem !important;
+    }
+
+    input,
+    select,
+    textarea {
+        padding: 0.8rem 0.7rem !important;
+        font-size: 16px !important;
+    }
+
+    .btn-primary {
+        padding: 0.9rem !important;
+        font-size: 1rem !important;
+    }
+
+    /* Annunci grid mobile ultra-compatto */
+    .announcements-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.8rem !important;
+    }
+
+    .annuncio-card {
+        border-radius: 12px !important;
+    }
+
+    .annuncio-img {
+        height: 150px !important;
+    }
+
+    .card-content {
+        padding: 1rem !important;
+    }
+
+    .annuncio-card h3 {
+        font-size: 1.1rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .annuncio-card p {
+        font-size: 0.85rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    .card-footer {
+        gap: 0.5rem !important;
+    }
+
+    /* Premium banner mobile */
+    .premium-banner {
+        padding: 1rem !important;
+        gap: 1rem !important;
+        margin: 0.5rem 0 !important;
+    }
+
+    .premium-content h3 {
+        font-size: 1.3rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .premium-badge-showcase {
+        font-size: 2.5rem !important;
+    }
+
+    /* Plans */
+    .subscription-plans {
+        gap: 1rem !important;
+        margin-top: 1rem !important;
+    }
+
+    .plan-card {
+        padding: 1.5rem !important;
+        border-radius: 16px !important;
+    }
+
+    .plan-card .price {
+        font-size: 1.8rem !important;
+        margin: 0.8rem 0 !important;
+    }
+
+    .plan-card .price span {
+        font-size: 0.9rem !important;
+    }
+
+    .plan-features {
+        margin: 1rem 0 !important;
+    }
+
+    .plan-features li {
+        padding: 0.4rem 0 !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* Stats */
+    .stats-grid-proportional {
+        gap: 1rem !important;
+        margin-top: 1rem !important;
+    }
+
+    .stats-card-large {
+        padding: 1.5rem !important;
+    }
+
+    .stats-card-large p {
+        font-size: 0.9rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .stats-card-large h3 {
+        font-size: 2rem !important;
+        margin: 0.3rem 0 !important;
+    }
+
+    .stats-card-large small {
+        font-size: 0.85rem !important;
+    }
+
+    /* Chat message width su mobile */
+    .message {
+        max-width: 90% !important;
+        padding: 0.7rem 0.9rem !important;
+        border-radius: 10px !important;
+    }
+
+    /* Chat header su mobile */
+    .chat-item {
+        padding: 0.8rem !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* Modal mobile */
+    .modal-content {
+        width: 95vw !important;
+        max-width: 100vw !important;
+        border-radius: 16px !important;
+    }
+
+    /* Buttons ridimensionati */
+    .btn-primary {
+        width: 100% !important;
+    }
+
+    /* Feature card */
+    .feature-card {
+        padding: 1.5rem !important;
+    }
+
+    .feature-icon {
+        font-size: 2.5rem !important;
+    }
+
+    /* Course card */
+    .course-card {
+        border-radius: 12px !important;
+    }
+
+    /* Toast position su mobile */
+    #toast-container {
+        bottom: 10px !important;
+        right: 10px !important;
+        left: 10px !important;
+    }
+
+    .toast {
+        min-width: auto !important;
+        width: 100% !important;
+    }
+
+    /* Transazioni */
+    .transaction-item {
+        padding: 10px !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* Profile info */
+    .profile-info {
+        padding: 0.8rem !important;
+        margin-bottom: 0.5rem !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* Modal scorre bene su mobile */
+    .modal {
+        padding: 10px !important;
+    }
+
+    .modal-content {
+        max-height: 95vh !important;
+    }
+
+    /* Reduce margin/gap everywhere for mobile */
+    .content-header {
+        flex-direction: column !important;
+        gap: 1rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    .filters-bar {
+        gap: 0.5rem !important;
+        flex-wrap: wrap !important;
+    }
+
+    .filters-bar input,
+    .filters-bar select {
+        max-width: 100% !important;
+        padding: 0.7rem !important;
+    }
+
+    /* Sidebar icon ridotto */
+    .sidebar {
+        width: 55px !important;
+    }
+
+    .main-content {
+        margin-left: 55px !important;
+        width: calc(100vw - 55px) !important;
     }
 }
 

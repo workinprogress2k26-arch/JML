@@ -1,0 +1,47 @@
+<!-- 
+  DEBUG MOBILE - Aggiunta temporanea per testare le dimensioni su mobile
+  Questo mostra le dimensioni dello schermo in tempo reale
+  
+  COME USARE:
+  1. Aggiungi questo code prima del tag </body> in index.html
+  2. Accedi al sito da mobile
+  3. Vedrai le dimensioni nel basso a sinistra
+  4. Rimuovi il codice quando il testing è completato
+-->
+
+<div id="mobile-debug" style="
+  position: fixed;
+  bottom: 70px;
+  left: 10px;
+  background: rgba(0,0,0,0.8);
+  color: #DCAA25;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-size: 12px;
+  z-index: 99999;
+  font-family: monospace;
+  border: 1px solid #DCAA25;
+  display: none;
+">
+  <div>W: <span id="debug-width">-</span>px</div>
+  <div>H: <span id="debug-height">-</span>px</div>
+  <div>Scale: <span id="debug-scale">-</span></div>
+</div>
+
+<script>
+// Debug mobile - Attiva solo su mobile
+if (window.innerWidth <= 768) {
+  document.getElementById('mobile-debug').style.display = 'block';
+  
+  function updateDimensions() {
+    document.getElementById('debug-width').textContent = window.innerWidth;
+    document.getElementById('debug-height').textContent = window.innerHeight;
+    document.getElementById('debug-scale').textContent = 
+      (window.devicePixelRatio || 1).toFixed(2);
+  }
+  
+  updateDimensions();
+  window.addEventListener('resize', updateDimensions);
+  window.addEventListener('orientationchange', updateDimensions);
+}
+</script>
