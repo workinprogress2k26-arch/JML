@@ -17,6 +17,14 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    max-width: 100%;
+}
+
+img,
+video,
+iframe {
+    max-width: 100%;
+    height: auto;
 }
 
 body {
@@ -27,6 +35,19 @@ body {
     overflow-x: hidden;
     width: 100%;
     max-width: 100%;
+}
+
+html {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+}
+
+/* global fix for overflow due to 100vw margins */
+#app-view,
+.main-content {
+    overflow-x: hidden !important;
+    max-width: 100% !important;
 }
 
 /* === MOBILE FIRST APPROACH === */
@@ -1248,10 +1269,14 @@ input:focus {
     display: none !important;
 }
 
-body.auth-mode {
+body.auth-mode,
+html.auth-mode {
     overflow: hidden !important;
-    position: fixed;
-    width: 100%;
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100vh !important;
 }
 
 #auth-view {
@@ -1259,6 +1284,24 @@ body.auth-mode {
     z-index: 10000;
     position: fixed;
     inset: 0;
+    overflow: hidden;
+}
+
+/* hide scrollbar inside auth-view just in case */
+#auth-view::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+#auth-view {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+/* ensure authentication card never forces page scroll */
+.auth-card {
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    margin: auto !important;
 }
 
 /* Messaggio dell'IA quando blocca un contenuto offensivo o illegale */
