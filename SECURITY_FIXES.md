@@ -16,10 +16,12 @@
      - `http://localhost:3000` (development)
      - `http://localhost:5173` (Vite dev)
 
-3. **✅ Content Security Policy Debole**
-   - PRIMA: `'unsafe-inline'` e `'unsafe-eval'` nel CSP
-   - DOPO: Rimossi (migliora protezione XSS)
-   - AGGIUNTO: `object-src 'none'` e `base-uri 'self'`
+3. **⚠️ Content Security Policy Debole** (PARZIALMENTE RISOLTO)
+   - PRIMA: No CSP
+   - DOPO: CSP implementato con:
+     - `'unsafe-inline'` per `style-src` - ✅ Accettabile (gli inline styles non sono un vettore XSS primario)
+     - `'unsafe-inline'` per `script-src` - ⚠️ Compromesso temporaneo (progetto legacy con 20+ inline event handlers)
+   - **PROSSIMO STEP**: Refactorizzare da `onclick="..."` a `addEventListener()` e rimuovere `'unsafe-inline'` da script-src
 
 4. **✅ Versione Gemini API Obsoleta**
    - PRIMA: `gemini-pro` (deprecato)
@@ -92,9 +94,38 @@ Le variabili d'ambiente devono essere configurate nel dashboard del servizio:
 - **Vercel**: Settings → Environment Variables
 - **Supabase Edge Functions**: Settings → Secrets
 
-## 🛡️ Best Practices Applicate
+## 🛡️ CSP Strategy & Roadmap
 
-### 1. Input Validation ✅
+### Situazione Attuale
+
+Il file `index.html` contiene **20+ inline event handlers** (`onclick="login()"`, ecc.) che violano un CSP strict.
+
+**Soluzione temporanea**: Consentito `'unsafe-inline'` su `script-src`
+
+**Soluzione definitiva** (TODO):
+1. Refactorizzare gli event handler da `onclick="..."` a `addEventListener()`
+2. Usare un'app helper: [csp-event-handler-helper.js](csp-event-handler-helper.js)
+
+### Come Completare la Migrazione
+
+```html
+<!-- VECCHIO (non CSP-compliant) -->
+<button onclick="login()">Accedi</button>
+
+<!-- NUOVO (CSP-compliant) -->
+<button class="btn-login">Accedi</button>
+```
+
+Poi nel file `script.js`:
+```javascript
+document.querySelector('.btn-login').addEventListener('click', login);
+```
+
+O usa il helper fornito: [csp-event-handler-helper.js](csp-event-handler-helper.js)
+
+### Best Practices Applicate
+
+#### 1. Input Validation ✅
 ```javascript
 // Tutti gli input validati per lunghezza e pattern
 if (!message || typeof message !== 'string' || message.length > 5000) {
@@ -102,22 +133,22 @@ if (!message || typeof message !== 'string' || message.length > 5000) {
 }
 ```
 
-### 2. XSS Prevention ✅
-- CSP headers strict (no `unsafe-inline`)
+#### 2. XSS Prevention ✅
+- CSP headers configurato
 - Sanitizzazione HTML con `sanitizeInput()`
 - Pattern matching per rilevare script injection
 
-### 3. CORS Security ✅
+#### 3. CORS Security ✅
 - Whitelist di domini allowed
 - No more `Access-Control-Allow-Origin: *`
 - Proper CORS headers per metodo HTTP
 
-### 4. API Security ✅
+#### 4. API Security ✅
 - Validazione request/response
 - Timeout implementati (10s)
 - Error handling con dettagli limitati in produzione
 
-### 5. Content Moderation ✅
+#### 5. Content Moderation ✅
 - Rilevamento automatico di contenuto violento/illegale
 - Scoring severity per azioni appropriate
 - Logging di tentativi sospetti
@@ -129,6 +160,7 @@ if (!message || typeof message !== 'string' || message.length > 5000) {
 3. **Rate Limiting**: Non implementato - considera aggiungere rate limiting su API
 4. **2FA**: Implementa 2-Factor Authentication per account premium
 5. **API Key Rotation**: Ruota regolarmente le API keys (ogni 90 giorni)
+6. **CSP Strict**: Completa la migrazione dei inline event handlers
 
 ## 🔍 Testing di Sicurezza
 
@@ -143,6 +175,9 @@ curl -X POST http://localhost:3000/api/chat \
 curl -X OPTIONS http://localhost:3000/api/chat \
   -H "Origin: http://evil.com"
 # Dovrebbe NON includere header CORS per evil.com
+
+# Test inline event handlers
+# Apri browser F12, non dovrebbero esserci errori CSP ✅
 ```
 
 ## 📚 Riferimenti
@@ -151,9 +186,10 @@ curl -X OPTIONS http://localhost:3000/api/chat \
 - [Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP)
 - [CORS Best Practices](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
 - [Supabase Security](https://supabase.com/docs/guides/security)
+- [CSP Event Handlers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src#unsafe-inline)
 
 ---
 
 **Ultima modifica**: 3 Marzo 2026
 **Autore**: Security Audit
-**Status**: ✅ Tutti i problemi critici risolti
+**Status**: ✅ Todos i problemi critici risolti | ⚠️ CSP: Roadmap in progress
