@@ -20,6 +20,8 @@ function initSupabase() {
     if (!cfg.url || !cfg.anon) {
         console.error('❌ Supabase non configurato: manca URL o ANON_KEY a runtime. Non inizializzo il client per motivi di sicurezza.');
         showBanner('Supabase non configurato in produzione. Aggiungi le environment variables su Vercel e ridistribuisci.', 'supabase-banner');
+        // Offer an in-browser ephemeral fallback: prompt the current user to paste ANON key into sessionStorage
+        showSupabaseConfigPrompt();
         return false;
     }
     try {
@@ -156,6 +158,63 @@ function removeBanner(id) {
     const b = document.getElementById(id);
     if (b) b.style.display = 'none';
 }
+
+// If the developer/user didn't supply runtime vars, allow entering them temporarily
+function showSupabaseConfigPrompt() {
+    if (document.getElementById('supabase-config-action')) return; // already shown
+    const wrapper = document.createElement('div');
+    wrapper.id = 'supabase-config-action';
+    wrapper.style.position = 'fixed';
+    wrapper.style.right = '16px';
+    wrapper.style.bottom = '16px';
+    wrapper.style.zIndex = 9999;
+
+    const btn = document.createElement('button');
+    btn.textContent = 'Configura Supabase (temporaneo)';
+    btn.className = 'btn-primary';
+    btn.style.padding = '10px 14px';
+    btn.onclick = promptForSupabaseConfig;
+
+    wrapper.appendChild(btn);
+    document.body.appendChild(wrapper);
+}
+
+function promptForSupabaseConfig() {
+    try {
+        const defaultUrl = 'https://qtmfgmrigldgodxrecue.supabase.co';
+        const url = window.prompt('Inserisci Supabase URL (lascia vuoto per usare default):', defaultUrl) || defaultUrl;
+        const key = window.prompt('Inserisci ANON KEY (copiala dalla tua dashboard Supabase). Questa chiave sarà salvata solo in questa sessione del browser.', '');
+        if (!key) {
+            alert('ANON KEY non fornita. Operazione annullata.');
+            return;
+        }
+        // store only in sessionStorage (ephemeral)
+        sessionStorage.setItem('supabase_url', url);
+        sessionStorage.setItem('supabase_anon_key', key);
+        // populate runtime globals
+        window.__SUPABASE_URL = url;
+        window.__SUPABASE_ANON_KEY = key;
+        removeBanner('supabase-banner');
+        const el = document.getElementById('supabase-config-action');
+        if (el) el.remove();
+        // Re-initialize
+        initSupabase();
+        if (supabaseAvailable) showToast('Supabase inizializzato (sessione corrente).', 'success');
+    } catch (e) {
+        console.error('Errore durante la configurazione temporanea di Supabase:', e);
+        alert('Errore durante la configurazione temporanea. Vedi console.');
+    }
+}
+
+// If sessionStorage has runtime config (entered manually earlier), populate globals early
+try {
+    const sUrl = sessionStorage.getItem('supabase_url');
+    const sKey = sessionStorage.getItem('supabase_anon_key');
+    if (sUrl && sKey) {
+        window.__SUPABASE_URL = sUrl;
+        window.__SUPABASE_ANON_KEY = sKey;
+    }
+} catch (e) { /* ignore */ }
 
 // --- RICERCA PROSSIMITÀ (SMART MAPS) ---
 async function findJobsNearMe() {
