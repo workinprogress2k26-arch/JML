@@ -1237,12 +1237,12 @@ async function createAnnuncio() {
             arg_title: title,
             arg_description: desc,
             arg_category: category,
-            arg_rate: rate,
-            arg_duration: duration,
+            arg_rate: Number(rate),          // Forza numero
+            arg_duration: Number(duration),  // Forza numero
             arg_time_unit: timeUnit,
             arg_address: address,
-            arg_lat: coords.lat,
-            arg_lng: coords.lng,
+            arg_lat: Number(coords.lat),     // Forza numero
+            arg_lng: Number(coords.lng),     // Forza numero
             arg_image_url: imageBase64
         });
 
