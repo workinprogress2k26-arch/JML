@@ -499,69 +499,67 @@ document.addEventListener('DOMContentLoaded', () => {
 // ... DA QUI IN POI COMINCIANO LE TUE ALTRE FUNZIONI (checkLoginStatus, renderBacheca, etc.) ...
 
 // --- LOGICA DI NAVIGAZIONE E AUTH ---
+let isCheckingLogin = false; // Flag per evitare doppie esecuzioni
+
 async function checkLoginStatus() {
-    if (!supabaseClient) return;
-    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!supabaseClient || isCheckingLogin) return;
+    isCheckingLogin = true; // Blocca esecuzioni simultanee
 
-    if (session) {
-        const user = session.user;
+    try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
 
-        // USA maybeSingle() invece di single() per evitare l'errore 406 se il profilo non esiste
-        let { data: profile, error: profileErr } = await supabaseClient
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .maybeSingle();
+        if (session) {
+            const user = session.user;
 
-        if (profileErr) {
-            console.error('Errore recupero profilo:', profileErr);
-        }
+            // Prepariamo i dati del profilo
+            const profileData = {
+                id: user.id,
+                display_name: user.user_metadata.full_name || user.email,
+                email: user.email,
+                avatar_url: user.user_metadata.avatar_url || '',
+                user_type: 'private'
+                // Non mettiamo balance qui per evitare di sovrascrivere il saldo reale a ogni login
+            };
 
-        // Se il profilo non esiste (primo accesso), lo creiamo automaticamente
-        if (!profile) {
-            console.log("Profilo non trovato, creazione in corso...");
-            const { data: newProfile, error: insErr } = await supabaseClient
+            // UPSERT: Se esiste aggiorna (senza toccare il saldo), se non esiste crea.
+            // Usiamo onConflict: 'id' per dire a Supabase di controllare la chiave primaria
+            const { data: profile, error: upsertErr } = await supabaseClient
                 .from('profiles')
-                .insert([{
-                    id: user.id,
-                    display_name: user.user_metadata.full_name || user.email,
-                    email: user.email,
-                    avatar_url: user.user_metadata.avatar_url || '',
-                    balance: 0,
-                    frozen_balance: 0,
-                    user_type: 'private'
-                }])
+                .upsert(profileData, { onConflict: 'id' })
                 .select()
                 .maybeSingle();
-            
-            if (insErr) {
-                console.error("Errore creazione profilo:", insErr);
-            } else {
-                profile = newProfile;
+
+            if (upsertErr) {
+                console.error("Errore sincronizzazione profilo:", upsertErr);
             }
+
+            if (profile) {
+                // Carichiamo i saldi REALI dal database
+                userBalance = parseFloat(profile.balance) || 0;
+                frozenBalance = parseFloat(profile.frozen_balance) || 0;
+
+                const userData = {
+                    id: profile.id,
+                    name: profile.display_name,
+                    email: profile.email,
+                    type: profile.user_type,
+                    avatar: profile.avatar_url,
+                    is_premium: profile.is_premium
+                };
+                localStorage.setItem('userData', JSON.stringify(userData));
+                
+                showView('app-view');
+                updateSidebar(); 
+                loadAnnouncementsFromDB();
+                renderUserProfile();
+            }
+        } else {
+            showView('auth-view');
         }
-
-        if (profile) {
-            userBalance = parseFloat(profile.balance) || 0;
-            frozenBalance = parseFloat(profile.frozen_balance) || 0;
-
-            const userData = {
-                id: profile.id,
-                name: profile.display_name,
-                email: profile.email,
-                type: profile.user_type,
-                avatar: profile.avatar_url,
-                is_premium: profile.is_premium
-            };
-            localStorage.setItem('userData', JSON.stringify(userData));
-        }
-
-        showView('app-view');
-        updateSidebar(); 
-        loadAnnouncementsFromDB();
-        renderUserProfile();
-    } else {
-        showView('auth-view');
+    } catch (err) {
+        console.error("Errore critico in checkLoginStatus:", err);
+    } finally {
+        isCheckingLogin = false; // Sblocca
     }
 }
 //SHOW VIEW 
