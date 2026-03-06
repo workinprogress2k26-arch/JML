@@ -37,6 +37,25 @@ function initSupabase() {
   }
 }
 
+// Ensure supabaseClient is available before making calls
+function ensureSupabase() {
+    if (!supabaseClient) {
+        console.error('Supabase non inizializzato. Alcune funzionalità sono disabilitate.');
+        showToast('Servizio non pronto: alcune funzioni potrebbero non funzionare.', 'warning');
+        return false;
+    }
+    return true;
+}
+
+// Global error handlers to capture unexpected exceptions and promise rejections
+window.addEventListener('unhandledrejection', (ev) => {
+    console.error('Unhandled rejection:', ev.reason);
+});
+
+window.addEventListener('error', (ev) => {
+    console.error('Window error:', ev.message, ev.error);
+});
+
 // Initialize on page load
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initSupabase);
@@ -257,34 +276,36 @@ async function renderTransactions() {
 // --- 3. INIZIALIZZAZIONE ALL'AVVIO ---
 document.addEventListener('DOMContentLoaded', () => {
     console.log("App avviata...");
-
     // Avvio delle funzioni principali
-    if (typeof checkLoginStatus === 'function') {
-        checkLoginStatus();
-    } else {
-        console.error("Errore: la funzione checkLoginStatus non è stata trovata!");
-    }
+    try {
+        if (typeof checkLoginStatus === 'function') checkLoginStatus();
+        else console.error("Errore: la funzione checkLoginStatus non è stata trovata!");
 
-    if (typeof renderChatHistory === 'function') {
-        renderChatHistory();
-    }
+        if (typeof renderChatHistory === 'function') renderChatHistory();
 
-    // --- AGGIUNGI DA QUI: ASCOLTA I MESSAGGI IN TEMPO REALE ---
-    supabaseClient
-        .channel('realtime-messages')
-        .on('postgres_changes', {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages'
-        }, payload => {
-            console.log("Nuovo messaggio ricevuto:", payload.new);
-            // Se l'utente ha la chat aperta proprio su quel lavoro, ricarica i messaggi
-            if (currentChatCompany && payload.new.announcement_id === currentChatCompany.jobId) {
-                loadMessages(currentChatCompany.jobId);
+        // Real-time subscription: solo se Supabase inizializzato
+        if (ensureSupabase()) {
+            try {
+                supabaseClient
+                    .channel('realtime-messages')
+                    .on('postgres_changes', {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'messages'
+                    }, payload => {
+                        console.log("Nuovo messaggio ricevuto:", payload.new);
+                        if (currentChatCompany && payload.new.announcement_id === currentChatCompany.jobId) {
+                            if (typeof loadMessages === 'function') loadMessages(currentChatCompany.jobId);
+                        }
+                    })
+                    .subscribe();
+            } catch (e) {
+                console.warn('Impossibile sottoscrivere canale realtime:', e.message || e);
             }
-        })
-        .subscribe();
-    // --- FINE AGGIUNTA ---
+        }
+    } catch (e) {
+        console.error('Errore allavvio:', e.message || e);
+    }
 });
 
 // --- 4. FUNZIONE CHAT AI AGGIORNATA (Usa supabaseClient) ---
@@ -293,6 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- LOGICA DI NAVIGAZIONE E AUTH ---
 async function checkLoginStatus() {
+    if (!ensureSupabase()) { showView('auth-view'); return; }
     const { data: { session } } = await supabaseClient.auth.getSession();
 
     if (session) {
@@ -406,6 +428,7 @@ function initDashboard() {
 }
 
 async function loadAnnouncementsFromDB() {
+    if (!ensureSupabase()) return;
     try {
         console.log("Tentativo scaricamento annunci...");
         // Tentativo query con profili (rimosso is_premium che causava errore)
@@ -1040,6 +1063,7 @@ async function createAnnuncio() {
 
 // --- CREAZIONE ANNUNCIO (SALVATAGGIO SU SUPABASE) ---
 async function finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageUrl, userData) {
+    if (!ensureSupabase()) { showToast('Servizio non disponibile. Riprova più tardi.', 'error'); return; }
     const rate = parseFloat(document.getElementById('ann-salary').value) || 0;
     const duration = parseFloat(document.getElementById('ann-duration').value) || 1;
     const unit = document.getElementById('ann-time-unit').value;
@@ -1135,6 +1159,7 @@ async function updateChatList() {
     const list = document.getElementById('company-chat-list');
     if (!list) return;
 
+    if (!ensureSupabase()) return;
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
 
@@ -1259,6 +1284,7 @@ function openCompanyChat(chat) {
 }
 
 async function releasePayment() {
+    if (!ensureSupabase()) return;
     if (!currentChatCompany || !currentChatCompany.jobId) {
         showToast("Seleziona una chat valida prima di pagare.", "error");
         return;
@@ -1482,6 +1508,8 @@ async function sendAIMessage() {
     const responseCont = document.getElementById('ai-bacheca-response');
     const body = document.getElementById('ai-chat-body');
     const userMsg = input.value.trim();
+
+    if (!ensureSupabase()) { appendMessage('ai warning', 'Servizio IA non disponibile', body); return; }
 
     if (!userMsg || isAIBusy) return;
 
