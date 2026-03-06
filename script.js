@@ -12,6 +12,24 @@ function initSupabase() {
   try {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     console.log('✅ Supabase inizializzato correttamente');
+        // Quick authorization smoke-test to detect 403/406 early and give actionable advice
+        (async () => {
+            try {
+                const { data, error, status } = await supabaseClient
+                    .from('profiles')
+                    .select('id')
+                    .limit(1);
+                if (error) {
+                    if (status === 403) console.error("Supabase: Accesso negato (403). Controlla il tuo ANON_KEY, le policy RLS e le impostazioni CORS del progetto.");
+                    else if (status === 406) console.error("Supabase: Richiesta non accettabile (406). Potrebbe essere un problema con l'header Accept o con la query REST.");
+                    else console.warn('Supabase smoke-test errore:', error, 'status:', status);
+                } else {
+                    console.log('Supabase smoke-test OK');
+                }
+            } catch (e) {
+                console.warn('Supabase smoke-test eccezione:', e.message || e);
+            }
+        })();
     return true;
   } catch (err) {
     console.error('❌ Errore caricamento Supabase:', err);
@@ -585,7 +603,12 @@ function initMap() {
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap'
-        }).addTo(map);
+            }).addTo(map)
+            .on('tileerror', function (error, tile) {
+                console.warn('Tile error:', error);
+                // Mostra un messaggio utente leggibile solo la prima volta
+                showToast('Problema rete: impossibile caricare alcune tessere della mappa. Verifica la tua connessione o riprova più tardi.', 'warning');
+            });
 
         syncMapMarkers(annunci);
 

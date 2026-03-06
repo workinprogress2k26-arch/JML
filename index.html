@@ -49,7 +49,8 @@
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="screenshot-preview.png" type="image/png">
+  <!-- Favicon fallback: user local file may be missing, use an allowed external image to avoid 404 in console -->
+  <link rel="icon" href="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=32&q=80" type="image/png">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -232,10 +233,13 @@
                 <div id="ai-suggestion-ghost" class="suggestion-ghost"
                   style="position: absolute; top: 12px; left: 13px; color: rgba(255,255,255,0.3); pointer-events: none; font-family: inherit; font-size: 1rem;">
                 </div>
-                <input type="text" id="ai-input"
+                <div style="position: relative; width: 100%;">
+                <input type="text" id="ai-input" enterkeyhint="go"
                   placeholder="Chiedi a Worky-AI (es: 'Cerca cameriere' o 'Crea annuncio')..."
                   style="width: 100%; height: 45px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; color: white; padding-left: 13px; font-size: 1rem;"
                   oninput="updateAIWithGhostText(); renderBachecaFromAI();" onkeydown="handleAIKeyDown(event)">
+                <button id="ai-send-btn" class="btn-icon" onclick="sendAIMessage()" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:transparent; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-dim);">➤</button>
+              </div>
               </div>
               <select id="filter-category"
                 style="flex: 1; min-width: 150px; height: 45px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; color: white;"

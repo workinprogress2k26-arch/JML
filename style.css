@@ -118,6 +118,14 @@ html {
 
 /* === MOBILE LAYOUT (< 768px) === COMPLETE REDESIGN === */
 @media (max-width: 767px) {
+    /* hide text labels under icons */
+    .nav-item {
+        font-size: 0 !important;
+    }
+    .nav-item span {
+        font-size: 1.5rem !important;
+    }
+
     #app-view {
         display: flex !important;
         flex-direction: column !important;
@@ -143,7 +151,7 @@ html {
         background: rgba(13, 14, 20, 0.98) !important;
         border-top: 1px solid var(--border) !important;
         display: flex !important;
-        justify-content: space-around !important;
+        justify-content: space-evenly !important;
         align-items: center !important;
         z-index: 2000 !important;
         padding: 0 !important;
@@ -172,9 +180,10 @@ html {
         flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 0.2rem !important;
+        gap: 0 !important;
         color: var(--text-dim) !important;
-        font-size: 0.64rem !important;
+        font-size: 0 !important; /* hide labels */
+        line-height: 0 !important;
         transition: color 0.2s !important;
     }
 
@@ -258,8 +267,30 @@ html {
         margin-bottom: 0.8rem;
     }
 
+    /* keep AI response visible above bottom nav */
+    #ai-bacheca-response {
+        margin-bottom: 1.5rem !important;
+        z-index: 10;
+    }
+
     .filters-bar {
         gap: 0.3rem;
+        position: relative;
+    }
+
+    .btn-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: none;
+        color: var(--text-dim);
+        cursor: pointer;
+        padding: 0;
+        font-size: 1.3rem;
+    }
+    .btn-icon:hover {
+        color: var(--primary);
     }
 
     /* === BADGE POSITIONING === */
@@ -767,6 +798,77 @@ input:focus {
     border-radius: 12px;
     display: flex;
     justify-content: space-between;
+
+/* === MOBILE ALIGNMENT FIXES (override and align elements) === */
+@media (max-width: 767px) {
+    html, body {
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+    }
+
+    /* Keep main areas centered with comfortable padding */
+    .main-content,
+    .auth-card,
+    .modal-content,
+    .glass {
+        margin-left: auto !important;
+        margin-right: auto !important;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+        box-sizing: border-box !important;
+        max-width: 1100px !important;
+    }
+
+    .main-content {
+        padding-top: 12px !important;
+        padding-bottom: 110px !important; /* leave room for bottom nav */
+    }
+
+    /* Make headers stack neatly */
+    .content-header {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.5rem !important;
+    }
+
+    /* Ensure grids collapse to single column */
+    .announcements-grid,
+    .subscription-plans,
+    .stats-grid-proportional {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+        padding: 0 !important;
+    }
+
+    /* Modal and auth sizing */
+    .modal-content {
+        max-width: 95vw !important;
+        margin: 18px auto !important;
+    }
+
+    .auth-card {
+        width: 94vw !important;
+        max-width: 520px !important;
+        padding: 1rem !important;
+    }
+
+    /* Improve touch targets and spacing */
+    .btn-primary,
+    .btn-icon {
+        min-height: 44px !important;
+    }
+
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+
+    /* Avoid accidental horizontal scrolling */
+    html, body, #app-view, .main-content { overflow-x: hidden !important; }
+
+    /* Slightly reduce large images */
+    .annuncio-img { height: auto !important; }
+}
     align-items: center;
     border: 1px solid transparent;
     transition: border-color 0.3s;
