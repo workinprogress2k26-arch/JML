@@ -506,24 +506,60 @@ async function checkLoginStatus() {
     if (session) {
         const user = session.user;
 
-        // Recupera il profilo reale dal database
-        let { data: profile } = await supabaseClient
+        // USA maybeSingle() invece di single() per evitare l'errore 406 se il profilo non esiste
+        let { data: profile, error: profileErr } = await supabaseClient
             .from('profiles')
             .select('*')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
+
+        if (profileErr) {
+            console.error('Errore recupero profilo:', profileErr);
+        }
+
+        // Se il profilo non esiste (primo accesso), lo creiamo automaticamente
+        if (!profile) {
+            console.log("Profilo non trovato, creazione in corso...");
+            const { data: newProfile, error: insErr } = await supabaseClient
+                .from('profiles')
+                .insert([{
+                    id: user.id,
+                    display_name: user.user_metadata.full_name || user.email,
+                    email: user.email,
+                    avatar_url: user.user_metadata.avatar_url || '',
+                    balance: 0,
+                    frozen_balance: 0,
+                    user_type: 'private'
+                }])
+                .select()
+                .maybeSingle();
+            
+            if (insErr) {
+                console.error("Errore creazione profilo:", insErr);
+            } else {
+                profile = newProfile;
+            }
+        }
 
         if (profile) {
-            // USIAMO I DATI DEL DB, NON DEL LOCALSTORAGE
             userBalance = parseFloat(profile.balance) || 0;
             frozenBalance = parseFloat(profile.frozen_balance) || 0;
-            
-            // Salva solo per comodità visiva, ma la fonte è il DB
-            localStorage.setItem('userData', JSON.stringify(profile));
+
+            const userData = {
+                id: profile.id,
+                name: profile.display_name,
+                email: profile.email,
+                type: profile.user_type,
+                avatar: profile.avatar_url,
+                is_premium: profile.is_premium
+            };
+            localStorage.setItem('userData', JSON.stringify(userData));
         }
+
         showView('app-view');
-        updateSidebar(); // Aggiorna la grafica del saldo
+        updateSidebar(); 
         loadAnnouncementsFromDB();
+        renderUserProfile();
     } else {
         showView('auth-view');
     }
