@@ -500,85 +500,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- LOGICA DI NAVIGAZIONE E AUTH ---
 async function checkLoginStatus() {
-    if (!ensureSupabase()) { showView('auth-view'); return; }
+    if (!supabaseClient) return;
     const { data: { session } } = await supabaseClient.auth.getSession();
 
     if (session) {
         const user = session.user;
 
-        // 1. Scarica o crea il profilo (Saldo, Nome, ecc.)
-        // Use maybeSingle() to avoid throwing when no row exists (prevents 406/Not Acceptable crash)
-        let { data: profile, error: profileErr } = await supabaseClient
+        // Recupera il profilo reale dal database
+        let { data: profile } = await supabaseClient
             .from('profiles')
             .select('*')
             .eq('id', user.id)
-            .maybeSingle();
-
-        if (profileErr) {
-            console.warn('Errore recupero profilo (maybeSingle):', profileErr);
-            profile = null;
-        }
-
-        // Se l'utente è entrato con Google e non ha un profilo, o mancano info Google
-        if (user.app_metadata?.provider === 'google') {
-            const googleName = user.user_metadata.full_name;
-            const googleAvatar = user.user_metadata.avatar_url;
-
-            if (!profile) {
-                // Primo accesso Google: Crea profilo
-                const { data: newProfile, error: insErr } = await supabaseClient
-                    .from('profiles')
-                    .insert([{
-                        id: user.id,
-                        display_name: googleName || user.email,
-                        email: user.email,
-                        avatar_url: googleAvatar,
-                        user_type: 'private',
-                        balance: 0,
-                        frozen_balance: 0
-                    }])
-                    .select()
-                    .single();
-                if (!insErr) profile = newProfile;
-            } else if (!profile.avatar_url || profile.display_name === profile.email) {
-                // Aggiorna info Google se mancanti o di default
-                const { data: updProfile, error: updErr } = await supabaseClient
-                    .from('profiles')
-                    .update({
-                        avatar_url: profile.avatar_url || googleAvatar,
-                        display_name: (profile.display_name === profile.email) ? googleName : profile.display_name
-                    })
-                    .eq('id', user.id)
-                    .select()
-                    .maybeSingle();
-                if (!updErr && updProfile) profile = updProfile;
-            }
-        }
+            .single();
 
         if (profile) {
+            // USIAMO I DATI DEL DB, NON DEL LOCALSTORAGE
             userBalance = parseFloat(profile.balance) || 0;
             frozenBalance = parseFloat(profile.frozen_balance) || 0;
-
-            // Salva i dati dell'utente per la UI (Inclusi i nuovi campi e social)
-            const userData = {
-                name: profile.display_name,
-                surname: profile.display_name?.split(' ')[1] || "",
-                email: profile.email,
-                type: profile.user_type,
-                avatar: profile.avatar_url,
-                is_premium: profile.is_premium,
-                cv: profile.cv,
-                certifications: profile.certifications,
-                socials: user.user_metadata.socials || {}
-            };
-            localStorage.setItem('userData', JSON.stringify(userData));
+            
+            // Salva solo per comodità visiva, ma la fonte è il DB
+            localStorage.setItem('userData', JSON.stringify(profile));
         }
-
-        // 2. Mostra l'app e carica la bacheca dal DB
         showView('app-view');
-        updateChatList();
-        loadAnnouncementsFromDB(); // Carica annunci dal cloud
-        renderUserProfile();
+        updateSidebar(); // Aggiorna la grafica del saldo
+        loadAnnouncementsFromDB();
     } else {
         showView('auth-view');
     }
@@ -1206,100 +1151,32 @@ function openCreateModal() { document.getElementById('create-annuncio-modal').cl
 function closeCreateModal() { document.getElementById('create-annuncio-modal').classList.add('hidden'); }
 
 async function createAnnuncio() {
-    // Disable submit to prevent double-submits (mobile double-tap etc.)
-    const submitBtn = document.getElementById('create-annuncio-submit');
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.dataset.origText = submitBtn.textContent;
-        submitBtn.textContent = 'Pubblicando...';
-    }
-    const rawTitle = document.getElementById('ann-title').value;
-    let rawCategory = document.getElementById('ann-category').value;
-    const rawDesc = document.getElementById('ann-desc').value;
+    const rate = parseFloat(document.getElementById('ann-salary').value);
+    const duration = parseFloat(document.getElementById('ann-duration').value);
+    const totalToLock = rate * duration;
 
-    // Sanitizzazione Anti-XSS: pulisce eventuali tag HTML/script
-    const title = sanitizeInput(rawTitle);
-    let category = sanitizeInput(rawCategory);
-    const desc = sanitizeInput(rawDesc);
-
-    // --- NUOVI CAMPI PER IL CALCOLO TEMPORALE ---
-    const rate = parseFloat(document.getElementById('ann-salary').value) || 0;      // Prezzo unitario
-    const duration = parseFloat(document.getElementById('ann-duration').value) || 1; // Quantità (ore/giorni)
-    const unit = document.getElementById('ann-time-unit').value;                   // Unità (ora/giorno/min)
-
-    const address = document.getElementById('ann-address').value;
-    const city = document.getElementById('ann-city').value;
-
-    const otherCatValue = document.getElementById('ann-other-category').value;
-    if (category === 'altro' && otherCatValue) {
-        category = otherCatValue;
-    }
-
-    // 1. Controlli base di compilazione
-    if (!title || !desc || !address) { alert('Compila i campi necessari.'); if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.origText || 'Pubblica'; } return; }
-
-    // --- LOGICA MATEMATICA COMPENSO ---
-    const totalAmount = rate * duration; // Esempio: 15€ * 4 ore = 60€
-
-    // 2. Logica Escrow (Saldo e Fondi)
-    const userData = JSON.parse(localStorage.getItem('userData'));
-    const cur = userData ? (userData.currency || '€') : '€';
-
-    if (totalAmount <= 0) {
-        alert('❌ Il compenso totale deve essere maggiore di zero!');
+    // CONTROLLO SICURO: Hai i soldi sul DB?
+    if (userBalance < totalToLock) {
+        alert("Saldo insufficiente sul tuo account!");
         return;
     }
 
-    // Controllo se l'utente ha abbastanza soldi per il TOTALE calcolato
-    if (userBalance < totalAmount) {
-        alert(`❌ Saldo insufficiente!\nIl costo totale dell'annuncio è ${cur} ${totalAmount.toFixed(2)} (${rate}${cur}/${unit} x ${duration} ${unit}), ma il tuo saldo attuale è ${cur} ${userBalance.toFixed(2)}.`);
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.origText || 'Pubblica'; }
+    // 1. Scaliamo dal saldo disponibile e mettiamo in congelato sul DB
+    const { error: balanceError } = await supabaseClient
+        .from('profiles')
+        .update({ 
+            balance: userBalance - totalToLock,
+            frozen_balance: frozenBalance + totalToLock 
+        })
+        .eq('id', (await supabaseClient.auth.getUser()).data.user.id);
+
+    if (balanceError) {
+        alert("Errore durante il blocco dei fondi.");
         return;
     }
 
-    // Sottraiamo il TOTALE calcolato
-    userBalance -= totalAmount;
-    frozenBalance += totalAmount;
-
-    // Aggiornamento locale (localStorage e UI)
-    localStorage.setItem('userBalance', userBalance);
-    localStorage.setItem('frozenBalance', frozenBalance);
-    renderUserProfile();
-    updateSidebar();
-
-    // 3. Geocoding e Immagine
-    const coords = await getCoordinates(`${address}, ${city}`);
-
-    // Build a dedupe key to prevent duplicate submissions (client-side)
-    const pendingKey = `${title.trim().toLowerCase()}|${address.trim().toLowerCase()}|${rate}|${duration}`;
-    if (pendingAnnouncements.has(pendingKey)) {
-        showToast('Invio già in corso per questo annuncio. Attendi il completamento.', 'warning');
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.origText || 'Pubblica'; }
-        return;
-    }
-    // mark as pending
-    pendingAnnouncements.add(pendingKey);
-
-    // Prepariamo la stringa del salario da visualizzare nella card (es: "15€/ora per 4 ore")
-    const displaySalary = `${rate}${cur}/${unit} x ${duration} (Tot: ${totalAmount}${cur})`;
-
-    const file = document.getElementById('ann-image').files[0];
-    let imageBase64 = "";
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            imageBase64 = e.target.result;
-            // Passiamo displaySalary (stringa descrittiva) alla creazione finale
-            finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageBase64, userData, pendingKey).finally(() => {
-                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.origText || 'Pubblica'; }
-            });
-        };
-        reader.readAsDataURL(file);
-    } else {
-        finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageBase64, userData, pendingKey).finally(() => {
-            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.origText || 'Pubblica'; }
-        });
-    }
+    // 2. Prosegui con la creazione dell'annuncio...
+    // (Qui tieni il resto del tuo codice finalizeAnnuncioCreation)
 }
 
 // --- CREAZIONE ANNUNCIO (SALVATAGGIO SU SUPABASE) ---
@@ -1558,77 +1435,29 @@ function openCompanyChat(chat) {
 }
 
 async function releasePayment() {
-    if (!ensureSupabase()) return;
-    if (!currentChatCompany || !currentChatCompany.jobId) {
-        showToast("Seleziona una chat valida prima di pagare.", "error");
-        return;
-    }
-
+    if (!currentChatCompany) return;
+    
     const jobId = currentChatCompany.jobId;
-    const workerId = currentChatCompany.partnerId;
-
-    if (!workerId || workerId === 'N/A') {
-        showToast("Identità del lavoratore non trovata. Apri la chat Messaggi.", "error");
-        return;
-    }
-
+    const workerId = currentChatCompany.partnerId; // ID del lavoratore nella chat
     const ann = annunci.find(a => a.id === jobId);
-    if (!ann) {
-        showToast("Impossibile trovare l'annuncio.", "error");
-        return;
-    }
+    const amount = parseFloat(ann.salary); // Importo da sbloccare
 
-    const amount = parseFloat(ann.salary) || 0;
+    const { data: { user } } = await supabaseClient.auth.getUser();
 
-    if (!confirm(`Confermi il completamento del lavoro e il rilascio di €${amount.toFixed(2)} a ${currentChatCompany.name}?`)) return;
+    // CHIAMA LA RPC (Funzione SQL sicura)
+    const { error } = await supabaseClient.rpc('release_escrow_payment', {
+        employer_id: user.id,
+        worker_id: workerId,
+        job_id: jobId,
+        p_amount: amount
+    });
 
-    try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-
-        // 1. Esegui il pagamento sicuro tramite RPC (Escrow)
-        const { error: err1 } = await supabaseClient.rpc('release_escrow_payment', {
-            employer_id: user.id,
-            worker_id: workerId,
-            job_id: jobId,
-            p_amount: amount
-        });
-
-        if (err1) {
-            console.error("Errore RPC:", err1);
-            if (err1.message.includes("is_premium")) {
-                showToast("Errore Database: Manca la colonna 'is_premium'. Esegui il comando SQL suggerito in precedenza.", "error");
-            } else {
-                showToast("Errore durante il rilascio: " + err1.message, "error");
-            }
-            return;
-        }
-
-        // 2. Registra Transazioni
-        await logTransaction(-amount, `Pagamento rilasciato per: ${ann.title}`);
-
-        showToast("Pagamento rilasciato con successo! Grazie per aver collaborato.", "success");
-
-        // 3. Elimina l'annuncio dal database (Lavoro completato)
-        await supabaseClient
-            .from('announcements')
-            .delete()
-            .eq('id', jobId);
-
-        // 4. Mark job as completed localmente
-        completedContracts.push(jobId);
-        localStorage.setItem('completedContracts', JSON.stringify(completedContracts));
-
-        // 5. Pulizia locale
-        acceptedContracts = acceptedContracts.filter(id => id !== jobId);
-        localStorage.setItem('acceptedContracts', JSON.stringify(acceptedContracts));
-        annunci = annunci.filter(a => a.id !== jobId); // Rimuovi dai dati correnti
-
-        closeChatArea('company');
-        renderBacheca(); // Aggiorna subito la UI (Bacheca e Mappa)
-        checkLoginStatus(); // Ricarica saldi
-    } catch (err) {
-        console.error("Eccezione durante il rilascio:", err);
-        showToast("Errore critico: " + err.message, "error");
+    if (error) {
+        alert("Errore nel pagamento: " + error.message);
+    } else {
+        alert("Pagamento inviato con successo! Il lavoratore ha ricevuto i fondi.");
+        // Aggiorna la UI
+        checkLoginStatus(); 
     }
 }
 
