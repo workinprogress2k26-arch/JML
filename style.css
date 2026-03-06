@@ -368,6 +368,31 @@ html {
     }
 }
 
+/* Mobile: collapse the category select to an icon to avoid overflow */
+@media (max-width: 767px) {
+    .filter-category {
+        /* make compact square button */
+        width: 44px !important;
+        min-width: 44px !important;
+        max-width: 44px !important;
+        padding: 0 !important;
+        text-indent: -9999px !important; /* hide text visually */
+        -webkit-appearance: none !important;
+        appearance: none !important;
+        background-color: rgba(255,255,255,0.03) !important;
+        border-radius: 8px !important;
+        border: 1px solid var(--border) !important;
+        height: 45px !important;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24'><path fill='%23DCAA25' d='M3 6h18v2H3zM7 11h10v2H7zM10 16h4v2h-4z'/></svg>") !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        background-size: 18px 18px !important;
+    }
+
+    /* Keep a visible label for screen readers */
+    .filter-category:focus { outline: 2px solid rgba(220,170,37,0.3) !important; }
+}
+
     .filters-bar {
         gap: 0.3rem;
         position: relative;

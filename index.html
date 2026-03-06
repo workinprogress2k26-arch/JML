@@ -241,7 +241,8 @@
                 <button id="ai-send-btn" class="btn-icon" onclick="sendAIMessage()" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:transparent; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-dim);">➤</button>
               </div>
               </div>
-              <select id="filter-category"
+              <select id="filter-category" class="filter-category"
+                aria-label="Seleziona categoria"
                 style="flex: 1; min-width: 150px; height: 45px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; color: white;"
                 onchange="renderBacheca()">
                 <option value="">Tutte le categorie</option>
