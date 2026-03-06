@@ -93,9 +93,28 @@ window.addEventListener('error', (ev) => {
 
 // Initialize on page load
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initSupabase);
+  document.addEventListener('DOMContentLoaded', () => {
+    initSupabase();
+    // Auto-check login status after OAuth redirect (e.g., after Google login)
+    setTimeout(() => checkAutoLoginAfterRedirect(), 300);
+  });
 } else {
   initSupabase();
+  setTimeout(() => checkAutoLoginAfterRedirect(), 300);
+}
+
+// Controlla se l'utente è autenticato dopo un redirect OAuth (es. da Google)
+async function checkAutoLoginAfterRedirect() {
+  if (!supabaseClient) return;
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+      console.log('✅ Utente autenticato rilevato dopo redirect OAuth, caricamento profilo...');
+      checkLoginStatus();
+    }
+  } catch (err) {
+    console.warn('checkAutoLoginAfterRedirect errore:', err);
+  }
 }
 
 // --- 2. VARIABILI GLOBALI (Caricate da Supabase) ---
