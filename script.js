@@ -25,14 +25,21 @@ function initSupabase() {
                     else console.warn('Supabase smoke-test errore:', error, 'status:', status);
                 } else {
                     console.log('Supabase smoke-test OK');
+                    supabaseAvailable = true;
+                    // clear any banner
+                    removeBanner('supabase-banner');
                 }
             } catch (e) {
                 console.warn('Supabase smoke-test eccezione:', e.message || e);
+                supabaseAvailable = false;
+                showBanner('Impossibile contattare Supabase. Alcune funzioni potrebbero non funzionare.', 'supabase-banner');
             }
         })();
     return true;
   } catch (err) {
     console.error('❌ Errore caricamento Supabase:', err);
+    supabaseAvailable = false;
+    showBanner('Errore inizializzazione Supabase. Controlla la connessione e le chiavi.', 'supabase-banner');
     return false;
   }
 }
@@ -77,6 +84,7 @@ let map = null;
 let markers = [];
 let reviewViewMode = 'received'; // <--- Fondamentale per non far crashare il profilo
 let pendingAnnouncements = new Set();
+let supabaseAvailable = false;
 
 // --- SISTEMA TOAST (UX PROFESSIONALE) ---
 function showToast(message, type = 'info') {
@@ -102,6 +110,38 @@ function showToast(message, type = 'info') {
         toast.classList.remove('show');
         setTimeout(() => container.removeChild(toast), 400);
     }, 5000);
+}
+
+// lightweight UI helpers (toasts, banners)
+function showToast(msg, type = 'info') {
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.classList.add('visible'), 10);
+    setTimeout(() => t.classList.remove('visible'), 5000 - 300);
+    setTimeout(() => t.remove(), 5000);
+}
+
+function showBanner(message, id) {
+    if (!id) return;
+    let b = document.getElementById(id);
+    if (!b) {
+        b = document.createElement('div');
+        b.id = id;
+        b.className = 'site-banner';
+        b.textContent = message;
+        document.body.appendChild(b);
+    } else {
+        b.textContent = message;
+        b.style.display = '';
+    }
+}
+
+function removeBanner(id) {
+    if (!id) return;
+    const b = document.getElementById(id);
+    if (b) b.style.display = 'none';
 }
 
 // --- RICERCA PROSSIMITÀ (SMART MAPS) ---

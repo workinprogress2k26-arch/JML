@@ -366,6 +366,25 @@ html {
         padding: 0.75rem !important;
         font-size: 15px !important;
     }
+
+    /* Ensure modal titles and primary actions are readable on mobile */
+    #create-annuncio-modal h2,
+    #create-annuncio-modal h3,
+    .modal-content h2,
+    .modal-content h3 {
+        font-size: 1.25rem !important;
+        line-height: 1.2 !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    /* Make the publish button more prominent on mobile */
+    #create-annuncio-submit {
+        font-size: 1rem !important;
+        padding: 0.8rem 1rem !important;
+    }
+
+    /* Tighter input spacing to avoid overflow */
+    .modal-content .input-group { padding-bottom: 0.6rem !important; }
 }
 
 /* Mobile: collapse the category select to an icon to avoid overflow */
