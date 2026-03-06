@@ -246,8 +246,6 @@ html {
         width: 90vw !important;
     }
 }
-        font-size: 0.85rem !important;
-    }
 
     /* === TOAST: Full Width === */
     #toast-container {
@@ -271,6 +269,26 @@ html {
     #ai-bacheca-response {
         margin-bottom: 1.5rem !important;
         z-index: 10;
+    }
+
+    /* MOBILE: Make modals align to top and be scroll-friendly */
+    @media (max-width: 767px) {
+        .modal {
+            align-items: flex-start !important;
+            padding-top: 12px !important;
+            padding-bottom: 12px !important;
+        }
+
+        .modal-content {
+            width: 95vw !important;
+            max-height: calc(100vh - 80px) !important;
+            overflow-y: auto !important;
+            border-radius: 12px !important;
+            padding: 1rem !important;
+            margin: 12px auto !important;
+            box-sizing: border-box !important;
+            background: var(--bg-card) !important;
+        }
     }
 
     .filters-bar {
