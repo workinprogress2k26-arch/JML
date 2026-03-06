@@ -321,14 +321,20 @@ async function checkLoginStatus() {
         const user = session.user;
 
         // 1. Scarica o crea il profilo (Saldo, Nome, ecc.)
-        let { data: profile } = await supabaseClient
+        // Use maybeSingle() to avoid throwing when no row exists (prevents 406/Not Acceptable crash)
+        let { data: profile, error: profileErr } = await supabaseClient
             .from('profiles')
             .select('*')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
+
+        if (profileErr) {
+            console.warn('Errore recupero profilo (maybeSingle):', profileErr);
+            profile = null;
+        }
 
         // Se l'utente è entrato con Google e non ha un profilo, o mancano info Google
-        if (user.app_metadata.provider === 'google') {
+        if (user.app_metadata?.provider === 'google') {
             const googleName = user.user_metadata.full_name;
             const googleAvatar = user.user_metadata.avatar_url;
 
@@ -350,7 +356,7 @@ async function checkLoginStatus() {
                 if (!insErr) profile = newProfile;
             } else if (!profile.avatar_url || profile.display_name === profile.email) {
                 // Aggiorna info Google se mancanti o di default
-                const { data: updProfile } = await supabaseClient
+                const { data: updProfile, error: updErr } = await supabaseClient
                     .from('profiles')
                     .update({
                         avatar_url: profile.avatar_url || googleAvatar,
@@ -358,8 +364,8 @@ async function checkLoginStatus() {
                     })
                     .eq('id', user.id)
                     .select()
-                    .single();
-                if (updProfile) profile = updProfile;
+                    .maybeSingle();
+                if (!updErr && updProfile) profile = updProfile;
             }
         }
 
@@ -987,6 +993,13 @@ function openCreateModal() { document.getElementById('create-annuncio-modal').cl
 function closeCreateModal() { document.getElementById('create-annuncio-modal').classList.add('hidden'); }
 
 async function createAnnuncio() {
+    // Disable submit to prevent double-submits (mobile double-tap etc.)
+    const submitBtn = document.getElementById('create-annuncio-submit');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.dataset.origText = submitBtn.textContent;
+        submitBtn.textContent = 'Pubblicando...';
+    }
     const rawTitle = document.getElementById('ann-title').value;
     let rawCategory = document.getElementById('ann-category').value;
     const rawDesc = document.getElementById('ann-desc').value;
@@ -1010,7 +1023,7 @@ async function createAnnuncio() {
     }
 
     // 1. Controlli base di compilazione
-    if (!title || !desc || !address) { alert('Compila i campi necessari.'); return; }
+    if (!title || !desc || !address) { alert('Compila i campi necessari.'); if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.origText || 'Pubblica'; } return; }
 
     // --- LOGICA MATEMATICA COMPENSO ---
     const totalAmount = rate * duration; // Esempio: 15€ * 4 ore = 60€
@@ -1027,6 +1040,7 @@ async function createAnnuncio() {
     // Controllo se l'utente ha abbastanza soldi per il TOTALE calcolato
     if (userBalance < totalAmount) {
         alert(`❌ Saldo insufficiente!\nIl costo totale dell'annuncio è ${cur} ${totalAmount.toFixed(2)} (${rate}${cur}/${unit} x ${duration} ${unit}), ma il tuo saldo attuale è ${cur} ${userBalance.toFixed(2)}.`);
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.origText || 'Pubblica'; }
         return;
     }
 
@@ -1053,11 +1067,15 @@ async function createAnnuncio() {
         reader.onload = function (e) {
             imageBase64 = e.target.result;
             // Passiamo displaySalary (stringa descrittiva) alla creazione finale
-            finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageBase64, userData);
+            finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageBase64, userData).finally(() => {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.origText || 'Pubblica'; }
+            });
         };
         reader.readAsDataURL(file);
     } else {
-        finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageBase64, userData);
+        finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageBase64, userData).finally(() => {
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.origText || 'Pubblica'; }
+        });
     }
 }
 
@@ -1067,23 +1085,54 @@ async function finalizeAnnuncioCreation(title, category, desc, displaySalary, ad
     const rate = parseFloat(document.getElementById('ann-salary').value) || 0;
     const duration = parseFloat(document.getElementById('ann-duration').value) || 1;
     const unit = document.getElementById('ann-time-unit').value;
-
     // Chiamiamo la funzione sicura sul server (RPC)
-    const { error } = await supabaseClient.rpc('create_announcement_safe', {
-        arg_title: title,
-        arg_description: desc,
-        arg_category: category,
-        arg_rate: rate,
-        arg_duration: duration,
-        arg_time_unit: unit,
-        arg_address: address,
-        arg_lat: coords.lat,
-        arg_lng: coords.lng,
-        arg_image_url: imageUrl
-    });
+    try {
+        const { error } = await supabaseClient.rpc('create_announcement_safe', {
+            arg_title: title,
+            arg_description: desc,
+            arg_category: category,
+            arg_rate: rate,
+            arg_duration: duration,
+            arg_time_unit: unit,
+            arg_address: address,
+            arg_lat: coords.lat,
+            arg_lng: coords.lng,
+            arg_image_url: imageUrl
+        });
 
-    if (error) {
-        showToast("Errore durante la creazione: " + error.message, "error");
+        if (error) {
+            // Handle 409 Conflict (duplicate / already processing)
+            const status = error.status || (error.code ? parseInt(error.code, 10) : null);
+            if (status === 409 || (error.message && error.message.toLowerCase().includes('conflict'))) {
+                // Refund local balances since creation failed
+                const totalAmount = rate * duration;
+                userBalance += totalAmount;
+                frozenBalance -= totalAmount;
+                updateBalances();
+                showToast('Operazione duplicata o già in corso. Se pensi sia un errore controlla i tuoi annunci.', 'warning');
+                return;
+            }
+
+            showToast("Errore durante la creazione: " + error.message, "error");
+            // Refund local balances
+            const totalAmount = rate * duration;
+            userBalance += totalAmount;
+            frozenBalance -= totalAmount;
+            updateBalances();
+            return;
+        }
+    } catch (rpcErr) {
+        console.error('Errore RPC create_announcement_safe:', rpcErr);
+        const isConflict = rpcErr?.status === 409 || (rpcErr?.message && rpcErr.message.toLowerCase().includes('conflict'));
+        const totalAmount = rate * duration;
+        userBalance += totalAmount;
+        frozenBalance -= totalAmount;
+        updateBalances();
+        if (isConflict) {
+            showToast('Operazione duplicata o già in corso. Se pensi sia un errore controlla i tuoi annunci.', 'warning');
+        } else {
+            showToast('Errore durante la creazione dell\'annuncio: ' + (rpcErr.message || rpcErr), 'error');
+        }
         return;
     }
 
