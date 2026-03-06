@@ -1185,32 +1185,84 @@ function openCreateModal() { document.getElementById('create-annuncio-modal').cl
 function closeCreateModal() { document.getElementById('create-annuncio-modal').classList.add('hidden'); }
 
 async function createAnnuncio() {
-    const rate = parseFloat(document.getElementById('ann-salary').value);
-    const duration = parseFloat(document.getElementById('ann-duration').value);
-    const totalToLock = rate * duration;
+    console.log("Inizio procedura pubblicazione...");
+    
+    // Recupero elementi
+    const btn = document.getElementById('create-annuncio-submit');
+    const title = document.getElementById('ann-title').value.trim();
+    const rate = parseFloat(document.getElementById('ann-salary').value) || 0;
+    const duration = parseFloat(document.getElementById('ann-duration').value) || 1;
+    const desc = document.getElementById('ann-desc').value.trim();
+    const category = document.getElementById('ann-category').value;
+    const address = document.getElementById('ann-address').value;
+    const city = document.getElementById('ann-city').value || "Bologna";
+    const timeUnit = document.getElementById('ann-time-unit').value;
+    const imageFile = document.getElementById('ann-image').files[0];
 
-    // CONTROLLO SICURO: Hai i soldi sul DB?
-    if (userBalance < totalToLock) {
-        alert("Saldo insufficiente sul tuo account!");
+    // 1. Validazione
+    if (!title || rate <= 0 || !address) {
+        alert("⚠️ Inserisci titolo, compenso e indirizzo!");
         return;
     }
 
-    // 1. Scaliamo dal saldo disponibile e mettiamo in congelato sul DB
-    const { error: balanceError } = await supabaseClient
-        .from('profiles')
-        .update({ 
-            balance: userBalance - totalToLock,
-            frozen_balance: frozenBalance + totalToLock 
-        })
-        .eq('id', (await supabaseClient.auth.getUser()).data.user.id);
-
-    if (balanceError) {
-        alert("Errore durante il blocco dei fondi.");
+    const totalCost = rate * duration;
+    if (userBalance < totalCost) {
+        alert(`❌ Saldo insufficiente! L'annuncio costa ${totalCost}€, tu hai ${userBalance.toFixed(2)}€`);
         return;
     }
 
-    // 2. Prosegui con la creazione dell'annuncio...
-    // (Qui tieni il resto del tuo codice finalizeAnnuncioCreation)
+    // Blocca pulsante
+    btn.disabled = true;
+    btn.textContent = "⌛ Invio in corso...";
+
+    try {
+        // 2. Immagine
+        let imageBase64 = "";
+        if (imageFile) {
+            console.log("Conversione immagine...");
+            imageBase64 = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.readAsDataURL(imageFile);
+            });
+        }
+
+        // 3. Coordinate
+        console.log("Recupero coordinate...");
+        const coords = await getCoordinates(`${address}, ${city}`);
+
+        // 4. Chiamata al Database
+        console.log("Chiamata RPC Supabase...");
+        const { error } = await supabaseClient.rpc('create_announcement_safe', {
+            arg_title: title,
+            arg_description: desc,
+            arg_category: category,
+            arg_rate: rate,
+            arg_duration: duration,
+            arg_time_unit: timeUnit,
+            arg_address: address,
+            arg_lat: coords.lat,
+            arg_lng: coords.lng,
+            arg_image_url: imageBase64
+        });
+
+        if (error) throw error;
+
+        // 5. Successo
+        console.log("✅ Annuncio creato!");
+        alert("Annuncio pubblicato correttamente! 🚀");
+        
+        closeCreateModal();
+        await checkLoginStatus(); // Ricarica saldo
+        await loadAnnouncementsFromDB(); // Ricarica bacheca
+
+    } catch (err) {
+        console.error("ERRORE CRITICO:", err);
+        alert("Errore durante la pubblicazione: " + (err.message || err.details));
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Pubblica";
+    }
 }
 
 // --- CREAZIONE ANNUNCIO (SALVATAGGIO SU SUPABASE) ---
