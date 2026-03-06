@@ -6,8 +6,11 @@
 
 let supabaseClient = null;
 function getRuntimeSupabaseConfig() {
-    const url = (window.__SUPABASE_URL || '') || '';
-    const anon = (window.__SUPABASE_ANON_KEY || '') || '';
+    // Fallback to embedded values for temporary restoration (option A)
+    const fallbackUrl = 'https://qtmfgmrigldgodxrecue.supabase.co';
+    const fallbackAnon = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0bWZnbXJpZ2xkZ29keHJlY3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNzMwMDYsImV4cCI6MjA4NTk0OTAwNn0.sHywE9mS6HU5-GOEt5_riL_9aywsNZE8iplVAQsGMf8';
+    const url = window.__SUPABASE_URL || sessionStorage.getItem('supabase_url') || fallbackUrl;
+    const anon = window.__SUPABASE_ANON_KEY || sessionStorage.getItem('supabase_anon_key') || fallbackAnon;
     return { url, anon };
 }
 
@@ -20,8 +23,15 @@ function initSupabase() {
     if (!cfg.url || !cfg.anon) {
         console.error('❌ Supabase non configurato: manca URL o ANON_KEY a runtime. Non inizializzo il client per motivi di sicurezza.');
         showBanner('Supabase non configurato in produzione. Aggiungi le environment variables su Vercel e ridistribuisci.', 'supabase-banner');
-        // Offer an in-browser ephemeral fallback: prompt the current user to paste ANON key into sessionStorage
-        showSupabaseConfigPrompt();
+        // Show an action banner so the developer can paste a session-only ANON KEY
+        showSupabaseSetupBanner();
+        // Auto-open the prompt once per session to make recovery immediate
+        try {
+            if (!sessionStorage.getItem('supabase_prompt_auto_shown')) {
+                sessionStorage.setItem('supabase_prompt_auto_shown', '1');
+                setTimeout(promptForSupabaseConfig, 300);
+            }
+        } catch (e) {}
         return false;
     }
     try {
@@ -62,8 +72,11 @@ function initSupabase() {
 // Ensure supabaseClient is available before making calls
 function ensureSupabase() {
     if (!supabaseClient) {
-        console.error('Supabase non inizializzato. Alcune funzionalità sono disabilitate.');
-        showToast('Servizio non pronto: alcune funzioni potrebbero non funzionare.', 'warning');
+        if (!ensureSupabaseWarned) {
+            console.warn('Supabase non inizializzato. Alcune funzionalità sono disabilitate.');
+            showToast('Servizio non pronto: incolla la ANON key con il pulsante di configurazione.', 'warning');
+            ensureSupabaseWarned = true;
+        }
         return false;
     }
     return true;
@@ -100,6 +113,7 @@ let markers = [];
 let reviewViewMode = 'received'; // <--- Fondamentale per non far crashare il profilo
 let pendingAnnouncements = new Set();
 let supabaseAvailable = false;
+let ensureSupabaseWarned = false;
 
 // --- SISTEMA TOAST (UX PROFESSIONALE) ---
 function showToast(message, type = 'info') {
@@ -157,6 +171,46 @@ function removeBanner(id) {
     if (!id) return;
     const b = document.getElementById(id);
     if (b) b.style.display = 'none';
+}
+
+function showSupabaseSetupBanner() {
+    if (document.getElementById('supabase-setup-banner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'supabase-setup-banner';
+    banner.className = 'site-banner';
+    banner.style.position = 'fixed';
+    banner.style.left = '0';
+    banner.style.right = '0';
+    banner.style.top = '0';
+    banner.style.zIndex = 9998;
+    banner.style.display = 'flex';
+    banner.style.justifyContent = 'space-between';
+    banner.style.alignItems = 'center';
+    banner.style.padding = '10px 16px';
+    banner.style.background = '#fffae6';
+    banner.style.color = '#222';
+
+    const msg = document.createElement('div');
+    msg.textContent = 'Supabase non configurato — incolla la ANON KEY per inizializzare temporaneamente la sessione.';
+
+    const actions = document.createElement('div');
+    const btn = document.createElement('button');
+    btn.textContent = 'Configura ora';
+    btn.className = 'btn-primary';
+    btn.style.marginRight = '8px';
+    btn.onclick = promptForSupabaseConfig;
+
+    const close = document.createElement('button');
+    close.textContent = 'Chiudi';
+    close.className = 'btn-secondary';
+    close.onclick = () => banner.remove();
+
+    actions.appendChild(btn);
+    actions.appendChild(close);
+
+    banner.appendChild(msg);
+    banner.appendChild(actions);
+    document.body.appendChild(banner);
 }
 
 // If the developer/user didn't supply runtime vars, allow entering them temporarily
