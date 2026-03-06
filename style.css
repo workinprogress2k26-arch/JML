@@ -291,6 +291,83 @@ html {
         }
     }
 
+/* === ADDITIONAL MOBILE FIXES: Chat stacking and modal overrides === */
+@media (max-width: 767px) {
+    /* Stack chat list and chat window vertically to avoid horizontal overflow */
+    .chat-container {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+        width: 100% !important;
+    }
+
+    .chat-list {
+        width: 100% !important;
+        max-height: 34vh !important;
+        overflow-y: auto !important;
+        border-bottom: 1px solid var(--border) !important;
+        padding: 0.75rem !important;
+    }
+
+    .chat-window {
+        width: 100% !important;
+        min-height: calc(100vh - 220px) !important;
+        max-height: calc(100vh - 120px) !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    /* Keep header visible and compact */
+    .company-chat-header {
+        position: sticky !important;
+        top: 0 !important;
+        background: rgba(10,11,16,0.95) !important;
+        padding: 0.6rem 0.9rem !important;
+        z-index: 30 !important;
+    }
+
+    .chat-body {
+        flex: 1 1 auto !important;
+        max-height: calc(100vh - 260px) !important;
+        overflow-y: auto !important;
+        padding: 0.8rem !important;
+    }
+
+    .chat-input-area {
+        position: sticky !important;
+        bottom: 0 !important;
+        background: rgba(0,0,0,0.35) !important;
+        padding: 0.6rem !important;
+        border-top: 1px solid var(--border) !important;
+    }
+
+    .chat-input-area input {
+        width: 100% !important;
+    }
+
+    /* Specific modal overrides for create-annuncio and chat modal to ensure they don't overflow */
+    #create-annuncio-modal .modal-content,
+    #company-chat-modal .modal-content,
+    #annuncio-details-modal .modal-content {
+        width: 95vw !important;
+        max-width: 640px !important;
+        margin: 8px auto !important;
+        padding: 1rem !important;
+        max-height: calc(100vh - 70px) !important;
+        overflow-y: auto !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Reduce heavy paddings inside create modal fields to fit mobile better */
+    #create-annuncio-modal .input-group input,
+    #create-annuncio-modal .input-group textarea,
+    #create-annuncio-modal .input-group select {
+        padding: 0.75rem !important;
+        font-size: 15px !important;
+    }
+}
+
     .filters-bar {
         gap: 0.3rem;
         position: relative;
