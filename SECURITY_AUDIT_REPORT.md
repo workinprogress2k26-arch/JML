@@ -72,7 +72,7 @@ Se deployed su Vercel:
 1. Vai a **Settings → Environment Variables**
 2. Aggiungi:
    - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
+  - `VITE_SUPABASE_ANON_KEY` (NON committare questa chiave nel repo)
    - `GEMINI_API_KEY`
    - `STRIPE_SECRET_KEY`
 
@@ -91,6 +91,25 @@ Per rimuovere `'unsafe-inline'` da `script-src`:
 Usa il helper: [csp-event-handler-helper.js](csp-event-handler-helper.js)
 
 ---
+
+### ✅ Rimozione chiavi hard-coded (Azione consigliata)
+
+Per motivi di sicurezza abbiamo rimosso le chiavi Supabase hard-coded dal codice sorgente e il client ora richiede che le variabili siano fornite a runtime dall'ambiente di hosting.
+
+Passaggi immediati in produzione (Vercel):
+
+1. Vai su **Project → Settings → Environment Variables**
+2. Aggiungi le seguenti variabili (scope: Production):
+
+```bash
+VITE_SUPABASE_URL=https://qtmfgmrigldgodxrecue.supabase.co
+VITE_SUPABASE_ANON_KEY=<la_tua_anon_key>
+```
+
+3. Ridistribuisci il progetto (re-deploy) in modo che i meta tag runtime vengano popolati.
+
+Se non vuoi usare le env a build-time, imposta un sistema server-side (funzione edge o serverless) per firmare le richieste sensibili e non esporre operazioni critiche al client.
+
 
 ## 🔒 Security Checklist
 

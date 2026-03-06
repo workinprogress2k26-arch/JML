@@ -1,16 +1,29 @@
 // --- 1. CONFIGURAZIONE SUPABASE (SECURE) ---
-const SUPABASE_URL = 'https://qtmfgmrigldgodxrecue.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0bWZnbXJpZ2xkZ29keHJlY3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNzMwMDYsImV4cCI6MjA4NTk0OTAwNn0.sHywE9mS6HU5-GOEt5_riL_9aywsNZE8iplVAQsGMf8';
+// NOTE: For security, avoid hard-coding the ANON key in source. At runtime the key
+// should be provided by the hosting environment (Vercel) or injected into the
+// page as `window.__SUPABASE_ANON_KEY`. This file will refuse to initialize
+// Supabase if the key is missing to prevent accidental leakage or use.
 
-// Initialize Supabase with fallback
 let supabaseClient = null;
+function getRuntimeSupabaseConfig() {
+    const url = (window.__SUPABASE_URL || '') || '';
+    const anon = (window.__SUPABASE_ANON_KEY || '') || '';
+    return { url, anon };
+}
+
 function initSupabase() {
-  if (!window.supabase) {
-    console.error('❌ Supabase library non caricata. Verifica che supabase-js sia incluso in index.html');
-    return false;
-  }
-  try {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    if (!window.supabase) {
+        console.error('❌ Supabase library non caricata. Verifica che supabase-js sia incluso in index.html');
+        return false;
+    }
+    const cfg = getRuntimeSupabaseConfig();
+    if (!cfg.url || !cfg.anon) {
+        console.error('❌ Supabase non configurato: manca URL o ANON_KEY a runtime. Non inizializzo il client per motivi di sicurezza.');
+        showBanner('Supabase non configurato in produzione. Aggiungi le environment variables su Vercel e ridistribuisci.', 'supabase-banner');
+        return false;
+    }
+    try {
+        supabaseClient = window.supabase.createClient(cfg.url, cfg.anon);
     console.log('✅ Supabase inizializzato correttamente');
         // Quick authorization smoke-test to detect 403/406 early and give actionable advice
         (async () => {
@@ -36,12 +49,12 @@ function initSupabase() {
             }
         })();
     return true;
-  } catch (err) {
-    console.error('❌ Errore caricamento Supabase:', err);
-    supabaseAvailable = false;
-    showBanner('Errore inizializzazione Supabase. Controlla la connessione e le chiavi.', 'supabase-banner');
-    return false;
-  }
+        } catch (err) {
+        console.error('❌ Errore caricamento Supabase:', err);
+        supabaseAvailable = false;
+        showBanner('Errore inizializzazione Supabase. Controlla la connessione e le chiavi.', 'supabase-banner');
+        return false;
+    }
 }
 
 // Ensure supabaseClient is available before making calls
@@ -478,21 +491,46 @@ async function loadAnnouncementsFromDB() {
     if (!ensureSupabase()) return;
     try {
         console.log("Tentativo scaricamento annunci...");
-        // Tentativo query con profili (rimosso is_premium che causava errore)
-        let { data, error } = await supabaseClient
-            .from('announcements')
-            .select(`
-                *,
-                profiles (
-                    display_name, 
-                    email, 
-                    avatar_url
-                )
-            `)
-            .order('created_at', { ascending: false });
+        // Se l'utente non è autenticato, evitiamo join con `profiles` per non incorrere
+        // in 403 dovuti a RLS; mostriamo solo i campi pubblici degli annunci.
+        const { data: authData } = await supabaseClient.auth.getUser();
+        const isAuthed = !!(authData && authData.user);
+
+        let data;
+        let error;
+
+        if (isAuthed) {
+            // Utente autenticato: tentiamo la query con join profili
+            ({ data, error } = await supabaseClient
+                .from('announcements')
+                .select(`
+                    *,
+                    profiles (
+                        display_name,
+                        email,
+                        avatar_url,
+                        is_premium
+                    )
+                `)
+                .order('created_at', { ascending: false }));
+        } else {
+            // Utente anonimo: query più sicura senza join profiles
+            ({ data, error } = await supabaseClient
+                .from('announcements')
+                .select(`id,title,description,category,rate as salary,address,lat,lng,image_url,author_id,created_at`)
+                .order('created_at', { ascending: false }));
+        }
 
         if (error) {
             console.error("Errore scaricamento annunci (Tentativo 1):", error);
+            // Diagnostic helpers: log status and details if present to help debug 403/406/401
+            try {
+                console.error('Supabase error status:', error.status, 'message:', error.message, 'details:', error.details, 'hint:', error.hint);
+            } catch (e) { /* ignore logging issues */ }
+            // If it's a 403, provide actionable hint
+            if (error && error.status === 403) {
+                showToast('Accesso negato (403) durante il caricamento annunci. Controlla Allowed Origins e le policy RLS in Supabase.', 'warning');
+            }
 
             // Prova fallback senza join se l'errore persiste
             const { data: fallbackData, error: fbError } = await supabaseClient
@@ -501,7 +539,9 @@ async function loadAnnouncementsFromDB() {
                 .order('created_at', { ascending: false });
 
             if (fbError) {
-                showToast("Errore critico database: " + fbError.message, "error");
+                console.error('Fallback query error:', fbError);
+                try { console.error('Fallback status:', fbError.status, 'details:', fbError.details, 'hint:', fbError.hint); } catch(e){}
+                showToast("Errore critico database: " + fbError.message + (fbError.status ? (' (status ' + fbError.status + ')') : ''), "error");
                 return;
             }
             data = fallbackData;

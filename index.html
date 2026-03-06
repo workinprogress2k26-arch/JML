@@ -57,6 +57,21 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://js.stripe.com/v3/"></script>
 
+  <!-- Runtime Supabase config: set these during deployment (Vercel env) or inject via a build step -->
+  <meta name="supabase-url" content="">
+  <meta name="supabase-anon-key" content="">
+  <script>
+    // Populate safe runtime globals read by script.js
+    (function(){
+      try {
+        var metaUrl = document.querySelector('meta[name="supabase-url"]')?.content || '';
+        var metaKey = document.querySelector('meta[name="supabase-anon-key"]')?.content || '';
+        if (metaUrl) window.__SUPABASE_URL = metaUrl;
+        if (metaKey) window.__SUPABASE_ANON_KEY = metaKey;
+      } catch(e) { console.warn('Runtime supabase config not set'); }
+    })();
+  </script>
+
   <!-- 2. Carica il TUO script per ULTIMO -->
   <script src="script.js" defer></script>
 
