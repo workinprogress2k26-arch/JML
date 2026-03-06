@@ -32,15 +32,24 @@ body {
     background-color: var(--bg-dark);
     color: var(--text-main);
     line-height: 1.6;
-    overflow-x: hidden;
+    overflow: hidden !important;
+    overflow-x: hidden !important;
     width: 100%;
     max-width: 100%;
 }
 
 html {
-    overflow-x: hidden;
+    overflow: hidden !important;
+    overflow-x: hidden !important;
     width: 100%;
     max-width: 100%;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
 }
 
 /* global fix for overflow due to 100vw margins */
@@ -1528,17 +1537,29 @@ html.auth-mode {
     z-index: 10000;
     position: fixed;
     inset: 0;
-    overflow: hidden;
+    overflow: hidden !important;
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
 }
 
 /* hide scrollbar inside auth-view just in case */
 #auth-view::-webkit-scrollbar {
-    width: 0;
-    height: 0;
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
 }
+
+#auth-view::-webkit-scrollbar-track {
+    display: none !important;
+}
+
+#auth-view::-webkit-scrollbar-thumb {
+    display: none !important;
+}
+
 #auth-view {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none !important;  /* IE and Edge */
+    scrollbar-width: none !important;  /* Firefox */
 }
 
 /* ensure authentication card never forces page scroll */
