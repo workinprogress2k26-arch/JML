@@ -76,6 +76,7 @@ let currentChatCompany = null;
 let map = null;
 let markers = [];
 let reviewViewMode = 'received'; // <--- Fondamentale per non far crashare il profilo
+let pendingAnnouncements = new Set();
 
 // --- SISTEMA TOAST (UX PROFESSIONALE) ---
 function showToast(message, type = 'info') {
@@ -467,7 +468,7 @@ async function loadAnnouncementsFromDB() {
         }
 
         if (!data || data.length === 0) {
-            console.warn("Nessun annuncio trovato nel DB.");
+            console.info("Nessun annuncio trovato nel DB.");
             annunci = [];
             renderBacheca();
             return;
@@ -1057,6 +1058,16 @@ async function createAnnuncio() {
     // 3. Geocoding e Immagine
     const coords = await getCoordinates(`${address}, ${city}`);
 
+    // Build a dedupe key to prevent duplicate submissions (client-side)
+    const pendingKey = `${title.trim().toLowerCase()}|${address.trim().toLowerCase()}|${rate}|${duration}`;
+    if (pendingAnnouncements.has(pendingKey)) {
+        showToast('Invio già in corso per questo annuncio. Attendi il completamento.', 'warning');
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.origText || 'Pubblica'; }
+        return;
+    }
+    // mark as pending
+    pendingAnnouncements.add(pendingKey);
+
     // Prepariamo la stringa del salario da visualizzare nella card (es: "15€/ora per 4 ore")
     const displaySalary = `${rate}${cur}/${unit} x ${duration} (Tot: ${totalAmount}${cur})`;
 
@@ -1067,21 +1078,21 @@ async function createAnnuncio() {
         reader.onload = function (e) {
             imageBase64 = e.target.result;
             // Passiamo displaySalary (stringa descrittiva) alla creazione finale
-            finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageBase64, userData).finally(() => {
+            finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageBase64, userData, pendingKey).finally(() => {
                 if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.origText || 'Pubblica'; }
             });
         };
         reader.readAsDataURL(file);
     } else {
-        finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageBase64, userData).finally(() => {
+        finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageBase64, userData, pendingKey).finally(() => {
             if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.origText || 'Pubblica'; }
         });
     }
 }
 
 // --- CREAZIONE ANNUNCIO (SALVATAGGIO SU SUPABASE) ---
-async function finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageUrl, userData) {
-    if (!ensureSupabase()) { showToast('Servizio non disponibile. Riprova più tardi.', 'error'); return; }
+async function finalizeAnnuncioCreation(title, category, desc, displaySalary, address, coords, imageUrl, userData, pendingKey) {
+    if (!ensureSupabase()) { showToast('Servizio non disponibile. Riprova più tardi.', 'error'); if (pendingKey) pendingAnnouncements.delete(pendingKey); return; }
     const rate = parseFloat(document.getElementById('ann-salary').value) || 0;
     const duration = parseFloat(document.getElementById('ann-duration').value) || 1;
     const unit = document.getElementById('ann-time-unit').value;
@@ -1133,6 +1144,7 @@ async function finalizeAnnuncioCreation(title, category, desc, displaySalary, ad
         } else {
             showToast('Errore durante la creazione dell\'annuncio: ' + (rpcErr.message || rpcErr), 'error');
         }
+        if (pendingKey) pendingAnnouncements.delete(pendingKey);
         return;
     }
 
@@ -1147,6 +1159,7 @@ async function finalizeAnnuncioCreation(title, category, desc, displaySalary, ad
     // Ricarichiamo il profilo e la bacheca per vedere il nuovo saldo aggiornato dal server
     checkLoginStatus();
     loadAnnouncementsFromDB();
+    if (pendingKey) pendingAnnouncements.delete(pendingKey);
 }
 
 // SISTEMA ABBONAMENTI & CORSI
