@@ -1572,35 +1572,35 @@ async function releasePayment() {
         return;
     }
 
-    // Estraiamo il numero pulito dal compenso (es: "50€/ora" -> 50)
-    const amount = parseFloat(ann.salary.replace(/[^0-9.]/g, '')) || 0;
+    // Puliamo il prezzo per avere solo il numero
+    const amount = parseFloat(ann.salary.toString().replace(/[^0-9.]/g, '')) || 0;
 
     if (!confirm(`Confermi il rilascio di €${amount.toFixed(2)} a ${currentChatCompany.name}?`)) return;
 
     try {
         const { data: { user } } = await supabaseClient.auth.getUser();
 
-        // CHIAMATA AL DATABASE
+        // CHIAMATA RPC CON I PARAMETRI CORRETTI (p_...)
         const { error } = await supabaseClient.rpc('release_escrow_payment', {
-            employer_id: user.id,
-            worker_id: workerId,
-            job_id: Number(jobId), // FORZA IL NUMERO (bigint)
-            p_amount: Number(amount) // FORZA IL NUMERO (numeric)
+            p_employer_id: user.id,
+            p_worker_id: workerId,
+            p_job_id: Number(jobId),
+            p_amount: Number(amount)
         });
 
         if (error) throw error;
 
-        // Successo!
-        showToast("Pagamento rilasciato con successo! ✅", "success");
+        // --- SUCCESS ---
+        showToast("Pagamento inviato correttamente! ✅", "success");
         
-        // Pulizia e aggiornamento bacheca
+        // Chiudi la chat e ricarica i dati
         closeChatArea('company');
-        loadAnnouncementsFromDB();
-        checkLoginStatus(); // Ricarica il saldo aggiornato
+        await loadAnnouncementsFromDB();
+        await checkLoginStatus(); // Questo ricarica il saldo aggiornato nel profilo
 
     } catch (err) {
         console.error("Errore rilascio pagamento:", err);
-        showToast("Errore nel pagamento: " + (err.message || err.details), "error");
+        showToast("Errore: " + (err.message || "Impossibile completare il pagamento"), "error");
     }
 }
 
