@@ -1557,64 +1557,50 @@ function openCompanyChat(chat) {
 }
 
 async function releasePayment() {
-    if (!currentChatCompany) return;
-    
-    const jobId = currentChatCompany.jobId;
-    const workerId = currentChatCompany.partnerId; // ID del lavoratore nella chat
-    const ann = annunci.find(a => a.id === jobId);
-    const amount = parseFloat(ann.salary); // Importo da sbloccare
-
-    const { data: { user } } = await supabaseClient.auth.getUser();
-
-    // CHIAMA LA RPC (Funzione SQL sicura)
-    const { error } = await supabaseClient.rpc('release_escrow_payment', {
-        employer_id: user.id,
-        worker_id: workerId,
-        job_id: jobId,
-        p_amount: amount
-    });
-
-    if (error) {
-        alert("Errore nel pagamento: " + error.message);
-    } else {
-        alert("Pagamento inviato con successo! Il lavoratore ha ricevuto i fondi.");
-        // Aggiorna la UI
-        checkLoginStatus(); 
+    if (!ensureSupabase()) return;
+    if (!currentChatCompany || !currentChatCompany.jobId) {
+        showToast("Seleziona una chat valida prima di pagare.", "error");
+        return;
     }
-}
 
-function openReportModal() {
-    if (!currentChatCompany) return;
-    showModal('report-job-modal');
-}
+    const jobId = currentChatCompany.jobId;
+    const workerId = currentChatCompany.partnerId;
 
-async function submitReport() {
-    const reason = document.getElementById('report-reason').value;
-    const details = document.getElementById('report-details').value;
+    const ann = annunci.find(a => a.id === Number(jobId));
+    if (!ann) {
+        showToast("Impossibile trovare l'annuncio.", "error");
+        return;
+    }
 
-    if (!currentChatCompany) return;
+    // Estraiamo il numero pulito dal compenso (es: "50€/ora" -> 50)
+    const amount = parseFloat(ann.salary.replace(/[^0-9.]/g, '')) || 0;
 
-    showToast("Invio segnalazione in corso...", "info");
+    if (!confirm(`Confermi il rilascio di €${amount.toFixed(2)} a ${currentChatCompany.name}?`)) return;
 
     try {
         const { data: { user } } = await supabaseClient.auth.getUser();
 
-        const { error } = await supabaseClient
-            .from('reports')
-            .insert([{
-                job_id: currentChatCompany.jobId,
-                reporter_id: user.id,
-                reported_id: currentChatCompany.partnerId,
-                reason: reason,
-                details: details
-            }]);
+        // CHIAMATA AL DATABASE
+        const { error } = await supabaseClient.rpc('release_escrow_payment', {
+            employer_id: user.id,
+            worker_id: workerId,
+            job_id: Number(jobId), // FORZA IL NUMERO (bigint)
+            p_amount: Number(amount) // FORZA IL NUMERO (numeric)
+        });
 
         if (error) throw error;
 
-        showToast("Segnalazione inviata correttamente. Il nostro team verificherà l'accaduto.", "success");
-        closeModal('report-job-modal');
+        // Successo!
+        showToast("Pagamento rilasciato con successo! ✅", "success");
+        
+        // Pulizia e aggiornamento bacheca
+        closeChatArea('company');
+        loadAnnouncementsFromDB();
+        checkLoginStatus(); // Ricarica il saldo aggiornato
+
     } catch (err) {
-        showToast("Errore invio segnalazione: " + err.message, "error");
+        console.error("Errore rilascio pagamento:", err);
+        showToast("Errore nel pagamento: " + (err.message || err.details), "error");
     }
 }
 
