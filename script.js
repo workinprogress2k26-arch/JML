@@ -393,30 +393,21 @@ async function renderTransactions() {
     }
 
     try {
-        const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
-        if (userErr) {
-            console.error("❌ Errore recupero utente:", userErr);
-            list.innerHTML = '<p style="color: var(--text-dim);">Errore caricamento transazioni</p>';
-            return;
-        }
-
-        if (!user) {
-            list.innerHTML = '<p style="color: var(--text-dim);">Effettua il login per visualizzare le transazioni</p>';
+        // Controlliamo se c'è una sessione attiva PRIMA di chiedere i dati
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) {
+            list.innerHTML = '<p style="color: var(--text-dim);">Effettua il login per vedere i movimenti.</p>';
             return;
         }
 
         const { data: trans, error } = await supabaseClient
             .from('transactions')
             .select('*')
-            .eq('user_id', user.id)
+            .eq('user_id', session.user.id)
             .order('created_at', { ascending: false })
             .limit(10);
 
-        if (error) {
-            console.error("❌ Errore query transazioni:", error);
-            list.innerHTML = '<p style="color: var(--text-dim);">Errore caricamento</p>';
-            return;
-        }
+        if (error) throw error;
 
         if (!trans || trans.length === 0) {
             list.innerHTML = '<p style="color: var(--text-dim); font-size: 0.8rem; padding: 10px;">Nessun movimento recente.</p>';
@@ -442,8 +433,7 @@ async function renderTransactions() {
             list.appendChild(item);
         });
     } catch (e) {
-        console.error("❌ Eccezione renderTransactions:", e);
-        list.innerHTML = '<p style="color: var(--text-dim);">Errore sconosciuto</p>';
+        console.warn("Avviso transazioni:", e.message);
     }
 }
 
