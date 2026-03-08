@@ -2448,18 +2448,13 @@ function initEventListeners() {
     const loginBtn = document.getElementById('btn-login-submit');
     if (loginBtn) loginBtn.addEventListener('click', login);
 
-    // Cerca il pulsante Google tramite l'ID che abbiamo appena messo
-const googleBtn = document.getElementById('btn-google-login');
+    const googleBtn = document.getElementById('btn-google-login');
+    if (googleBtn) googleBtn.addEventListener('click', loginWithGoogle);
 
-if (googleBtn) {
-    // Quando viene cliccato, esegui la funzione loginWithGoogle
-    googleBtn.addEventListener('click', loginWithGoogle);
-}
-
-    const signupBtn = document.querySelector('.btn-signup'); // Se hai aggiunto la classe
+    const signupBtn = document.querySelector('.btn-signup'); 
     if (signupBtn) signupBtn.addEventListener('click', signup);
 
-    // 2. Navigazione Sidebar (Logica Automatica)
+    // 2. Navigazione Sidebar (Logica Automatica data-section)
     const navItems = document.querySelectorAll('.nav-item[data-section]');
     navItems.forEach(item => {
         item.addEventListener('click', () => {
@@ -2469,17 +2464,45 @@ if (googleBtn) {
     });
 
     // 3. Azioni Profilo
-    const rechargeBtn = document.getElementById('btn-recharge-balance'); // Aggiungi questo ID nell'HTML
+    const rechargeBtn = document.getElementById('btn-recharge-balance');
     if (rechargeBtn) rechargeBtn.addEventListener('click', rechargeBalance);
 
-    const editAccountBtn = document.getElementById('btn-edit-account'); // Aggiungi questo ID nell'HTML
+    const editAccountBtn = document.getElementById('btn-edit-account');
     if (editAccountBtn) editAccountBtn.addEventListener('click', openEditAccountModal);
 
-    // 4. Azioni Annunci
-    const createAnnBtn = document.querySelector('button[onclick="openCreateModal()"]');
-    if (createAnnBtn) {
-        createAnnBtn.removeAttribute('onclick'); // Rimuoviamo il vecchio se presente
-        createAnnBtn.addEventListener('click', openCreateModal);
+    const logoutBtn = document.querySelector('button[onclick="logout()"]');
+    if (logoutBtn) {
+        logoutBtn.removeAttribute('onclick');
+        logoutBtn.addEventListener('click', logout);
+    }
+
+    // 4. Azioni Annunci (Apertura e Pubblicazione)
+    
+    // Bottone per APRIRE il modal (+ Crea Annuncio)
+    const openModalBtn = document.querySelector('button[onclick="openCreateModal()"]');
+    if (openModalBtn) {
+        openModalBtn.removeAttribute('onclick');
+        openModalBtn.addEventListener('click', openCreateModal);
+    }
+
+    // --- COSA ABBIAMO AGGIUNTO PER FAR FUNZIONARE IL TASTO PUBBLICA ---
+    const submitAnnuncioBtn = document.getElementById('create-annuncio-submit');
+    if (submitAnnuncioBtn) {
+        console.log("✅ Listener collegato al tasto Pubblica");
+        submitAnnuncioBtn.addEventListener('click', createAnnuncio);
+    }
+
+    // Bottone ANNULLA dentro il modal (per chiuderlo)
+    const cancelAnnBtn = document.querySelector('#create-annuncio-modal .btn-primary[style*="text-dim"]');
+    if (cancelAnnBtn) {
+        cancelAnnBtn.addEventListener('click', closeCreateModal);
+    }
+
+    // 5. Altre Azioni Mappa
+    const findJobsBtn = document.querySelector('button[onclick="findJobsNearMe()"]');
+    if (findJobsBtn) {
+        findJobsBtn.removeAttribute('onclick');
+        findJobsBtn.addEventListener('click', findJobsNearMe);
     }
 }
 
