@@ -2031,33 +2031,7 @@ function renderUserProfile() {
 
     // Carichiamo anche i movimenti
     renderTransactions();
-    /*
-    // Curriculum e Certificazioni
-    const cvBox = document.getElementById('profile-cv-data');
-    const certBox = document.getElementById('profile-certifications-data');
-    if (cvBox) cvBox.textContent = data.cv || "Nessun curriculum inserito. Aggiungilo dalle impostazioni.";
-    if (certBox) certBox.textContent = data.certifications || "Nessuna certificazione inserita.";
-
-    // Aggiornamento Immagini Profilo (Avatar)
-    const avatarUrl = data.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150';
-
-    const profileImgBig = document.getElementById('profile-avatar-big');
-    const sidebarAvatar = document.getElementById('user-avatar');
-
-    if (profileImgBig) profileImgBig.src = avatarUrl;
-    if (sidebarAvatar) sidebarAvatar.src = avatarUrl;
-
-    // Aggiornamento Nome in Sidebar
-    const sideName = document.getElementById('user-display-name');
-    if (sideName) sideName.textContent = data.name || "Utente";
-
-    // Mostra saldo con valuta corretta
-    const cur = data.currency || '€';
-    const bal = document.getElementById('user-balance');
-    const fro = document.getElementById('frozen-balance');
-    if (bal) bal.textContent = `${cur} ${userBalance.toFixed(2)}`;
-    if (fro) fro.textContent = `${cur} ${frozenBalance.toFixed(2)}`;
-    */
+    
     renderReviews();
 
 
