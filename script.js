@@ -1387,47 +1387,33 @@ async function activatePremium(planType = 'PRO') {
     }
 }
 
-// Contratti e Chat
 async function toggleContract(id) {
     if (!ensureSupabase()) return;
     const jobId = Number(id);
-
     const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) {
-        showToast("Devi essere loggato per accettare un lavoro!", "error");
-        return;
-    }
+    if (!user) return;
 
-    showToast("Accettazione in corso...", "info");
+    const ann = annunci.find(a => a.id === jobId);
 
-    // 1. Scrittura sul Database
     const { error } = await supabaseClient
         .from('contracts')
-        .insert([{
-            job_id: jobId,
-            worker_id: user.id,
-            status: 'active'
-        }]);
+        .insert([{ job_id: jobId, worker_id: user.id, status: 'active' }]);
 
     if (error) {
-        if (error.code === '23505') { // Errore duplicato (Unique constraint)
-            showToast("Hai già accettato questo contratto!", "warning");
-        } else {
-            console.error("Errore contratto:", error);
-            showToast("Errore durante l'accettazione.", "error");
-        }
+        showToast("Hai già accettato questo contratto!", "warning");
         return;
     }
 
-    // 2. Aggiornamento locale e UI
+    // GENERIAMO IL MESSAGGIO AUTOMATICO
+    const msgConferma = `🤝 Ho accettato il lavoro! Il sistema ha confermato l'impegno dei fondi (${ann.salary}).`;
+    await sendSystemMessage(jobId, ann.authorId, msgConferma);
+
     acceptedContracts.push(jobId);
-    
-    showToast("Contratto accettato! La chat è ora disponibile.", "success");
-    
-    // Aggiorna bacheca e messaggi
+    showToast("Contratto accettato e messaggio inviato!", "success");
     renderBacheca();
     updateChatList();
 }
+
 async function updateChatList() {
     const list = document.getElementById('company-chat-list');
     if (!list) return;
@@ -1514,7 +1500,7 @@ async function updateChatList() {
     }
 }
 
-function openCompanyChat(chat) {
+async function openCompanyChat(chat) {
     currentChatCompany = chat;
 
     // Sezione Messaggi: attiviamo la finestra
@@ -1527,82 +1513,39 @@ function openCompanyChat(chat) {
     const jobTitleLabel = document.getElementById('chat-job-title');
     if (jobTitleLabel) jobTitleLabel.textContent = chat.jobTitle;
 
-    // Gestione Pulsanti "Azione" per l'azienda
+    // --- NUOVA LOGICA: Controllo stato contratto per nascondere i tasti ---
     const releaseBtn = document.getElementById('btn-release-payment');
     const reportBtn = document.getElementById('btn-report-job');
 
-    if (chat.isOwner) {
+    // Recuperiamo lo stato dal database
+    const { data: contract } = await supabaseClient
+        .from('contracts')
+        .select('status')
+        .eq('job_id', chat.jobId)
+        .maybeSingle();
+
+    // Mostra i tasti solo se: 
+    // 1. Sei l'owner 
+    // 2. Il contratto esiste 
+    // 3. Lo stato NON è 'completed'
+    if (chat.isOwner && contract && contract.status !== 'completed') {
         releaseBtn?.classList.remove('hidden');
         reportBtn?.classList.remove('hidden');
     } else {
         releaseBtn?.classList.add('hidden');
         reportBtn?.classList.add('hidden');
     }
+    // ---------------------------------------------------------------------
 
-    const body = document.getElementById('company-chat-body');
-    if (body) {
-        body.innerHTML = `
-            <div class="message company glass">
-                <div class="msg-content">Ciao! Hai accettato il lavoro per "${sanitizeInput(chat.jobTitle)}". Come possiamo organizzarci?</div>
-                <span class="msg-timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
-        `;
-    }
+    // Caricamento messaggi reali dalla cronologia Cloud
+    loadMessages(chat.jobId);
 
     // MOSTRA IL TASTO CESTINO
     const clearBtn = document.getElementById('btn-clear-chat');
     if (clearBtn) clearBtn.classList.remove('hidden');
-
-    loadMessages(chat.jobId);
 }
 
-async function releasePayment() {
-    if (!ensureSupabase()) return;
-    if (!currentChatCompany || !currentChatCompany.jobId) {
-        showToast("Seleziona una chat valida prima di pagare.", "error");
-        return;
-    }
 
-    const jobId = currentChatCompany.jobId;
-    const workerId = currentChatCompany.partnerId;
-
-    const ann = annunci.find(a => a.id === Number(jobId));
-    if (!ann) {
-        showToast("Impossibile trovare l'annuncio.", "error");
-        return;
-    }
-
-    // Puliamo il prezzo per avere solo il numero
-    const amount = parseFloat(ann.salary.toString().replace(/[^0-9.]/g, '')) || 0;
-
-    if (!confirm(`Confermi il rilascio di €${amount.toFixed(2)} a ${currentChatCompany.name}?`)) return;
-
-    try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-
-        // CHIAMATA RPC CON I PARAMETRI CORRETTI (p_...)
-        const { error } = await supabaseClient.rpc('release_escrow_payment', {
-            p_employer_id: user.id,
-            p_worker_id: workerId,
-            p_job_id: Number(jobId),
-            p_amount: Number(amount)
-        });
-
-        if (error) throw error;
-
-        // --- SUCCESS ---
-        showToast("Pagamento inviato correttamente! ✅", "success");
-        
-        // Chiudi la chat e ricarica i dati
-        closeChatArea('company');
-        await loadAnnouncementsFromDB();
-        await checkLoginStatus(); // Questo ricarica il saldo aggiornato nel profilo
-
-    } catch (err) {
-        console.error("Errore rilascio pagamento:", err);
-        showToast("Errore: " + (err.message || "Impossibile completare il pagamento"), "error");
-    }
-}
 
 async function sendCompanyMessage() {
     const input = document.getElementById('company-input');
@@ -2513,3 +2456,66 @@ function setupNavigation() {
 
 // Assicurati di chiamarla al caricamento
 document.addEventListener('DOMContentLoaded', setupNavigation);
+
+async function sendSystemMessage(jobId, partnerId, text) {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    await supabaseClient.from('messages').insert([{
+        announcement_id: jobId,
+        sender_id: user.id, // Il sistema usa l'ID dell'utente che compie l'azione
+        receiver_id: partnerId,
+        content: text,
+        is_system: true // Opzionale: aggiungi una colonna boolean 'is_system' se vuoi uno stile diverso
+    }]);
+}
+
+async function releasePayment() {
+    if (!ensureSupabase()) return;
+    if (!currentChatCompany || !currentChatCompany.jobId) {
+        showToast("Seleziona una chat valida prima di pagare.", "error");
+        return;
+    }
+
+    const jobId = currentChatCompany.jobId;
+    const workerId = currentChatCompany.partnerId;
+
+    const ann = annunci.find(a => a.id === Number(jobId));
+    if (!ann) {
+        showToast("Impossibile trovare l'annuncio.", "error");
+        return;
+    }
+
+    // Puliamo il prezzo per avere solo il numero
+    const amount = parseFloat(ann.salary.toString().replace(/[^0-9.]/g, '')) || 0;
+
+    if (!confirm(`Confermi il rilascio di €${amount.toFixed(2)} a ${currentChatCompany.name}?`)) return;
+
+     try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+
+        const { error } = await supabaseClient.rpc('release_escrow_payment', {
+            p_employer_id: user.id,
+            p_worker_id: workerId,
+            p_job_id: Number(jobId),
+            p_amount: Number(amount)
+        });
+
+        if (error) throw error;
+
+        // GENERIAMO IL MESSAGGIO DI FINE LAVORO
+        const msgFine = `✅ Lavoro terminato correttamente. Ho rilasciato il pagamento di €${amount.toFixed(2)}. Grazie!`;
+        await sendSystemMessage(jobId, workerId, msgFine);
+
+        showToast("Pagamento inviato e lavoro completato! ✅", "success");
+
+        // NASCONDIAMO I TASTI IMMEDIATAMENTE NELLA UI
+        document.getElementById('btn-release-payment').classList.add('hidden');
+        document.getElementById('btn-report-job').classList.add('hidden');
+
+        await loadAnnouncementsFromDB();
+        await checkLoginStatus(); 
+
+    } catch (err) {
+        console.error(err);
+        showToast("Errore durante il saldo", "error");
+    }
+}
