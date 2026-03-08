@@ -2031,7 +2031,7 @@ function renderUserProfile() {
 
     // Carichiamo anche i movimenti
     renderTransactions();
-
+    /*
     // Curriculum e Certificazioni
     const cvBox = document.getElementById('profile-cv-data');
     const certBox = document.getElementById('profile-certifications-data');
@@ -2057,7 +2057,7 @@ function renderUserProfile() {
     const fro = document.getElementById('frozen-balance');
     if (bal) bal.textContent = `${cur} ${userBalance.toFixed(2)}`;
     if (fro) fro.textContent = `${cur} ${frozenBalance.toFixed(2)}`;
-
+    */
     renderReviews();
 
 
