@@ -1701,6 +1701,26 @@ html.auth-mode {
     align-items: center;
 }
 
+.company-chat-header .btn-primary {
+    width: auto;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+    .company-chat-header .btn-primary {
+        min-height: 34px;
+        padding: 0.45rem 0.8rem;
+        font-size: 0.78rem;
+    }
+}
+
 /* --- SISTEMA TOAST --- */
 #toast-container {
     position: fixed;
