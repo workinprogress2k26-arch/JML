@@ -97,17 +97,17 @@
           <label>Password</label>
           <input type="password" id="password-login" placeholder="••••••••">
         </div>
-        <button class="btn-primary" onclick="login()">Accedi</button>
+        <button class="btn-primary" id="btn-login-submit">Accedi</button>
         <div style="margin: 1.5rem 0; display: flex; align-items: center; gap: 1rem; color: var(--text-dim);">
           <hr style="flex-grow: 1; border: 1px solid var(--border);"> O
           <hr style="flex-grow: 1; border: 1px solid var(--border);">
         </div>
         <!-- Pulsante Google personalizzato -->
-        <button class="btn-primary" onclick="loginWithGoogle()"
-          style="background: white; color: #000; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 1rem; border: none;">
-          <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" width="20" alt="Google">
-          Accedi con Google
-        </button>
+        <button class="btn-primary" id="btn-google-login"
+  style="background: white; color: #000; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 1rem; border: none;">
+  <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" width="20" alt="Google">
+  Accedi con Google
+</button>
       </div>
 
       <div id="signup-form" class="hidden">
@@ -194,26 +194,26 @@
         <span>🚀</span> WIP Premium
       </div>
       <ul class="nav-links">
-        <li class="nav-item active" onclick="showSection('bacheca-section')">
-          <span>📋</span> Bacheca Annunci
-        </li>
-        <li class="nav-item" onclick="showSection('map-section')">
-          <span>📍</span> Mappa Lavori
-        </li>
-        <li class="nav-item" onclick="showSection('contracts-section')">
-          <span>🤝</span> Messaggi Aziende
-        </li>
-        <li class="nav-item" onclick="showSection('profile-section')">
-          <span>👤</span> Mio Profilo
-        </li>
-        <li class="nav-item" onclick="showSection('subscriptions-section')">
-          <span>💎</span> Worky Academy
-        </li>
-        <!-- Voci Business (Visibili solo se account aziendale) -->
-        <li id="nav-business-dashboard" class="nav-item hidden" onclick="showSection('business-section')">
-          <span>📊</span> Statistiche Business
-        </li>
-      </ul>
+    <li class="nav-item active" data-section="bacheca-section">
+        <span>📋</span> Bacheca Annunci
+    </li>
+    <li class="nav-item" data-section="map-section">
+        <span>📍</span> Mappa Lavori
+    </li>
+    <li class="nav-item" data-section="contracts-section">
+        <span>🤝</span> Messaggi Aziende
+    </li>
+    <li class="nav-item" data-section="profile-section">
+        <span>👤</span> Mio Profilo
+    </li>
+    <li class="nav-item" data-section="subscriptions-section">
+        <span>💎</span> Worky Academy
+    </li>
+    <!-- Sezione Business (se presente) -->
+    <li id="nav-business-dashboard" class="nav-item hidden" data-section="business-section">
+        <span>📊</span> Statistiche Business
+    </li>
+</ul>
       <div class="user-profile">
         <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100"
           id="user-avatar" alt="Avatar">
@@ -610,7 +610,7 @@
           <div class="modal-buttons" style="display:flex; gap:1rem; margin-top:2rem;">
             <button class="btn-primary" style="background:var(--text-dim);"
               onclick="closeCreateModal()">Annulla</button>
-            <button id="create-annuncio-submit" class="btn-primary" onclick="createAnnuncio()">Pubblica</button>
+<button id="create-annuncio-submit" class="btn-primary">Pubblica</button>
           </div>
         </div>
       </div>

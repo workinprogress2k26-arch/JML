@@ -160,16 +160,6 @@ function showToast(message, type = 'info') {
     }, 5000);
 }
 
-// lightweight UI helpers (toasts, banners)
-function showToast(msg, type = 'info') {
-    const t = document.createElement('div');
-    t.className = `toast ${type}`;
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(() => t.classList.add('visible'), 10);
-    setTimeout(() => t.classList.remove('visible'), 5000 - 300);
-    setTimeout(() => t.remove(), 5000);
-}
 
 function showBanner(message, id) {
     if (!id) return;
@@ -533,26 +523,32 @@ async function checkLoginStatus() {
                 console.error("Errore sincronizzazione profilo:", upsertErr);
             }
 
-            if (profile) {
-                // Carichiamo i saldi REALI dal database
-                userBalance = parseFloat(profile.balance) || 0;
-                frozenBalance = parseFloat(profile.frozen_balance) || 0;
+            // ... dentro checkLoginStatus ...
+if (profile) {
+    // Carichiamo i saldi
+    userBalance = parseFloat(profile.balance) || 0;
+    frozenBalance = parseFloat(profile.frozen_balance) || 0;
 
-                const userData = {
-                    id: profile.id,
-                    name: profile.display_name,
-                    email: profile.email,
-                    type: profile.user_type,
-                    avatar: profile.avatar_url,
-                    is_premium: profile.is_premium
-                };
-                localStorage.setItem('userData', JSON.stringify(userData));
-                
-                showView('app-view');
-                updateSidebar(); 
-                loadAnnouncementsFromDB();
-                renderUserProfile();
-            }
+    // --- NUOVA PARTE: Caricamento contratti dal DB ---
+    const { data: contracts } = await supabaseClient
+        .from('contracts')
+        .select('job_id')
+        .eq('worker_id', user.id)
+        .eq('status', 'active');
+
+    if (contracts) {
+        // Popoliamo l'array globale con gli ID dei lavori accettati
+        acceptedContracts = contracts.map(c => c.job_id);
+    }
+    // ------------------------------------------------
+    
+    // Procedi con il resto della funzione
+    showView('app-view');
+    updateSidebar(); 
+    loadAnnouncementsFromDB();
+    renderUserProfile();
+    updateChatList(); // Aggiorna la lista chat basandosi sui contratti reali
+}
         } else {
             showView('auth-view');
         }
@@ -755,34 +751,42 @@ async function getCoordinates(address) {
     try {
         const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
         const data = await response.json();
+        
         if (data && data.length > 0) {
-            return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+            // Indirizzo trovato!
+            return { 
+                lat: parseFloat(data[0].lat), 
+                lng: parseFloat(data[0].lon) 
+            };
+        } else {
+            // Indirizzo NON trovato
+            return null; 
         }
-    } catch (e) { console.error("Geocoding error:", e); }
-    return { lat: 44.49 + (Math.random() * 0.05), lng: 11.34 + (Math.random() * 0.05) };
+    } catch (e) { 
+        console.error("Errore Geocoding:", e); 
+        return null;
+    }
 }
 
 function showSection(sectionId) {
+    // 1. Nasconde tutte le sezioni di contenuto
     document.querySelectorAll('.content-section').forEach(s => s.classList.add('hidden'));
-    const section = document.getElementById(sectionId);
-    if (section) section.classList.remove('hidden');
+    
+    // 2. Mostra solo quella cliccata
+    const target = document.getElementById(sectionId);
+    if (target) target.classList.remove('hidden');
 
-    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-    const activeLink = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick')?.includes(sectionId));
-    if (activeLink) activeLink.classList.add('active');
-
-    // FIX PER MOBILE: Torna in alto
-    document.querySelector('.main-content').scrollTop = 0;
-
-    // Ricalcola o Inizializza Mappa solo se visibile
-    if (sectionId === 'map-section') {
-        if (!map) {
-            initMap();
-        } else {
-            setTimeout(() => {
-                if (map) map.invalidateSize();
-            }, 300);
+    // 3. Gestisce la classe "active" nei tasti della sidebar
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.getAttribute('data-section') === sectionId) {
+            item.classList.add('active');
         }
+    });
+
+    // 4. Se è la mappa, forziamo il ricalcolo delle dimensioni
+    if (sectionId === 'map-section' && map) {
+        setTimeout(() => map.invalidateSize(), 200);
     }
 }
 
@@ -1087,14 +1091,41 @@ async function deleteAnnuncio(id) {
     loadAnnouncementsFromDB();
 }
 
-function rechargeBalance() {
-    const userData = JSON.parse(localStorage.getItem('userData'));
-    const cur = userData ? (userData.currency || '€') : '€';
-    userBalance += 500;
-    localStorage.setItem('userBalance', userBalance);
+async function rechargeBalance() {
+    if (!ensureSupabase()) return;
+
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+        showToast("Devi essere loggato per ricaricare!", "error");
+        return;
+    }
+
+    const incremento = 500;
+    const nuovoSaldo = userBalance + incremento;
+
+    // 1. Aggiorna il Database (Tabella Profiles)
+    const { error } = await supabaseClient
+        .from('profiles')
+        .update({ balance: nuovoSaldo })
+        .eq('id', user.id);
+
+    if (error) {
+        console.error("Errore ricarica:", error);
+        showToast("Errore durante la ricarica sul server", "error");
+        return;
+    }
+
+    // 2. Se il DB è aggiornato, aggiorna la UI locale
+    userBalance = nuovoSaldo;
+    localStorage.setItem('userBalance', userBalance); // Fallback locale
+    
     renderUserProfile();
     updateSidebar();
-    alert(`Saldo ricaricato di ${cur} 500.00! 💰`);
+    
+    showToast(`Saldo ricaricato con successo di €${incremento.toFixed(2)}! 💰`, "success");
+    
+    // Registra la transazione nel log per trasparenza
+    await logTransaction(incremento, "Ricarica Account (Bonus Test)");
 }
 
 function handleCategoryChange() {
@@ -1185,80 +1216,72 @@ function openCreateModal() { document.getElementById('create-annuncio-modal').cl
 function closeCreateModal() { document.getElementById('create-annuncio-modal').classList.add('hidden'); }
 
 async function createAnnuncio() {
-    console.log("Inizio procedura pubblicazione...");
-    
-    // Recupero elementi
     const btn = document.getElementById('create-annuncio-submit');
     const title = document.getElementById('ann-title').value.trim();
     const rate = parseFloat(document.getElementById('ann-salary').value) || 0;
     const duration = parseFloat(document.getElementById('ann-duration').value) || 1;
     const desc = document.getElementById('ann-desc').value.trim();
-    const category = document.getElementById('ann-category').value;
     const address = document.getElementById('ann-address').value;
-    const city = document.getElementById('ann-city').value || "Bologna";
-    const timeUnit = document.getElementById('ann-time-unit').value;
-    const imageFile = document.getElementById('ann-image').files[0];
+    const category = document.getElementById('ann-category').value;
+    const imageFile = document.getElementById('ann-image').files[0]; // Prende il file vero e proprio
 
-    // 1. Validazione
     if (!title || rate <= 0 || !address) {
-        alert("⚠️ Inserisci titolo, compenso e indirizzo!");
+        showToast("⚠️ Compila i campi obbligatori!", "warning");
         return;
     }
 
-    const totalCost = rate * duration;
-    if (userBalance < totalCost) {
-        alert(`❌ Saldo insufficiente! L'annuncio costa ${totalCost}€, tu hai ${userBalance.toFixed(2)}€`);
-        return;
-    }
-
-    // Blocca pulsante
     btn.disabled = true;
-    btn.textContent = "⌛ Invio in corso...";
+    btn.textContent = "⌛ Caricamento in corso...";
 
     try {
-        // 2. Immagine
-        let imageBase64 = "";
+        let finalImageUrl = "";
+
+        // 1. SE C'È UNA FOTO, CARICALA SULLO STORAGE
         if (imageFile) {
-            console.log("Conversione immagine...");
-            imageBase64 = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.readAsDataURL(imageFile);
-            });
+            const fileName = `${Date.now()}_${imageFile.name}`; // Nome unico per la foto
+            
+            const { data: uploadData, error: uploadError } = await supabaseClient
+                .storage
+                .from('announcements') // Nome del bucket creato in Fase 1
+                .upload(fileName, imageFile);
+
+            if (uploadError) throw uploadError;
+
+            // Prendi l'indirizzo internet (URL) della foto appena caricata
+            const { data: urlData } = supabaseClient
+                .storage
+                .from('announcements')
+                .getPublicUrl(fileName);
+
+            finalImageUrl = urlData.publicUrl;
         }
 
-        // 3. Coordinate
-        console.log("Recupero coordinate...");
-        const coords = await getCoordinates(`${address}, ${city}`);
+        // 2. RECUPERA LE COORDINATE
+        const coords = await getCoordinates(`${address}, Bologna`);
 
-        // 4. Chiamata al Database
-        console.log("Chiamata RPC Supabase...");
-        const { error } = await supabaseClient.rpc('create_announcement_safe', {
+        // 3. SALVA L'ANNUNCIO NEL DATABASE (con il link della foto)
+        const { error: dbError } = await supabaseClient.rpc('create_announcement_safe', {
             arg_title: title,
             arg_description: desc,
             arg_category: category,
-            arg_rate: Number(rate),          // Forza numero
-            arg_duration: Number(duration),  // Forza numero
-            arg_time_unit: timeUnit,
+            arg_rate: Number(rate),
+            arg_duration: Number(duration),
+            arg_time_unit: document.getElementById('ann-time-unit').value,
             arg_address: address,
-            arg_lat: Number(coords.lat),     // Forza numero
-            arg_lng: Number(coords.lng),     // Forza numero
-            arg_image_url: imageBase64
+            arg_lat: Number(coords ? coords.lat : 44.4949),
+            arg_lng: Number(coords ? coords.lng : 11.3426),
+            arg_image_url: finalImageUrl // Qui salviamo solo il LINK (es. https://supabase.co/foto.jpg)
         });
 
-        if (error) throw error;
+        if (dbError) throw dbError;
 
-        // 5. Successo
-        console.log("✅ Annuncio creato!");
-        alert("Annuncio pubblicato correttamente! 🚀");
-        
+        showToast("Annuncio pubblicato! 🚀", "success");
         closeCreateModal();
-        await checkLoginStatus(); // Ricarica saldo
-        await loadAnnouncementsFromDB(); // Ricarica bacheca
+        loadAnnouncementsFromDB(); // Aggiorna la bacheca
 
     } catch (err) {
-        console.error("ERRORE CRITICO:", err);
-        alert("Errore durante la pubblicazione: " + (err.message || err.details));
+        console.error(err);
+        showToast("Errore durante la pubblicazione", "error");
     } finally {
         btn.disabled = false;
         btn.textContent = "Pubblica";
@@ -1375,20 +1398,43 @@ async function activatePremium(planType = 'PRO') {
 }
 
 // Contratti e Chat
-function toggleContract(id) {
+async function toggleContract(id) {
+    if (!ensureSupabase()) return;
     const jobId = Number(id);
 
-    if (acceptedContracts.includes(jobId)) {
-        alert('Contratto già accettato.');
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+        showToast("Devi essere loggato per accettare un lavoro!", "error");
         return;
     }
 
+    showToast("Accettazione in corso...", "info");
+
+    // 1. Scrittura sul Database
+    const { error } = await supabaseClient
+        .from('contracts')
+        .insert([{
+            job_id: jobId,
+            worker_id: user.id,
+            status: 'active'
+        }]);
+
+    if (error) {
+        if (error.code === '23505') { // Errore duplicato (Unique constraint)
+            showToast("Hai già accettato questo contratto!", "warning");
+        } else {
+            console.error("Errore contratto:", error);
+            showToast("Errore durante l'accettazione.", "error");
+        }
+        return;
+    }
+
+    // 2. Aggiornamento locale e UI
     acceptedContracts.push(jobId);
-    localStorage.setItem('acceptedContracts', JSON.stringify(acceptedContracts));
-
-    alert('Contratto accettato! Vai nella sezione Messaggi per parlare con il committente.');
-
-    // Forza l'aggiornamento della bacheca e della lista chat
+    
+    showToast("Contratto accettato! La chat è ora disponibile.", "success");
+    
+    // Aggiorna bacheca e messaggi
     renderBacheca();
     updateChatList();
 }
@@ -1917,45 +1963,57 @@ function toggleForms() {
 function renderUserProfile() {
     const display = document.getElementById('profile-display-data');
     if (!display) return;
+
+    // Recuperiamo i dati salvati durante il login (che ora includono le colonne del DB)
     const data = JSON.parse(localStorage.getItem('userData')) || {};
 
+    // 1. Rendering Informazioni Base e Business
     display.innerHTML = `
         <div class="profile-info">
-            <strong>Nome:</strong> ${sanitizeInput(data.name) || '---'} 
-            ${data.isPremium || data.is_premium ? '<span class="premium-badge-profile" title="Membro Academy Unlimited">💎 ELITE Member</span>' : ''}
+            <strong>Nome:</strong> ${sanitizeInput(data.name || data.display_name) || '---'} 
+            ${data.is_premium ? '<span class="premium-badge-profile" title="Membro Academy Unlimited">💎 ELITE Member</span>' : ''}
         </div>
         <div class="profile-info"><strong>Cognome:</strong> ${sanitizeInput(data.surname) || '---'}</div>
         <div class="profile-info"><strong>Email:</strong> ${sanitizeInput(data.email) || '---'}</div>
         <div class="profile-info"><strong>Città:</strong> ${sanitizeInput(data.city) || '---'}</div>
-        ${data.type === 'business' ? `
+        
+        ${data.type === 'business' || data.user_type === 'business' ? `
             <div class="profile-info" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border);">
-                <strong>🏢 Azienda:</strong> ${sanitizeInput(data.companyName) || '---'}
+                <strong>🏢 Azienda:</strong> ${sanitizeInput(data.company_name || data.companyName) || '---'}
             </div>
-            <div class="profile-info"><strong>📍 Sede:</strong> ${sanitizeInput(data.companyAddress) || '---'}</div>
+            <div class="profile-info"><strong>📍 Sede:</strong> ${sanitizeInput(data.company_address || data.companyAddress) || '---'}</div>
             <div class="company-tag">Account Aziendale Verificato</div>
         ` : ''}
     `;
 
-    // Render Social Links
+    // 2. Rendering Link Social (Sincronizzati con Passo 3)
     const socialCont = document.getElementById('profile-social-links');
     if (socialCont) {
         socialCont.innerHTML = '';
-        const socials = data.socials || {};
+        
+        // Mappiamo le chiavi esatte che abbiamo creato nel database ( Passo 3)
         const platforms = [
-            { id: 'instagram', icon: '📸', label: 'Instagram' },
-            { id: 'x', icon: '🐦', label: 'X (Twitter)' },
-            { id: 'facebook', icon: '👥', label: 'Facebook' },
-            { id: 'pinterest', icon: '📌', label: 'Pinterest' }
+            { key: 'instagram_url', icon: '📸', label: 'Instagram' },
+            { key: 'x_url', icon: '🐦', label: 'X (Twitter)' },
+            { key: 'facebook_url', icon: '👥', label: 'Facebook' },
+            { key: 'pinterest_url', icon: '📌', label: 'Pinterest' }
         ];
 
         let hasSocials = false;
+
         platforms.forEach(p => {
-            if (socials[p.id]) {
+            const url = data[p.key]; // Legge direttamente la colonna (es. data.instagram_url)
+            
+            if (url && url.trim() !== '') {
                 hasSocials = true;
                 const link = document.createElement('a');
-                link.href = socials[p.id];
+                
+                // Pulizia URL: aggiunge https se manca
+                const cleanUrl = url.startsWith('http') ? url : `https://${url}`;
+                
+                link.href = cleanUrl;
                 link.target = '_blank';
-                link.className = 'glass';
+                link.className = 'glass social-link-card';
                 link.style.padding = '0.5rem 1rem';
                 link.style.borderRadius = '10px';
                 link.style.textDecoration = 'none';
@@ -1973,6 +2031,13 @@ function renderUserProfile() {
             socialCont.innerHTML = '<p style="color: var(--text-dim); font-size: 0.8rem;">Nessun social collegato.</p>';
         }
     }
+
+    // Aggiornamento dei riquadri CV e Certificazioni
+    const cvBox = document.getElementById('profile-cv-data');
+    const certBox = document.getElementById('profile-certifications-data');
+    if (cvBox) cvBox.textContent = data.cv || "Nessun curriculum inserito.";
+    if (certBox) certBox.textContent = data.certifications || "Nessuna certificazione inserita.";
+}
 
     // Carichiamo anche i movimenti
     renderTransactions();
@@ -2004,7 +2069,7 @@ function renderUserProfile() {
     if (fro) fro.textContent = `${cur} ${frozenBalance.toFixed(2)}`;
 
     renderReviews();
-}
+
 
 // --- 11. SISTEMA MODIFICA PROFILO ---
 
@@ -2095,96 +2160,87 @@ async function updateAccountData() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
 
-    const metadata = user.user_metadata || {};
-
+    // Recupero valori dagli input del modale
     const newName = document.getElementById('edit-name').value;
     const newSurname = document.getElementById('edit-surname').value;
     const newCity = document.getElementById('edit-city').value;
-    const newPassword = document.getElementById('edit-password').value;
     const newCv = document.getElementById('edit-cv').value;
     const newCertifications = document.getElementById('edit-certifications').value;
 
-    let profileUpdates = {};
-    let authUpdates = {};
-
-    // Sincronizzazione Campi
-    if (newName) profileUpdates.display_name = `${newName} ${newSurname}`.trim();
-    if (newCity) profileUpdates.city = newCity;
-    if (newCv) profileUpdates.cv = newCv;
-    if (newCertifications) profileUpdates.certifications = newCertifications;
-
-    // Business fields
-    if (user.user_metadata.user_type === 'business') {
-        const newBizName = document.getElementById('edit-company-name').value;
-        const newBizAddr = document.getElementById('edit-company-address').value;
-        if (newBizName) profileUpdates.company_name = newBizName;
-        if (newBizAddr) profileUpdates.company_address = newBizAddr;
-    }
-
-    // Password (con validazione minima)
-    if (newPassword) {
-        if (newPassword.length < 6) {
-            showToast("La password deve avere almeno 6 caratteri.", "warning");
-            return;
-        }
-        authUpdates.password = newPassword;
-    }
-
-    // Socials
-    const newSocials = {
-        instagram: document.getElementById('edit-instagram').value,
-        x: document.getElementById('edit-x').value,
-        facebook: document.getElementById('edit-facebook').value,
-        pinterest: document.getElementById('edit-pinterest').value
+    // Dati Social
+    const socialData = {
+        instagram_url: document.getElementById('edit-instagram').value,
+        x_url: document.getElementById('edit-x').value,
+        facebook_url: document.getElementById('edit-facebook').value,
+        pinterest_url: document.getElementById('edit-pinterest').value
     };
 
-    // Esegui aggiornamenti
+    let profileUpdates = {
+        display_name: `${newName} ${newSurname}`.trim(),
+        city: newCity,
+        cv: newCv,
+        certifications: newCertifications,
+        ...socialData // Uniamo i social ai dati del profilo
+    };
+
     try {
-        // 1. Aggiorna Tabella Profiles
-        if (Object.keys(profileUpdates).length > 0) {
-            const { error: pErr } = await supabaseClient
-                .from('profiles')
-                .update(profileUpdates)
-                .eq('id', user.id);
-            if (pErr) throw pErr;
-        }
+        // 1. Aggiorna Tabella Profiles (TUTTI i dati, inclusi social)
+        const { error: pErr } = await supabaseClient
+            .from('profiles')
+            .update(profileUpdates)
+            .eq('id', user.id);
+        
+        if (pErr) throw pErr;
 
-        // 2. Aggiorna Metadata e Password su Auth
-        const { error: aErr } = await supabaseClient.auth.updateUser({
-            password: authUpdates.password || undefined,
-            data: { ...metadata, socials: newSocials }
+        // 2. Opzionale: Aggiorna anche metadata di Auth (per coerenza sessione)
+        await supabaseClient.auth.updateUser({
+            data: { socials: socialData }
         });
-        if (aErr) throw aErr;
 
-        showToast("Profilo aggiornato con successo!", "success");
+        showToast("Profilo e Social aggiornati con successo!", "success");
         closeModal('edit-account-modal');
-        checkLoginStatus(); // Ricarica dati UI
+        checkLoginStatus(); // Ricarica i dati per aggiornare la UI
     } catch (err) {
-        showToast("Errore durante l'aggiornamento: " + err.message, "error");
+        console.error("Errore aggiornamento:", err);
+        showToast("Errore durante il salvataggio dei dati", "error");
     }
 }
 
-function updateAvatar() {
-    // Deprecata - Ora usiamo handleAvatarUpload
-}
 
-function handleAvatarUpload(input) {
+
+async function handleAvatarUpload(input) {
     if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            const base64 = e.target.result;
-            const userData = JSON.parse(localStorage.getItem('userData')) || {};
-            userData.avatar = base64;
-            localStorage.setItem('userData', JSON.stringify(userData));
+        const file = input.files[0];
+        showToast("Caricamento foto profilo...", "info");
 
-            // Aggiorna UI immediatamente
-            document.getElementById('profile-avatar-big').src = base64;
-            if (document.getElementById('user-avatar')) {
-                document.getElementById('user-avatar').src = base64;
-            }
-            showToast('Foto profilo aggiornata con successo!', 'success');
-        };
-        reader.readAsDataURL(input.files[0]);
+        try {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            const fileName = `avatars/${user.id}_${Date.now()}.png`;
+
+            // 1. Carica su Storage
+            const { error: uploadError } = await supabaseClient
+                .storage
+                .from('announcements') // Usiamo lo stesso bucket o creane uno 'avatars'
+                .upload(fileName, file);
+
+            if (uploadError) throw uploadError;
+
+            // 2. Prendi URL
+            const { data: urlData } = supabaseClient.storage.from('announcements').getPublicUrl(fileName);
+            const publicUrl = urlData.publicUrl;
+
+            // 3. Aggiorna Tabella Profiles
+            await supabaseClient.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
+
+            // Aggiorna UI
+            document.getElementById('profile-avatar-big').src = publicUrl;
+            document.getElementById('user-avatar').src = publicUrl;
+            showToast("Foto profilo aggiornata!", "success");
+
+        } catch (err) {
+            console.error(err);
+            showToast("Errore durante il caricamento foto", "error");
+        }
     }
 }
 
@@ -2419,3 +2475,68 @@ async function sendModalCompanyMessage() {
     input.value = '';
     // ... logica aggiuntiva ...
 }
+
+// --- SISTEMA EVENT LISTENERS (Sicurezza CSP) ---
+function initEventListeners() {
+    console.log("🔧 Inizializzazione Event Listeners...");
+
+    // 1. Auth Events
+    const loginBtn = document.getElementById('btn-login-submit');
+    if (loginBtn) loginBtn.addEventListener('click', login);
+
+    // Cerca il pulsante Google tramite l'ID che abbiamo appena messo
+const googleBtn = document.getElementById('btn-google-login');
+
+if (googleBtn) {
+    // Quando viene cliccato, esegui la funzione loginWithGoogle
+    googleBtn.addEventListener('click', loginWithGoogle);
+}
+
+    const signupBtn = document.querySelector('.btn-signup'); // Se hai aggiunto la classe
+    if (signupBtn) signupBtn.addEventListener('click', signup);
+
+    // 2. Navigazione Sidebar (Logica Automatica)
+    const navItems = document.querySelectorAll('.nav-item[data-section]');
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const sectionId = item.getAttribute('data-section');
+            showSection(sectionId);
+        });
+    });
+
+    // 3. Azioni Profilo
+    const rechargeBtn = document.getElementById('btn-recharge-balance'); // Aggiungi questo ID nell'HTML
+    if (rechargeBtn) rechargeBtn.addEventListener('click', rechargeBalance);
+
+    const editAccountBtn = document.getElementById('btn-edit-account'); // Aggiungi questo ID nell'HTML
+    if (editAccountBtn) editAccountBtn.addEventListener('click', openEditAccountModal);
+
+    // 4. Azioni Annunci
+    const createAnnBtn = document.querySelector('button[onclick="openCreateModal()"]');
+    if (createAnnBtn) {
+        createAnnBtn.removeAttribute('onclick'); // Rimuoviamo il vecchio se presente
+        createAnnBtn.addEventListener('click', openCreateModal);
+    }
+}
+
+// Chiamiamo la funzione quando il DOM è pronto
+document.addEventListener('DOMContentLoaded', initEventListeners);
+
+// Aggiungi questo dentro initEventListeners() o in fondo al file script.js
+function setupNavigation() {
+    // Seleziona tutti gli elementi della sidebar che hanno l'attributo data-section
+    const navItems = document.querySelectorAll('.nav-item[data-section]');
+
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            // Legge il valore dell'attributo (es. "map-section")
+            const sectionId = item.getAttribute('data-section');
+            
+            // Chiama la funzione per cambiare schermata
+            showSection(sectionId);
+        });
+    });
+}
+
+// Assicurati di chiamarla al caricamento
+document.addEventListener('DOMContentLoaded', setupNavigation);
