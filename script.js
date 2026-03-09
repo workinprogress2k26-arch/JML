@@ -280,6 +280,8 @@ try {
 } catch (e) { /* ignore */ }
 
 // --- RICERCA PROSSIMITÀ (SMART MAPS) ---
+let userMarker = null;
+
 async function findJobsNearMe() {
     if (!navigator.geolocation) {
         showToast("Il tuo browser non supporta la geolocalizzazione", "error");
@@ -290,7 +292,23 @@ async function findJobsNearMe() {
 
     navigator.geolocation.getCurrentPosition(async (pos) => {
         const { latitude, longitude } = pos.coords;
-        if (map) map.setView([latitude, longitude], 14);
+        if (map) {
+            map.setView([latitude, longitude], 14);
+            
+            // Rimuove vecchio marker utente se presente
+            if (userMarker) map.removeLayer(userMarker);
+            
+            // Crea Marker Utente speciale (pulsante e rotondo)
+            const userIcon = L.divIcon({
+                html: `<div style="background:var(--secondary); width:35px; height:35px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:3px solid white; box-shadow:0 0 15px rgba(52, 152, 219, 0.8); color:white; font-size:1.2rem; animation: pulse-blue 2s infinite;">🧍</div>`,
+                className: 'custom-user-icon',
+                iconSize: [35, 35],
+                iconAnchor:[17, 17]
+            });
+            
+            userMarker = L.marker([latitude, longitude], { icon: userIcon }).addTo(map)
+                .bindPopup('<div style="color:black; font-weight:bold; text-align:center;">Tu sei qui<br><small>La tua posizione attuale</small></div>');
+        }
 
         showToast("Mappa aggiornata alla tua posizione!", "success");
         renderBacheca();
@@ -1176,25 +1194,30 @@ function syncMapMarkers(filteredAnnunci) {
 
     // Rimuovi marker esistenti
     markers.forEach(m => map.removeLayer(m));
-    markers = [];
+    markers =[];
 
     filteredAnnunci.forEach(ann => {
         const isPremium = ann.isPremium;
-        const markerColor = isPremium ? '#dcaa25' : '#3498db';
-        const iconEmoji = isPremium ? '💎' : '📍';
+        const markerColor = isPremium ? '#dcaa25' : '#2C3E50'; // Premium = Oro, Base = Blu scuro elegante
+        const iconEmoji = isPremium ? '💎' : '💼';
 
+        // Marker forma "Goccia" rovesciata (classico pin)
         const customIcon = L.divIcon({
-            html: `<div class="custom-marker" style="background:${markerColor}; width:30px; height:30px; border-radius:30px; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.4); color:white;">${iconEmoji}</div>`,
+            html: `<div style="background:${markerColor}; width:35px; height:35px; border-radius:50% 50% 50% 0; transform: rotate(-45deg); display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow:0 4px 10px rgba(0,0,0,0.4); color:white;">
+                     <span style="transform: rotate(45deg); font-size:16px; margin-top:2px; margin-left:2px;">${iconEmoji}</span>
+                   </div>`,
             className: 'custom-div-icon',
-            iconSize: [30, 30],
-            iconAnchor: [15, 15]
+            iconSize:[35, 35],
+            iconAnchor: [17, 35],
+            popupAnchor:[0, -35]
         });
 
         const marker = L.marker([ann.lat, ann.lng], { icon: customIcon }).addTo(map)
             .bindPopup(`
-                <div style="text-align: center; color: black; min-width:120px;">
-                    <strong style="color:${markerColor}">${sanitizeInput(ann.title)}</strong><br>
-                    <button class="btn-primary" style="margin-top:5px; padding:2px 8px; font-size:10px; width:100%;" onclick="openAnnuncioDetails(${ann.id})">Dettagli</button>
+                <div style="text-align: center; color: black; min-width:140px;">
+                    <strong style="color:${markerColor}; font-size:1.1rem;">${sanitizeInput(ann.title)}</strong><br>
+                    <span style="font-size:0.9rem; color:#555;">${sanitizeInput(ann.salary)}</span><br>
+                    <button class="btn-primary" style="margin-top:8px; padding:4px 10px; font-size:12px; width:100%; border-radius:6px;" onclick="openAnnuncioDetails(${ann.id})">Vedi Dettagli</button>
                 </div>
             `);
         markers.push(marker);
@@ -1513,9 +1536,10 @@ async function openCompanyChat(chat) {
     const jobTitleLabel = document.getElementById('chat-job-title');
     if (jobTitleLabel) jobTitleLabel.textContent = chat.jobTitle;
 
-    // --- NUOVA LOGICA: Controllo stato contratto per nascondere i tasti ---
+     // --- NUOVA LOGICA: Controllo stato contratto per nascondere i tasti ---
     const releaseBtn = document.getElementById('btn-release-payment');
     const reportBtn = document.getElementById('btn-report-job');
+    const reviewBtn  = document.getElementById('btn-review-job');
 
     // Recuperiamo lo stato dal database
     const { data: contract } = await supabaseClient
@@ -1524,16 +1548,30 @@ async function openCompanyChat(chat) {
         .eq('job_id', chat.jobId)
         .maybeSingle();
 
-    // Mostra i tasti solo se: 
-    // 1. Sei l'owner 
-    // 2. Il contratto esiste 
-    // 3. Lo stato NON è 'completed'
-    if (chat.isOwner && contract && contract.status !== 'completed') {
-        releaseBtn?.classList.remove('hidden');
-        reportBtn?.classList.remove('hidden');
-    } else {
+    // 1. Se sei Owner e il contratto NON è completato -> Mostra Paga / Segnala
+    if (chat.isOwner && contract) {
+        if (contract.status !== 'completed') {
+            releaseBtn?.classList.remove('hidden');
+            reportBtn?.classList.remove('hidden');
+            reviewBtn?.classList.add('hidden');
+        } else {
+            // Contratto completato -> L'Owner può recensire il lavoratore
+            releaseBtn?.classList.add('hidden');
+            reportBtn?.classList.add('hidden');
+            reviewBtn?.classList.remove('hidden');
+        }
+    } 
+    // 2. Se NON sei l'owner (sei il lavoratore) e il contratto è completato -> Puoi recensire l'azienda
+    else if (!chat.isOwner && contract && contract.status === 'completed') {
         releaseBtn?.classList.add('hidden');
         reportBtn?.classList.add('hidden');
+        reviewBtn?.classList.remove('hidden');
+    } 
+    // 3. Situazioni in corso per il lavoratore o altri stati
+    else {
+        releaseBtn?.classList.add('hidden');
+        reportBtn?.classList.add('hidden');
+        reviewBtn?.classList.add('hidden');
     }
     // ---------------------------------------------------------------------
 
@@ -2370,6 +2408,12 @@ async function sendModalCompanyMessage() {
 }
 
 // --- SISTEMA EVENT LISTENERS (Sicurezza CSP) ---
+window.openReviewFromChat = function() {
+    if (currentChatCompany && currentChatCompany.jobId) {
+        openReviewModal(currentChatCompany.jobId);
+    }
+};
+
 function initEventListeners() {
     console.log("🔧 Inizializzazione Event Listeners...");
 
@@ -2508,8 +2552,10 @@ async function releasePayment() {
         showToast("Pagamento inviato e lavoro completato! ✅", "success");
 
         // NASCONDIAMO I TASTI IMMEDIATAMENTE NELLA UI
+        // NASCONDIAMO I TASTI IMMEDIATAMENTE NELLA UI
         document.getElementById('btn-release-payment').classList.add('hidden');
         document.getElementById('btn-report-job').classList.add('hidden');
+        document.getElementById('btn-review-job').classList.remove('hidden'); // Appare "Lascia Recensione"
 
         await loadAnnouncementsFromDB();
         await checkLoginStatus(); 

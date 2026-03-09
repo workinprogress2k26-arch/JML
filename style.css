@@ -86,15 +86,16 @@ body::-webkit-scrollbar {
 }
 
 /* --- TABLET LAYOUT (@media 768px - 1024px) --- */
-@media (max-width: 1200px) and (min-width: 768px) {
+@media (max-width: 1024px) and (min-width: 768px) {
     #app-view {
-        grid-template-columns: 70px 1fr;
+        grid-template-columns: 80px 1fr !important;
     }
 
     .sidebar {
-        padding: 1rem 0;
-        width: 70px;
+        padding: 1.5rem 0 !important;
+        width: 80px !important;
         border-right: 1px solid var(--border);
+        align-items: center;
     }
 
     .logo-container {
@@ -122,6 +123,19 @@ body::-webkit-scrollbar {
 
     .main-content {
         padding: 1.5rem;
+    }
+    
+    .chat-container {
+        grid-template-columns: 280px 1fr !important;
+        height: calc(100vh - 160px) !important;
+    }
+
+    .announcements-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+    }
+
+    .stats-grid-proportional {
+        grid-template-columns: repeat(2, 1fr) !important;
     }
 }
 
@@ -597,12 +611,40 @@ body::-webkit-scrollbar {
 }
 
 body {
-    background: var(--bg-dark);
+    font-family: 'Outfit', sans-serif;
+    background-color: #050505; /* Sfondo base ancora più scuro */
     color: var(--text-main);
-    min-height: 100vh;
-    overflow-x: hidden;
-    transition: background 0.4s ease;
+    line-height: 1.6;
+    overflow: hidden !important;
+    overflow-x: hidden !important;
+    width: 100%;
+    max-width: 100%;
 }
+
+@keyframes backgroundShift {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 100% 100%; }
+}
+
+/* Animazione radar per marker posizione utente */
+@keyframes pulse-blue {
+    0% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(52, 152, 219, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); }
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: 
+        radial-gradient(circle at 15% 30%, rgba(220, 170, 37, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 85% 70%, rgba(52, 152, 219, 0.08) 0%, transparent 40%);
+    z-index: -1;
+    pointer-events: none;
+    animation: backgroundShift 20s ease-in-out infinite alternate;
+}
+
 
 /* Glassmorphism utility */
 .glass {
@@ -1211,19 +1253,22 @@ input:focus {
 }
 
 .message {
-    padding: 0.8rem 1rem;
-    border-radius: 12px;
-    max-width: 80%;
+    padding: 1rem 1.2rem;
+    max-width: 75%;
+    font-size: 0.95rem;
+    letter-spacing: 0.3px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     margin-bottom: 0.5rem;
     position: relative;
     line-height: 1.4;
 }
 
 .message.user {
-    background: var(--accent-gradient);
-    color: black;
+    background: linear-gradient(135deg, #DCAA25 0%, #e0bc46 100%);
+    color: #000;
     align-self: flex-end;
-    border-bottom-right-radius: 2px;
+    border-radius: 18px 18px 4px 18px;
+    box-shadow: 0 4px 15px rgba(220, 170, 37, 0.2);
 }
 
 .message.ai {
@@ -1231,21 +1276,24 @@ input:focus {
     border: 1px solid rgba(220, 170, 37, 0.3);
     color: white;
     align-self: flex-start;
-    border-bottom-left-radius: 2px;
+    border-radius: 18px 18px 18px 4px;
 }
 
 .message.company {
-    background: rgba(33, 150, 243, 0.1);
-    border: 1px solid rgba(33, 150, 243, 0.3);
-    color: white;
+    background: rgba(40, 42, 50, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: #fff;
     align-self: flex-start;
-    border-bottom-left-radius: 2px;
+    border-radius: 18px 18px 18px 4px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .msg-timestamp {
-    font-size: 0.65rem;
-    opacity: 0.5;
-    margin-top: 4px;
+    color: inherit;
+    opacity: 0.6;
+    font-size: 0.7rem;
+    margin-top: 6px;
+    font-weight: 500;
     display: block;
     text-align: right;
 }
