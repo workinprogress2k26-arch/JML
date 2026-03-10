@@ -3794,34 +3794,34 @@ html.auth-mode {
 
 /* --- MARKER PERSONALIZZATI CON FOTO PROFILO --- */
 
-.custom-user-marker {
+.custom-user-marker { background: none; border: none; }
 
-    width: 45px;
-
-    height: 45px;
-
+.marker-container {
     position: relative;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
+.marker-avatar {
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
-
-    overflow: hidden;
-
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-
-    transition: transform 0.2s ease;
-
+    border: 3px solid var(--primary);
+    object-fit: cover;
+    background: var(--bg-dark);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 }
-
-
-
-.custom-user-marker:hover {
-
-    transform: scale(1.1);
-
+.marker-edge {
+    position: absolute;
+    bottom: -5px;
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 10px solid var(--primary);
 }
-
-
-
 .marker-fallback {
 
     width: 100%;

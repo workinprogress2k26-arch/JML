@@ -1053,48 +1053,130 @@ async function renderBacheca() {
             }
         };
 
-        card.innerHTML = `
-            ${ann.image ? `<img src="${ann.image}" class="annuncio-img">` : ''}
-            <div class="card-content">
-                <div class="card-header">
-                    <span class="category-tag">${sanitizeInput(ann.category)}</span>
-                    <div class="author-tag">
-                        <img src="${ann.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100'}" class="author-logo">
-                        ${sanitizeInput(ann.author)}
-                    </div>
-                </div>
-                <h3>${sanitizeInput(ann.title)}</h3>
-                <p style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${sanitizeInput(ann.description)}</p>
-                <div class="card-footer">
-                    <strong>${userCurrency} ${ann.salary.replace(/[^0-9.]/g, '')}</strong>
-                    <div style="display:flex; flex-direction:column; gap:0.5rem; align-items: flex-end;">
-                        ${isAuthor ? `
-                            <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem; background: #ff4d4d; color: white;" onclick="event.stopPropagation(); deleteAnnuncio(${ann.id})">
-                                🗑️ Elimina
-                            </button>` : `
-                            <div style="display:flex; gap: 0.5rem;">
-                                <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem;" onclick="event.stopPropagation(); toggleContract(${ann.id})">
-                                    ${isAccepted ? 'Attivo' : 'Accetta'}
-                                </button>
-                                ${isAccepted ? `
-                                <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem; background: #ffb347; color: white;" onclick="event.stopPropagation(); openRevokeModal(${ann.id})" title="Revoca">
-                                    🚩
-                                </button>` : `
-                                <button class="btn-primary" style="width: auto; padding: 0.5rem 1rem; background: var(--text-dim); color: white;" onclick="event.stopPropagation(); hideAnnuncio(${ann.id})" title="Nascondi">
-                                    🚫
-                                </button>`}
-                            </div>
-                        `}
-                    </div>
-                </div>
-            </div>
-        `;
+        // Build card content safely using textContent for user input fields
+        const cardContent = document.createElement('div');
+        cardContent.className = 'card-content';
+
+        const cardHeader = document.createElement('div');
+        cardHeader.className = 'card-header';
+
+        const categoryTag = document.createElement('span');
+        categoryTag.className = 'category-tag';
+        categoryTag.textContent = ann.category;
+        cardHeader.appendChild(categoryTag);
+
+        const authorTag = document.createElement('div');
+        authorTag.className = 'author-tag';
+
+        const authorImg = document.createElement('img');
+        authorImg.src = ann.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100';
+        authorImg.className = 'author-logo';
+        authorTag.appendChild(authorImg);
+
+        const authorText = document.createTextNode(sanitizeInput(ann.author));
+        authorTag.appendChild(authorText);
+
+        cardHeader.appendChild(authorTag);
+        cardContent.appendChild(cardHeader);
+
+        const titleEl = document.createElement('h3');
+        titleEl.textContent = sanitizeInput(ann.title);
+        cardContent.appendChild(titleEl);
+
+        const descEl = document.createElement('p');
+        descEl.style.display = '-webkit-box';
+        descEl.style.webkitLineClamp = '3';
+        descEl.style.webkitBoxOrient = 'vertical';
+        descEl.style.overflow = 'hidden';
+        descEl.textContent = sanitizeInput(ann.description);
+        cardContent.appendChild(descEl);
+
+        const cardFooter = document.createElement('div');
+        cardFooter.className = 'card-footer';
+
+        const salaryEl = document.createElement('strong');
+        salaryEl.textContent = `${userCurrency} ${ann.salary.replace(/[^0-9.]/g, '')}`;
+        cardFooter.appendChild(salaryEl);
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.style.display = 'flex';
+        actionsDiv.style.flexDirection = 'column';
+        actionsDiv.style.gap = '0.5rem';
+        actionsDiv.style.alignItems = 'flex-end';
+
+        if (isAuthor) {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn-primary';
+            deleteBtn.style.width = 'auto';
+            deleteBtn.style.padding = '0.5rem 1rem';
+            deleteBtn.style.background = '#ff4d4d';
+            deleteBtn.style.color = 'white';
+            deleteBtn.textContent = '🗑️ Elimina';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteAnnuncio(ann.id);
+            };
+            actionsDiv.appendChild(deleteBtn);
+        } else {
+            const actionsInnerDiv = document.createElement('div');
+            actionsInnerDiv.style.display = 'flex';
+            actionsInnerDiv.style.gap = '0.5rem';
+
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = 'btn-primary';
+            toggleBtn.style.width = 'auto';
+            toggleBtn.style.padding = '0.5rem 1rem';
+            toggleBtn.textContent = isAccepted ? 'Attivo' : 'Accetta';
+            toggleBtn.onclick = (e) => {
+                e.stopPropagation();
+                toggleContract(ann.id);
+            };
+            actionsInnerDiv.appendChild(toggleBtn);
+
+            if (isAccepted) {
+                const revokeBtn = document.createElement('button');
+                revokeBtn.className = 'btn-primary';
+                revokeBtn.style.width = 'auto';
+                revokeBtn.style.padding = '0.5rem 1rem';
+                revokeBtn.style.background = '#ffb347';
+                revokeBtn.style.color = 'white';
+                revokeBtn.title = 'Revoca';
+                revokeBtn.textContent = '🚩';
+                revokeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    openRevokeModal(ann.id);
+                };
+                actionsInnerDiv.appendChild(revokeBtn);
+            } else {
+                const hideBtn = document.createElement('button');
+                hideBtn.className = 'btn-primary';
+                hideBtn.style.width = 'auto';
+                hideBtn.style.padding = '0.5rem 1rem';
+                hideBtn.style.background = 'var(--text-dim)';
+                hideBtn.style.color = 'white';
+                hideBtn.title = 'Nascondi';
+                hideBtn.textContent = '🚫';
+                hideBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    hideAnnuncio(ann.id);
+                };
+                actionsInnerDiv.appendChild(hideBtn);
+            }
+
+            actionsDiv.appendChild(actionsInnerDiv);
+        }
+
+        cardFooter.appendChild(actionsDiv);
+        cardContent.appendChild(cardFooter);
+
+        card.appendChild(cardContent);
         grid.appendChild(card);
     });
 
+    // Non chiamare syncMapMarkers qui - verrà chiamata da initMap
 }
 
-async function openAnnuncioDetails(annId) {
+function openAnnuncioDetails(annId) {
     const ann = annunci.find(a => a.id === annId);
     if (!ann) return;
 
@@ -1343,46 +1425,19 @@ function syncMapMarkers(filteredAnnunci) {
         const isPremium = ann.isPremium;
         const borderColor = isPremium ? '#dcaa25' : '#2C3E50'; // Premium = Oro, Base = Blu scuro elegante
 
-        // Funzione helper per ottenere le iniziali del nome
-        function getInitials(name) {
-            if (!name) return 'UT';
-            const parts = name.trim().split(' ');
-            if (parts.length >= 2) {
-                return parts[0][0].toUpperCase() + parts[parts.length - 1][0].toUpperCase();
-            }
-            return name.substring(0, 2).toUpperCase();
-        }
-
-        const hasPhoto = ann.authorAvatar && ann.authorAvatar.trim() !== '';
-        console.log(`🗺️ Annuncio ${ann.title} - hasPhoto:`, hasPhoto, "authorAvatar:", ann.authorAvatar);
-
-        // Crea HTML per il marker personalizzato
-        function createMarkerHTML() {
-            if (hasPhoto) {
-                return `
-                    <div class="custom-user-marker">
-                        <img src="${ann.authorAvatar}" alt="${ann.author}" 
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                             style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
-                        <div class="marker-fallback" style="display:none;">
-                            ${getInitials(ann.author || 'Utente')}
-                        </div>
-                        <div class="marker-border ${isPremium ? 'premium' : 'standard'}"></div>
-                    </div>
-                `;
-            } else {
-                // Marker colorato quando non c'è la foto
-                const markerColor = isPremium ? '#dcaa25' : '#2C3E50';
-                return `
-                    <div class="custom-user-marker" style="background: ${markerColor}; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-                        <div class="marker-fallback" style="color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
-                            ${getInitials(ann.author || 'Utente')}
-                        </div>
-                        <div class="marker-border ${isPremium ? 'premium' : 'standard'}"></div>
-                    </div>
-                `;
-            }
-        }
+        // Crea un'icona personalizzata con la foto profilo
+        const avatarUrl = ann.authorAvatar || 'https://via.placeholder.com/50';
+        const customIcon = L.divIcon({
+            className: 'custom-user-marker',
+            html: `<div class="marker-container">
+                      <img src="${avatarUrl}" class="marker-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                      <div class="marker-fallback" style="display:none;">${getInitials(ann.author || 'Utente')}</div>
+                      <div class="marker-edge"></div>
+                   </div>`,
+            iconSize: [45, 45],
+            iconAnchor: [22, 45],
+            popupAnchor: [0, -40]
+        });
 
         // Popup migliorato con stile Glassmorphism
         const popupContent = `
@@ -1417,14 +1472,6 @@ function syncMapMarkers(filteredAnnunci) {
             </div>
         `;
 
-        const customIcon = L.divIcon({
-            className: 'custom-icon',
-            html: createMarkerHTML(),
-            iconSize: [45, 45],
-            iconAnchor: [22.5, 45],
-            popupAnchor: [0, -45]
-        });
-
         try {
             const marker = L.marker([ann.lat, ann.lng], { icon: customIcon }).addTo(map)
                 .bindPopup(popupContent, {
@@ -1441,7 +1488,6 @@ function syncMapMarkers(filteredAnnunci) {
     
     console.log(`🗺️ syncMapMarkers completata. Total marker: ${markers.length}`);
 }
-
 async function createAnnuncio() {
     const btn = document.getElementById('create-annuncio-submit');
     const title = document.getElementById('ann-title').value.trim();
