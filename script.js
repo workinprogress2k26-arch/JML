@@ -1831,8 +1831,46 @@ function getCurrencySymbol(country) {
 async function signup() {
     const email = document.getElementById('reg-email').value;
     const password = document.getElementById('reg-password').value;
+    const confirm = document.getElementById('reg-confirm').value;
     const name = document.getElementById('reg-name').value;
     const type = document.getElementById('reg-type').value;
+
+    if (!email || !validateEmail(email)) {
+        showToast("⚠️ Inserisci un'email valida", "warning");
+        return;
+    }
+
+    if (!name || name.trim().length < 2) {
+        showToast("⚠️ Inserisci il tuo nome", "warning");
+        return;
+    }
+
+    if (type !== 'private' && type !== 'business') {
+        showToast("⚠️ Seleziona un tipo di account valido", "warning");
+        return;
+    }
+
+    // 4. VALIDAZIONE PASSWORD (Nuove regole rigide)
+    if (password.length < 8) {
+        showToast("⚠️ La password deve avere almeno 8 caratteri", "warning");
+        return;
+    }
+    if (!/[A-Z]/.test(password)) {
+        showToast("⚠️ La password deve contenere almeno una lettera maiuscola", "warning");
+        return;
+    }
+    if (!/\d/.test(password)) {
+        showToast("⚠️ La password deve contenere almeno un numero", "warning");
+        return;
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(password)) {
+        showToast("⚠️ La password deve contenere almeno un carattere speciale", "warning");
+        return;
+    }
+    if (password !== confirm) {
+        showToast("⚠️ Le password non coincidono", "warning");
+        return;
+    }
 
     const { data, error } = await supabaseClient.auth.signUp({
         email: email,
@@ -2563,5 +2601,53 @@ async function releasePayment() {
     } catch (err) {
         console.error(err);
         showToast("Errore durante il saldo", "error");
+    }
+}
+
+// Controllo in tempo reale della password
+function validatePasswordLive() {
+    const pwd = document.getElementById('reg-password').value;
+    
+    const lengthHint = document.getElementById('hint-length');
+    const upperHint = document.getElementById('hint-upper');
+    const numberHint = document.getElementById('hint-number');
+    const specialHint = document.getElementById('hint-special');
+
+    if (!lengthHint) return;
+
+    // Regola 1: Lunghezza (Minimo 8)
+    if (pwd.length >= 8) { 
+        lengthHint.innerHTML = '✅ Min. 8 caratteri'; 
+        lengthHint.style.color = '#4CAF50'; 
+    } else { 
+        lengthHint.innerHTML = '❌ Min. 8 caratteri'; 
+        lengthHint.style.color = 'var(--text-dim)'; 
+    }
+
+    // Regola 2: Lettera Maiuscola
+    if (/[A-Z]/.test(pwd)) { 
+        upperHint.innerHTML = '✅ 1 lettera maiuscola'; 
+        upperHint.style.color = '#4CAF50'; 
+    } else { 
+        upperHint.innerHTML = '❌ 1 lettera maiuscola'; 
+        upperHint.style.color = 'var(--text-dim)'; 
+    }
+
+    // Regola 3: Numero
+    if (/\d/.test(pwd)) { 
+        numberHint.innerHTML = '✅ 1 numero'; 
+        numberHint.style.color = '#4CAF50'; 
+    } else { 
+        numberHint.innerHTML = '❌ 1 numero'; 
+        numberHint.style.color = 'var(--text-dim)'; 
+    }
+
+    // Regola 4: Carattere speciale
+    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(pwd)) { 
+        specialHint.innerHTML = '✅ 1 carattere speciale'; 
+        specialHint.style.color = '#4CAF50'; 
+    } else { 
+        specialHint.innerHTML = '❌ 1 carattere speciale (!@#$...)'; 
+        specialHint.style.color = 'var(--text-dim)'; 
     }
 }
