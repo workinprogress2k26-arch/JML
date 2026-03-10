@@ -45,10 +45,21 @@ function initSupabase() {
 
         // Auth state listener: aggiorna UI subito dopo login/logout/refresh token
         try {
-            supabaseClient.auth.onAuthStateChange((_event, session) => {
+            supabaseClient.auth.onAuthStateChange(async (_event, session) => {
                 try {
                     const user = session?.user || null;
                     if (typeof updateUI === 'function') updateUI(user);
+
+                    // Bounce tracking mitigation: pulisce l'URL dal token dopo login
+                    if (user && window.location.hash.includes('access_token')) {
+                        try {
+                            // Rimuovi il token dall'URL per evitare bounce tracking warnings
+                            window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+                            console.log('🧹 URL pulita da token OAuth per bounce tracking mitigation');
+                        } catch (e) {
+                            console.warn('Impossibile pulire URL:', e);
+                        }
+                    }
                 } catch (e) {
                     console.warn('onAuthStateChange handler error:', e?.message || e);
                 }
