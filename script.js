@@ -131,6 +131,14 @@ function updateUI(user) {
     if (typeof renderUserProfile === 'function') renderUserProfile();
 }
 
+function togglePassword(inputId, iconEl) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isPassword = input.type === 'password';
+    input.type = isPassword ? 'text' : 'password';
+    if (iconEl) iconEl.textContent = isPassword ? '🔒' : '👁️';
+}
+
 // Ensure supabaseClient is available before making calls
 function ensureSupabase() {
     if (!supabaseClient) {

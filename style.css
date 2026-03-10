@@ -733,6 +733,30 @@ input:focus {
     border-color: var(--primary);
 }
 
+.password-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.password-wrapper input {
+    padding-right: 3rem;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: var(--text-dim);
+    user-select: none;
+}
+
+.toggle-password:hover {
+    color: var(--primary);
+}
+
 .btn-primary {
     width: 100%;
     padding: 1rem;
