@@ -1373,6 +1373,26 @@ function syncMapMarkers(filteredAnnunci) {
                             ${getInitials(ann.author || 'Utente')}
                         </div>
                         <div class="marker-border ${isPremium ? 'premium' : 'standard'}"></div>
+                    </div>
+                `;
+            }
+        }
+
+        // Popup migliorato con stile Glassmorphism
+        const popupContent = `
+            <div class="custom-popup glass">
+                <div class="popup-header">
+                    <div class="popup-user-info">
+                        ${hasPhoto ? 
+                            `<img src="${ann.authorAvatar}" alt="${ann.author}" class="popup-avatar">` :
+                            `<div class="popup-avatar-fallback">${getInitials(ann.author || 'Utente')}</div>`
+                        }
+                        <div class="popup-user-details">
+                            <h3 class="popup-title">${sanitizeInput(ann.title)}</h3>
+                            <p class="popup-author">${sanitizeInput(ann.author || 'Utente')}</p>
+                        </div>
+                    </div>
+                    ${isPremium ? '<div class="premium-badge-popup">💎</div>' : ''}
                 </div>
                 <div class="popup-body">
                     <div class="popup-price">
@@ -1384,11 +1404,16 @@ function syncMapMarkers(filteredAnnunci) {
                     </div>
                 </div>
                 <div class="popup-footer">
+                    <button class="btn-primary popup-btn" onclick="openAnnuncioDetails(${ann.id})">
+                        Vedi Dettagli
+                    </button>
+                </div>
+            </div>
+        `;
 
-        // Marker personalizzato con foto profilo
         const customIcon = L.divIcon({
+            className: 'custom-icon',
             html: createMarkerHTML(),
-            className: 'custom-div-icon',
             iconSize: [45, 45],
             iconAnchor: [22.5, 45],
             popupAnchor: [0, -45]
