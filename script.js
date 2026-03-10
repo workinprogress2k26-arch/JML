@@ -19,6 +19,7 @@ function initSupabase() {
         console.error('❌ Supabase library non caricata. Verifica che supabase-js sia incluso in index.html');
         return false;
     }
+
     const cfg = getRuntimeSupabaseConfig();
     if (!cfg.url || !cfg.anon) {
         console.error('❌ Supabase non configurato: manca URL o ANON_KEY a runtime. Non inizializzo il client per motivi di sicurezza.');
@@ -37,6 +38,20 @@ function initSupabase() {
     try {
         supabaseClient = window.supabase.createClient(cfg.url, cfg.anon);
         console.log('✅ Supabase inizializzato correttamente');
+
+        // Auth state listener: aggiorna UI subito dopo login/logout/refresh token
+        try {
+            supabaseClient.auth.onAuthStateChange((_event, session) => {
+                try {
+                    const user = session?.user || null;
+                    if (typeof updateUI === 'function') updateUI(user);
+                } catch (e) {
+                    console.warn('onAuthStateChange handler error:', e?.message || e);
+                }
+            });
+        } catch (e) {
+            console.warn('Impossibile registrare onAuthStateChange:', e?.message || e);
+        }
 
         // Pulisce l'URL da #access_token dopo OAuth (Supabase legge prima i parametri, poi noi ripuliamo)
         try {
@@ -84,6 +99,36 @@ function initSupabase() {
         showBanner('Errore inizializzazione Supabase. Controlla la connessione e le chiavi.', 'supabase-banner');
         return false;
     }
+}
+
+function updateUI(user) {
+    if (!user) {
+        try { localStorage.removeItem('isLoggedIn'); } catch (e) {}
+        showView('auth-view');
+        return;
+    }
+
+    const metadata = user.user_metadata || {};
+    const displayName = metadata.full_name || user.email || 'Utente';
+    const avatarUrl = metadata.avatar_url || '';
+
+    try {
+        const existing = JSON.parse(localStorage.getItem('userData')) || {};
+        const merged = {
+            ...existing,
+            id: user.id,
+            email: user.email,
+            display_name: displayName,
+            name: existing.name || displayName,
+            avatar_url: existing.avatar_url || avatarUrl
+        };
+        localStorage.setItem('userData', JSON.stringify(merged));
+        localStorage.setItem('isLoggedIn', 'true');
+    } catch (e) {}
+
+    showView('app-view');
+    if (typeof updateSidebar === 'function') updateSidebar();
+    if (typeof renderUserProfile === 'function') renderUserProfile();
 }
 
 // Ensure supabaseClient is available before making calls
@@ -305,16 +350,15 @@ async function findJobsNearMe() {
         return;
     }
 
-    showToast("Ricerca della tua posizione...", "info");
-
+    showToast("Ricerca della tua posizione...");
     navigator.geolocation.getCurrentPosition(async (pos) => {
         const { latitude, longitude } = pos.coords;
         if (map) {
             map.setView([latitude, longitude], 14);
-            
+
             // Rimuove vecchio marker utente se presente
             if (userMarker) map.removeLayer(userMarker);
-            
+
             // Crea Marker Utente speciale (pulsante e rotondo)
             const userIcon = L.divIcon({
                 html: `<div style="background:var(--secondary); width:35px; height:35px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:3px solid white; box-shadow:0 0 15px rgba(52, 152, 219, 0.8); color:white; font-size:1.2rem; animation: pulse-blue 2s infinite;">🧍</div>`,
@@ -322,7 +366,7 @@ async function findJobsNearMe() {
                 iconSize: [35, 35],
                 iconAnchor:[17, 17]
             });
-            
+
             userMarker = L.marker([latitude, longitude], { icon: userIcon }).addTo(map)
                 .bindPopup('<div style="color:black; font-weight:bold; text-align:center;">Tu sei qui<br><small>La tua posizione attuale</small></div>');
         }
@@ -1289,7 +1333,7 @@ async function createAnnuncio() {
         const coords = await getCoordinates(`${address}, Bologna`);
 
         // 3. SALVA L'ANNUNCIO NEL DATABASE (con il link della foto)
-        const { error: dbError } = await supabaseClient.rpc('create_announcement_safe', {
+        const { error } = await supabaseClient.rpc('create_announcement_safe', {
             arg_title: title,
             arg_description: desc,
             arg_category: category,
@@ -1302,12 +1346,12 @@ async function createAnnuncio() {
             arg_image_url: finalImageUrl // Qui salviamo solo il LINK (es. https://supabase.co/foto.jpg)
         });
 
-        if (dbError) {
-            if (dbError.code === '409') {
+        if (error) {
+            if (error.code === '409') {
                 showToast("Operazione già in corso o saldo insufficiente.", "warning");
                 return;
             }
-            throw dbError;
+            throw error;
         }
 
         showToast("Annuncio pubblicato! 🚀", "success");
@@ -2089,13 +2133,21 @@ async function openEditAccountModal() {
             console.warn("Errore recupero profilo:", error);
         }
 
-        // Fallback se il profilo non esiste ancora nel DB
+        // Fallback se il profilo non esiste ancora nel DB (o se la query non torna righe)
         const metadata = user.user_metadata || {};
         const fallbackProfile = {
             display_name: metadata.full_name || user.email || '',
-            avatar_url: metadata.avatar_url || ''
+            email: user.email || '',
+            avatar_url: metadata.avatar_url || '',
+            city: '',
+            cv: '',
+            certifications: '',
+            user_type: metadata.user_type || 'private',
+            company_name: '',
+            company_address: ''
         };
-        const effectiveProfile = profile || fallbackProfile;
+
+        const effectiveProfile = profile ? { ...fallbackProfile, ...profile } : fallbackProfile;
 
         const socials = metadata.socials || {};
 
@@ -2121,18 +2173,18 @@ async function openEditAccountModal() {
 
         nameInput.disabled = false;
         surnameInput.disabled = false;
-        cityInput.value = profile.city || "";
+        cityInput.value = effectiveProfile.city || "";
         cityInput.disabled = false;
-        cvInput.value = profile.cv || "";
+        cvInput.value = effectiveProfile.cv || "";
         cvInput.disabled = false;
-        certInput.value = profile.certifications || "";
+        certInput.value = effectiveProfile.certifications || "";
         certInput.disabled = false;
 
         // Business fields
-        if (profile.user_type === 'business') {
+        if (effectiveProfile.user_type === 'business') {
             document.getElementById('edit-biz-fields').classList.remove('hidden');
-            if (bizNameInput) bizNameInput.value = profile.company_name || "";
-            if (bizAddrInput) bizAddrInput.value = profile.company_address || "";
+            if (bizNameInput) bizNameInput.value = effectiveProfile.company_name || "";
+            if (bizAddrInput) bizAddrInput.value = effectiveProfile.company_address || "";
         } else {
             document.getElementById('edit-biz-fields').classList.add('hidden');
         }
