@@ -1899,10 +1899,13 @@ function getCurrencySymbol(country) {
 }
 
 async function signup() {
-    const email = document.getElementById('reg-email').value;
-    const password = document.getElementById('reg-password').value;
-    const confirm = document.getElementById('reg-confirm').value;
-    const name = document.getElementById('reg-name').value;
+    const email = (document.getElementById('reg-email')?.value || '').trim();
+    const password = document.getElementById('reg-password')?.value || '';
+    const confirm = document.getElementById('reg-confirm')?.value || '';
+    const name = (document.getElementById('reg-name')?.value || '').trim();
+    const surname = (document.getElementById('reg-surname')?.value || '').trim();
+    const city = (document.getElementById('reg-city')?.value || '').trim();
+    const zip = (document.getElementById('reg-zip')?.value || '').trim();
     const type = document.getElementById('reg-type').value;
 
     if (!email || !validateEmail(email)) {
@@ -1912,6 +1915,23 @@ async function signup() {
 
     if (!name || name.trim().length < 2) {
         showToast("⚠️ Inserisci il tuo nome", "warning");
+        return;
+    }
+
+    if (!surname || surname.length < 2) {
+        showToast("⚠️ Inserisci il tuo cognome", "warning");
+        return;
+    }
+
+    // Controllo città + CAP (devono essere coerenti: se uno è presente, anche l'altro)
+    if ((city && !zip) || (!city && zip)) {
+        showToast("⚠️ Inserisci sia la città che il CAP", "warning");
+        return;
+    }
+
+    // Validazione CAP: 5 cifre (Italia)
+    if (zip && !/^\d{5}$/.test(zip)) {
+        showToast("⚠️ CAP non valido (usa 5 cifre, es. 40121)", "warning");
         return;
     }
 
@@ -1946,7 +1966,7 @@ async function signup() {
         email: email,
         password: password,
         options: {
-            data: { display_name: name, user_type: type }
+            data: { display_name: name, user_type: type, full_name: `${name} ${surname}`.trim(), city: city, zip: zip }
         }
     });
 
@@ -1963,7 +1983,10 @@ async function signup() {
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('userData', JSON.stringify({
             name: name,
+            surname: surname,
             email: email,
+            city: city,
+            zip: zip,
             type: type
         }));
 
