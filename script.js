@@ -1322,11 +1322,10 @@ function syncMapMarkers(filteredAnnunci) {
             return name.substring(0, 2).toUpperCase();
         }
 
+        const hasPhoto = ann.user_avatar && ann.user_avatar.trim() !== '';
+
         // Crea HTML per il marker personalizzato
-        function createMarkerHTML(ann) {
-            const hasPhoto = ann.user_avatar && ann.user_avatar.trim() !== '';
-            const initials = getInitials(ann.author || 'Utente');
-            
+        function createMarkerHTML() {
             if (hasPhoto) {
                 return `
                     <div class="custom-user-marker">
@@ -1334,7 +1333,7 @@ function syncMapMarkers(filteredAnnunci) {
                              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                              style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                         <div class="marker-fallback" style="display:none;">
-                            ${initials}
+                            ${getInitials(ann.author || 'Utente')}
                         </div>
                         <div class="marker-border ${isPremium ? 'premium' : 'standard'}"></div>
                     </div>
@@ -1343,7 +1342,7 @@ function syncMapMarkers(filteredAnnunci) {
                 return `
                     <div class="custom-user-marker">
                         <div class="marker-fallback">
-                            ${initials}
+                            ${getInitials(ann.author || 'Utente')}
                         </div>
                         <div class="marker-border ${isPremium ? 'premium' : 'standard'}"></div>
                     </div>
@@ -1353,7 +1352,7 @@ function syncMapMarkers(filteredAnnunci) {
 
         // Marker personalizzato con foto profilo
         const customIcon = L.divIcon({
-            html: createMarkerHTML(ann),
+            html: createMarkerHTML(),
             className: 'custom-div-icon',
             iconSize: [45, 45],
             iconAnchor: [22.5, 45],
