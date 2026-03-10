@@ -1176,7 +1176,7 @@ async function renderBacheca() {
     // Non chiamare syncMapMarkers qui - verrà chiamata da initMap
 }
 
-function openAnnuncioDetails(annId) {
+async function openAnnuncioDetails(annId) {
     const ann = annunci.find(a => a.id === annId);
     if (!ann) return;
 
