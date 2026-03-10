@@ -918,6 +918,15 @@ function closeModal(modalId) {
     if (modal) modal.classList.add('hidden');
 }
 
+// Funzioni wrapper per compatibilità
+function openCreateModal() {
+    showModal('create-annuncio-modal');
+}
+
+function closeCreateModal() {
+    closeModal('create-annuncio-modal');
+}
+
 // Mappa
 function initMap() {
     const container = document.getElementById('map-content');
