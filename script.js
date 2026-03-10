@@ -1912,6 +1912,7 @@ async function signup() {
     const confirm = document.getElementById('reg-confirm')?.value || '';
     const name = (document.getElementById('reg-name')?.value || '').trim();
     const surname = (document.getElementById('reg-surname')?.value || '').trim();
+    const birth = (document.getElementById('reg-birth')?.value || '').trim();
     const city = (document.getElementById('reg-city')?.value || '').trim();
     const zip = (document.getElementById('reg-zip')?.value || '').trim();
     const type = document.getElementById('reg-type').value;
@@ -1928,6 +1929,25 @@ async function signup() {
 
     if (!surname || surname.length < 2) {
         showToast("⚠️ Inserisci il tuo cognome", "warning");
+        return;
+    }
+
+    // Data di nascita: minimo 14 anni
+    if (!birth) {
+        showToast("⚠️ Inserisci la tua data di nascita", "warning");
+        return;
+    }
+    const birthDate = new Date(birth);
+    if (Number.isNaN(birthDate.getTime())) {
+        showToast("⚠️ Data di nascita non valida", "warning");
+        return;
+    }
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+    if (age < 14) {
+        showToast("⚠️ Devi avere almeno 14 anni per registrarti", "warning");
         return;
     }
 
