@@ -1923,26 +1923,33 @@ function validateConfirmLive(value, password) {
 
 function validateSurnameLive(value) {
     if (!value) return null;
-    return value.trim().length >= 2 ? null : "Cognome troppo corto";
+    return value.trim().length >= 2 ? null : "Cognome troppo corto (minimo 2 caratteri)";
+}
+
+function validateCountryLive(value) {
+    if (!value) return null;
+    // Lista di paesi validi semplificata
+    const validCountries = ['italia', 'italy', 'francia', 'france', 'germania', 'germany', 'spagna', 'spain', 'regno unito', 'uk', 'united kingdom', 'svizzera', 'switzerland'];
+    return validCountries.includes(value.toLowerCase().trim()) ? null : `"${value}" non è un paese valido`;
 }
 
 function validateCityZipLive(city, zip) {
     const hasCity = city.trim().length > 0;
     const hasZip = zip.trim().length > 0;
     if ((hasCity && !hasZip) || (!hasCity && hasZip)) return "Inserisci sia città che CAP";
-    if (zip && !/^\d{5}$/.test(zip)) return "CAP non valido (5 cifre)";
+    if (zip && !/^\d{5}$/.test(zip)) return "CAP non valido (deve avere 5 cifre)";
     return null;
 }
 
 function validateBirthLive(value) {
     if (!value) return null;
     const birthDate = new Date(value);
-    if (Number.isNaN(birthDate.getTime())) return "Data non valida";
+    if (Number.isNaN(birthDate.getTime())) return "Data non valida (usa il formato GG/MM/AAAA)";
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-    return age >= 14 ? null : "Devi avere almeno 14 anni";
+    return age >= 14 ? null : `Devi avere almeno 14 anni (hai ${age} anni)`;
 }
 
 // Attach live validation listeners
@@ -1953,6 +1960,7 @@ function setupSignupLiveValidation() {
         { id: 'reg-password', validator: v => validatePasswordLive(v), event: 'input' },
         { id: 'reg-confirm', validator: v => validateConfirmLive(v, document.getElementById('reg-password')?.value || ''), event: 'input' },
         { id: 'reg-surname', validator: v => validateSurnameLive(v), event: 'blur' },
+        { id: 'reg-country', validator: v => validateCountryLive(v), event: 'blur' },
         { id: 'reg-city', validator: v => validateCityZipLive(v, document.getElementById('reg-zip')?.value || ''), event: 'blur' },
         { id: 'reg-zip', validator: v => validateCityZipLive(document.getElementById('reg-city')?.value || '', v), event: 'blur' },
         { id: 'reg-birth', validator: v => validateBirthLive(v), event: 'blur' }
