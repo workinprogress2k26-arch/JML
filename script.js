@@ -1311,13 +1311,23 @@ function confirmRevocation() {
 }
 
 function syncMapMarkers(filteredAnnunci) {
-    if (!map) return;
+    console.log("🗺️ syncMapMarkers chiamata con", filteredAnnunci.length, "annunci");
+    console.log("🗺️ Dati annunci:", filteredAnnunci);
+    console.log("🗺️ Mappa inizializzata:", !!map);
+    
+    if (!map) {
+        console.error("🗺️ ERRORE: Mappa non inizializzata!");
+        return;
+    }
 
     // Rimuovi marker esistenti
     markers.forEach(m => map.removeLayer(m));
     markers =[];
+    console.log("🗺️ Marker vecchi rimossi");
 
-    filteredAnnunci.forEach(ann => {
+    filteredAnnunci.forEach((ann, index) => {
+        console.log(`🗺️ Elaborando annuncio ${index + 1}:`, ann.title, "coord:", ann.lat, ann.lng);
+        
         const isPremium = ann.isPremium;
         const borderColor = isPremium ? '#dcaa25' : '#2C3E50'; // Premium = Oro, Base = Blu scuro elegante
 
@@ -1332,6 +1342,7 @@ function syncMapMarkers(filteredAnnunci) {
         }
 
         const hasPhoto = ann.authorAvatar && ann.authorAvatar.trim() !== '';
+        console.log(`🗺️ Annuncio ${ann.title} - hasPhoto:`, hasPhoto, "authorAvatar:", ann.authorAvatar);
 
         // Crea HTML per il marker personalizzato
         function createMarkerHTML() {
@@ -1401,14 +1412,21 @@ function syncMapMarkers(filteredAnnunci) {
             </div>
         `;
 
-        const marker = L.marker([ann.lat, ann.lng], { icon: customIcon }).addTo(map)
-            .bindPopup(popupContent, {
-                maxWidth: 280,
-                className: 'custom-leaflet-popup'
-            });
-        
-        markers.push(marker);
+        try {
+            const marker = L.marker([ann.lat, ann.lng], { icon: customIcon }).addTo(map)
+                .bindPopup(popupContent, {
+                    maxWidth: 280,
+                    className: 'custom-leaflet-popup'
+                });
+            
+            markers.push(marker);
+            console.log(`🗺️ ✅ Marker aggiunto per ${ann.title} a [${ann.lat}, ${ann.lng}]`);
+        } catch (error) {
+            console.error(`🗺️ ❌ Errore aggiungendo marker per ${ann.title}:`, error);
+        }
     });
+    
+    console.log(`🗺️ syncMapMarkers completata. Total marker: ${markers.length}`);
 }
 
 async function createAnnuncio() {
