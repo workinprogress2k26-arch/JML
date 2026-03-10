@@ -1947,6 +1947,7 @@ function validateBirthLive(value) {
 
 // Attach live validation listeners
 function setupSignupLiveValidation() {
+    console.log("🔧 setupSignupLiveValidation: inizio");
     const fields = [
         { id: 'reg-email', validator: v => validateEmailLive(v), event: 'blur' },
         { id: 'reg-password', validator: v => validatePasswordLive(v), event: 'input' },
@@ -1959,14 +1960,20 @@ function setupSignupLiveValidation() {
 
     fields.forEach(({ id, validator, event }) => {
         const el = document.getElementById(id);
-        if (!el) return;
+        if (!el) {
+            console.warn(`⚠️ Campo non trovato: ${id}`);
+            return;
+        }
+        console.log(`✅ Listener attached: ${id} (${event})`);
         el.addEventListener(event, () => {
             const err = validator(el.value);
+            console.log(`🔍 Live validation ${id}: value="${el.value}" err=${err}`);
             if (err) {
                 showToast("⚠️ " + err, "warning");
             }
         });
     });
+    console.log("🔧 setupSignupLiveValidation: fine");
 }
 
 function getCurrencySymbol(country) {
