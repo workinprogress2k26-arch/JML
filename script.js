@@ -1331,14 +1331,14 @@ function syncMapMarkers(filteredAnnunci) {
             return name.substring(0, 2).toUpperCase();
         }
 
-        const hasPhoto = ann.user_avatar && ann.user_avatar.trim() !== '';
+        const hasPhoto = ann.authorAvatar && ann.authorAvatar.trim() !== '';
 
         // Crea HTML per il marker personalizzato
         function createMarkerHTML() {
             if (hasPhoto) {
                 return `
                     <div class="custom-user-marker">
-                        <img src="${ann.user_avatar}" alt="${ann.author}" 
+                        <img src="${ann.authorAvatar}" alt="${ann.author}" 
                              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                              style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                         <div class="marker-fallback" style="display:none;">
@@ -1374,7 +1374,7 @@ function syncMapMarkers(filteredAnnunci) {
                 <div class="popup-header">
                     <div class="popup-user-info">
                         ${hasPhoto ? 
-                            `<img src="${ann.user_avatar}" alt="${ann.author}" class="popup-avatar">` :
+                            `<img src="${ann.authorAvatar}" alt="${ann.author}" class="popup-avatar">` :
                             `<div class="popup-avatar-fallback">${getInitials(ann.author || 'Utente')}</div>`
                         }
                         <div class="popup-user-details">
@@ -1410,7 +1410,6 @@ function syncMapMarkers(filteredAnnunci) {
         markers.push(marker);
     });
 }
-
 
 async function createAnnuncio() {
     const btn = document.getElementById('create-annuncio-submit');
