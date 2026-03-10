@@ -1896,6 +1896,12 @@ html.auth-mode {
 }
 
 /* --- MARKER PERSONALIZZATI CON FOTO PROFILO --- */
+.custom-div-icon {
+    background: transparent !important;
+    border: none !important;
+    z-index: 1000 !important;
+}
+
 .custom-user-marker {
     width: 45px;
     height: 45px;
@@ -1904,6 +1910,9 @@ html.auth-mode {
     overflow: hidden;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     transition: transform 0.2s ease;
+    background: white !important;
+    display: block !important;
+    visibility: visible !important;
 }
 
 .custom-user-marker:hover {

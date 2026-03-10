@@ -963,6 +963,11 @@ function initMap() {
         // IMPORTANT: Chiama syncMapMarkers SOLO dopo che la mappa è completamente inizializzata
         console.log(" Mappa inizializzata con successo, chiamo syncMapMarkers");
         syncMapMarkers(annunci);
+        
+        // Aggiungi un marker di test per verificare che funziona
+        const testMarker = L.marker([44.4949, 11.3426]).addTo(map)
+            .bindPopup("🗺️ MARKER DI TEST - Se vedi questo, i marker funzionano!");
+        console.log("🗺️ Marker di test aggiunto");
     }, 100);
 }
 
