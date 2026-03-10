@@ -1403,6 +1403,7 @@ function syncMapMarkers(filteredAnnunci) {
     });
 }
 
+
 async function createAnnuncio() {
     const btn = document.getElementById('create-annuncio-submit');
     const title = document.getElementById('ann-title').value.trim();
