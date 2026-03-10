@@ -3896,15 +3896,15 @@ html.auth-mode {
 
 .custom-leaflet-popup .leaflet-popup-content-wrapper {
 
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(13, 14, 20, 0.95) !important;
 
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(15px) !important;
 
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(220, 170, 37, 0.6) !important;
 
-    border-radius: 16px;
+    border-radius: 16px !important;
 
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
 
 }
 
@@ -3912,9 +3912,9 @@ html.auth-mode {
 
 .custom-leaflet-popup .leaflet-popup-tip {
 
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(13, 14, 20, 0.95) !important;
 
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(15px) !important;
 
 }
 
@@ -3931,6 +3931,8 @@ html.auth-mode {
     border-radius: 16px;
 
     overflow: hidden;
+
+    background: transparent !important;
 
 }
 
