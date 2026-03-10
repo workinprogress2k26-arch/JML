@@ -530,6 +530,8 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("App avviata...");
     // Avvio delle funzioni principali
     try {
+        initSupabase();
+        setupSignupLiveValidation();
         if (typeof checkLoginStatus === 'function') checkLoginStatus();
         else console.error("Errore: la funzione checkLoginStatus non è stata trovata!");
 
@@ -1965,13 +1967,9 @@ function setupSignupLiveValidation() {
     });
 }
 
-// Call when DOM is ready
-document.addEventListener('DOMContentLoaded', setupSignupLiveValidation);
-
 function getCurrencySymbol(country) {
     const c = country.toLowerCase().trim();
     if (c === 'italia' || c === 'italy' || c === 'germania' || c === 'francia' || c === 'spagna' || c === 'europa') return '€';
-    if (c === 'usa' || c === 'stati uniti' || c === 'america' || c === 'canada') return '$';
     if (c === 'uk' || c === 'regno unito' || c === 'inghilterra') return '£';
     if (c === 'giappone' || c === 'japan' || c === 'cina' || c === 'china') return '¥';
     if (c === 'svizzera' || c === 'switzerland') return 'CHF';
