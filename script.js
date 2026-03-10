@@ -15,6 +15,10 @@ function getRuntimeSupabaseConfig() {
 }
 
 function initSupabase() {
+    if (supabaseClient) {
+        console.log('ℹ️ Supabase client già inizializzato, skip.');
+        return supabaseAvailable;
+    }
     if (!window.supabase) {
         console.error('❌ Supabase library non caricata. Verifica che supabase-js sia incluso in index.html');
         return false;
@@ -164,12 +168,10 @@ window.addEventListener('error', (ev) => {
 // Initialize on page load
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        initSupabase();
         // Auto-check login status after OAuth redirect (e.g., after Google login)
         setTimeout(() => checkAutoLoginAfterRedirect(), 300);
     });
 } else {
-    initSupabase();
     setTimeout(() => checkAutoLoginAfterRedirect(), 300);
 }
 
