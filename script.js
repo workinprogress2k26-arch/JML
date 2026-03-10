@@ -955,6 +955,8 @@ function initMap() {
                 console.warn('Tile error:', error);
                 // Mostra un messaggio utente leggibile solo la prima volta
                 showToast('Problema rete: impossibile caricare alcune tessere della mappa. Verifica la tua connessione o riprova più tardi.', 'warning');
+            });
+        
         // Forza il ricalcolo finale
         map.invalidateSize();
         
