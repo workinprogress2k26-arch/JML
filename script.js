@@ -1896,6 +1896,78 @@ function validateEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+// Live validation helpers
+function validateEmailLive(value) {
+    if (!value) return null;
+    return validateEmail(value) ? null : "Email non valida";
+}
+
+function validatePasswordLive(value) {
+    if (!value) return null;
+    const issues = [];
+    if (value.length < 8) issues.push("almeno 8 caratteri");
+    if (!/[A-Z]/.test(value)) issues.push("una maiuscola");
+    if (!/\d/.test(value)) issues.push("un numero");
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(value)) issues.push("un carattere speciale");
+    return issues.length ? "Password: " + issues.join(", ") : null;
+}
+
+function validateConfirmLive(value, password) {
+    if (!value) return null;
+    return value === password ? null : "Le password non coincidono";
+}
+
+function validateSurnameLive(value) {
+    if (!value) return null;
+    return value.trim().length >= 2 ? null : "Cognome troppo corto";
+}
+
+function validateCityZipLive(city, zip) {
+    const hasCity = city.trim().length > 0;
+    const hasZip = zip.trim().length > 0;
+    if ((hasCity && !hasZip) || (!hasCity && hasZip)) return "Inserisci sia città che CAP";
+    if (zip && !/^\d{5}$/.test(zip)) return "CAP non valido (5 cifre)";
+    return null;
+}
+
+function validateBirthLive(value) {
+    if (!value) return null;
+    const birthDate = new Date(value);
+    if (Number.isNaN(birthDate.getTime())) return "Data non valida";
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+    return age >= 14 ? null : "Devi avere almeno 14 anni";
+}
+
+// Attach live validation listeners
+function setupSignupLiveValidation() {
+    const fields = [
+        { id: 'reg-email', validator: v => validateEmailLive(v), event: 'blur' },
+        { id: 'reg-password', validator: v => validatePasswordLive(v), event: 'input' },
+        { id: 'reg-confirm', validator: v => validateConfirmLive(v, document.getElementById('reg-password')?.value || ''), event: 'input' },
+        { id: 'reg-surname', validator: v => validateSurnameLive(v), event: 'blur' },
+        { id: 'reg-city', validator: v => validateCityZipLive(v, document.getElementById('reg-zip')?.value || ''), event: 'blur' },
+        { id: 'reg-zip', validator: v => validateCityZipLive(document.getElementById('reg-city')?.value || '', v), event: 'blur' },
+        { id: 'reg-birth', validator: v => validateBirthLive(v), event: 'blur' }
+    ];
+
+    fields.forEach(({ id, validator, event }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener(event, () => {
+            const err = validator(el.value);
+            if (err) {
+                showToast("⚠️ " + err, "warning");
+            }
+        });
+    });
+}
+
+// Call when DOM is ready
+document.addEventListener('DOMContentLoaded', setupSignupLiveValidation);
+
 function getCurrencySymbol(country) {
     const c = country.toLowerCase().trim();
     if (c === 'italia' || c === 'italy' || c === 'germania' || c === 'francia' || c === 'spagna' || c === 'europa') return '€';
