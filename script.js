@@ -716,32 +716,32 @@ function updateSidebar() {
     document.getElementById('frozen-balance').textContent = `${userData.currency || '€'} ${frozenBalance.toFixed(2)}`;
 }
 
-// Google Authentication
-function initGoogleAuth() {
-    if (typeof google === 'undefined') return;
-    google.accounts.id.initialize({
-        client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com", // Sostituire con ID reale
-        callback: handleGoogleLogin
-    });
-    google.accounts.id.renderButton(
-        document.getElementById("google-login-btn"),
-        { theme: "outline", size: "large", width: "100%" }
-    );
-}
-
-function handleGoogleLogin(response) {
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-    const userData = {
-        name: payload.given_name,
-        surname: payload.family_name,
-        email: payload.email,
-        avatar: payload.picture,
-        type: 'private'
-    };
-    localStorage.setItem('userData', JSON.stringify(userData));
-    localStorage.setItem('isLoggedIn', 'true');
-    checkLoginStatus();
-}
+// Google Authentication (LEGACY - non usare)
+// function initGoogleAuth() {
+//     if (typeof google === 'undefined') return;
+//     google.accounts.id.initialize({
+//         client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com", // Sostituire con ID reale
+//         callback: handleGoogleLogin
+//     });
+//     google.accounts.id.renderButton(
+//         document.getElementById("google-login-btn"),
+//         { theme: "outline", size: "large", width: "100%" }
+//     );
+// }
+//
+// function handleGoogleLogin(response) {
+//     const payload = JSON.parse(atob(response.credential.split('.')[1]));
+//     const userData = {
+//         name: payload.given_name,
+//         surname: payload.family_name,
+//         email: payload.email,
+//         avatar: payload.picture,
+//         type: 'private'
+//     };
+//     localStorage.setItem('userData', JSON.stringify(userData));
+//     localStorage.setItem('isLoggedIn', 'true');
+//     checkLoginStatus();
+// }
 
 // 1. LOGIN CON INDIRIZZO FISSO (Come richiesto)
 async function loginWithGoogle() {
