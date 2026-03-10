@@ -1585,17 +1585,23 @@ html.auth-mode {
     z-index: 10000;
     position: fixed;
     inset: 0;
-    overflow: hidden !important;
+    /* SBLOCCA LO SCORRIMENTO VERTICALE */
+    overflow-y: auto !important; 
     overflow-x: hidden !important;
-    overflow-y: hidden !important;
+    display: flex;
+    /* Allinea all'inizio per evitare che la parte in alto venga tagliata */
+    align-items: flex-start; 
+    justify-content: center;
+    padding: 2rem 1rem;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
 /* hide scrollbar inside auth-view just in case */
 #auth-view::-webkit-scrollbar {
-    display: none !important;
-    width: 0 !important;
-    height: 0 !important;
+    display: none;
 }
+
 
 #auth-view::-webkit-scrollbar-track {
     display: none !important;
@@ -1612,9 +1618,14 @@ html.auth-mode {
 
 /* ensure authentication card never forces page scroll */
 .auth-card {
-    max-height: 90vh !important;
-    overflow-y: auto !important;
-    margin: auto !important;
+    width: 100%;
+    max-width: 450px;
+    padding: 2rem !important;
+    margin: auto !important; /* Mantiene la card centrata se lo schermo è alto */
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
 }
 
 /* Messaggio dell'IA quando blocca un contenuto offensivo o illegale */
