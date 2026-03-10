@@ -949,7 +949,7 @@ function initMap() {
         }).setView([44.4949, 11.3426], 13);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
+            attribution: ' OpenStreetMap'
             }).addTo(map)
             .on('tileerror', function (error, tile) {
                 console.warn('Tile error:', error);
@@ -957,10 +957,12 @@ function initMap() {
                 showToast('Problema rete: impossibile caricare alcune tessere della mappa. Verifica la tua connessione o riprova più tardi.', 'warning');
             });
 
-        syncMapMarkers(annunci);
-
         // Forza il ricalcolo finale
         map.invalidateSize();
+        
+        // IMPORTANT: Chiama syncMapMarkers SOLO dopo che la mappa è completamente inizializzata
+        console.log(" Mappa inizializzata con successo, chiamo syncMapMarkers");
+        syncMapMarkers(annunci);
     }, 100);
 }
 
@@ -1017,7 +1019,7 @@ async function renderBacheca() {
         grid.innerHTML = '<div style="grid-column: 1/-1; padding:3rem; color:var(--text-dim); text-align:center; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed var(--border);">' +
             '<h3>Nessun annuncio trovato</h3>' +
             '<p>Prova a cambiare i filtri o scrivi un comando a Worky-AI</p></div>';
-        syncMapMarkers(filtered);
+        // Non chiamare syncMapMarkers qui - verrà chiamata da initMap
         return;
     }
 
@@ -1079,7 +1081,6 @@ async function renderBacheca() {
         grid.appendChild(card);
     });
 
-    syncMapMarkers(filtered);
 }
 
 async function openAnnuncioDetails(annId) {
