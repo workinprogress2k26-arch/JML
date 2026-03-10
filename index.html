@@ -90,13 +90,14 @@
 
       <div id="login-form">
         <div class="input-group">
-          <label>Email</label>
+          <label for="email-login">Email</label>
           <input type="email" id="email-login" placeholder="mario@esempio.it" autocomplete="email">
         </div>
         <div class="input-group">
-          <label>Password</label>
+          <label for="password-login">Password</label>
           <input type="password" id="password-login" placeholder="••••••••" autocomplete="current-password">
         </div>
+
         <button class="btn-primary" id="btn-login-submit">Accedi</button>
         <div style="margin: 1.5rem 0; display: flex; align-items: center; gap: 1rem; color: var(--text-dim);">
           <hr style="flex-grow: 1; border: 1px solid var(--border);"> O
@@ -104,63 +105,64 @@
         </div>
         <!-- Pulsante Google personalizzato -->
         <button class="btn-primary" id="btn-google-login"
-  style="background: white; color: #000; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 1rem; border: none;">
-  <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" width="20" alt="Google">
-  Accedi con Google
-</button>
+          style="background: white; color: #000; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 1rem; border: none;">
+          <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" width="20" alt="Google">
+          Accedi con Google
+        </button>
       </div>
 
       <div id="signup-form" class="hidden">
         <div class="grid-2-col">
           <div class="input-group">
-            <label>Nome</label>
+            <label for="reg-name">Nome</label>
             <input type="text" id="reg-name" placeholder="Mario">
           </div>
           <div class="input-group">
-            <label>Cognome</label>
+            <label for="reg-surname">Cognome</label>
             <input type="text" id="reg-surname" placeholder="Rossi">
           </div>
         </div>
         <div class="input-group">
-          <label>Email</label>
+          <label for="reg-email">Email</label>
           <input type="email" id="reg-email" placeholder="mario@esempio.it" autocomplete="email">
         </div>
         <div class="grid-2-col">
           <div class="input-group">
-            <label>Password</label>
+            <label for="reg-password">Password</label>
             <input type="password" id="reg-password" placeholder="••••••••" autocomplete="new-password">
           </div>
           <div class="input-group">
-            <label>Conferma Password</label>
+            <label for="reg-confirm">Conferma Password</label>
             <input type="password" id="reg-confirm" placeholder="••••••••" autocomplete="new-password">
           </div>
         </div>
+
         <div class="grid-2-col">
           <div class="input-group">
-            <label>Carta d'Identità</label>
+            <label for="reg-id">Carta d'Identità</label>
             <input type="text" id="reg-id" placeholder="AB12345CD">
           </div>
           <div class="input-group">
-            <label>Data di Nascita</label>
+            <label for="reg-birth">Data di Nascita</label>
             <input type="date" id="reg-birth">
           </div>
         </div>
         <div class="grid-2-col">
           <div class="input-group">
-            <label>Città</label>
+            <label for="reg-city">Città</label>
             <input type="text" id="reg-city" placeholder="Bologna">
           </div>
           <div class="input-group">
-            <label>Paese</label>
+            <label for="reg-country">Paese</label>
             <input type="text" id="reg-country" placeholder="Italia">
           </div>
         </div>
         <div class="input-group">
-          <label>CAP</label>
+          <label for="reg-zip">CAP</label>
           <input type="text" id="reg-zip" placeholder="40121">
         </div>
         <div class="input-group">
-          <label>Tipo Account</label>
+          <label for="reg-type">Tipo Account</label>
           <select id="reg-type" onchange="toggleCompanyFields()"
             style="width: 100%; padding: 0.8rem; border-radius: 8px; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--border);">
             <option value="private">Profilo Privato (Lavoratore)</option>
@@ -171,11 +173,11 @@
         <!-- CAMPI EXTRA AZIENDA (Mostrati solo se Tipo Account = Profilo Azienda) -->
         <div id="company-extra-fields" class="hidden">
           <div class="input-group">
-            <label>Nome Azienda</label>
+            <label for="reg-company-name">Nome Azienda</label>
             <input type="text" id="reg-company-name" placeholder="Es. Worky Solutions Srl">
           </div>
           <div class="input-group">
-            <label>Via dell'Azienda</label>
+            <label for="reg-company-address">Via dell'Azienda</label>
             <input type="text" id="reg-company-address" placeholder="Via, Città, Civico">
           </div>
         </div>
@@ -194,26 +196,26 @@
         <span>🚀</span> WIP Premium
       </div>
       <ul class="nav-links">
-    <li class="nav-item active" data-section="bacheca-section">
-        <span>📋</span> Bacheca Annunci
-    </li>
-    <li class="nav-item" data-section="map-section">
-        <span>📍</span> Mappa Lavori
-    </li>
-    <li class="nav-item" data-section="contracts-section">
-        <span>🤝</span> Messaggi Aziende
-    </li>
-    <li class="nav-item" data-section="profile-section">
-        <span>👤</span> Mio Profilo
-    </li>
-    <li class="nav-item" data-section="subscriptions-section">
-        <span>💎</span> Worky Academy
-    </li>
-    <!-- Sezione Business (se presente) -->
-    <li id="nav-business-dashboard" class="nav-item hidden" data-section="business-section">
-        <span>📊</span> Statistiche Business
-    </li>
-</ul>
+        <li class="nav-item active" data-section="bacheca-section">
+          <span>📋</span> Bacheca Annunci
+        </li>
+        <li class="nav-item" data-section="map-section">
+          <span>📍</span> Mappa Lavori
+        </li>
+        <li class="nav-item" data-section="contracts-section">
+          <span>🤝</span> Messaggi Aziende
+        </li>
+        <li class="nav-item" data-section="profile-section">
+          <span>👤</span> Mio Profilo
+        </li>
+        <li class="nav-item" data-section="subscriptions-section">
+          <span>💎</span> Worky Academy
+        </li>
+        <!-- Sezione Business (se presente) -->
+        <li id="nav-business-dashboard" class="nav-item hidden" data-section="business-section">
+          <span>📊</span> Statistiche Business
+        </li>
+      </ul>
       <div class="user-profile">
         <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100"
           id="user-avatar" alt="Avatar">
@@ -364,7 +366,7 @@
               onchange="handleAvatarUpload(this)">
           </div>
 
-           <button class="btn-primary" style="background: transparent; border: 1px solid var(--primary); color: var(--primary); width: auto; padding: 0.5rem 1.5rem; font-size: 0.9rem;" onclick="document.getElementById('review-switcher').scrollIntoView({behavior: 'smooth'})">
+          <button class="btn-primary" style="background: transparent; border: 1px solid var(--primary); color: var(--primary); width: auto; padding: 0.5rem 1.5rem; font-size: 0.9rem;" onclick="document.getElementById('review-switcher').scrollIntoView({behavior: 'smooth'})">
             ⭐ Vedi le mie recensioni
           </button>
 
@@ -527,14 +529,15 @@
           <p style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 1.5rem;">Segnala l'accaduto per annullare
             il lavoro.</p>
           <div class="input-group">
-            <label>Titolo Segnalazione</label>
+            <label for="revoke-title">Titolo Segnalazione</label>
             <input type="text" id="revoke-title" placeholder="Es. Emergenza familiare, Problema tecnico...">
           </div>
           <div class="input-group">
-            <label>Descrizione Dettagliata</label>
+            <label for="revoke-desc">Descrizione Dettagliata</label>
             <textarea id="revoke-desc" style="height: 100px;"
               placeholder="Spiega brevemente cosa è successo..."></textarea>
           </div>
+
           <div class="modal-buttons" style="display:flex; gap:1rem; margin-top:2rem;">
             <button class="btn-primary" style="background:var(--text-dim);"
               onclick="closeRevokeModal()">Annulla</button>
@@ -549,11 +552,11 @@
         <div class="modal-content glass" style="max-width: 500px; margin: 50px auto; padding: 2rem;">
           <h2>Nuovo Annuncio</h2>
           <div class="input-group">
-            <label>Titolo</label>
+            <label for="ann-title">Titolo</label>
             <input type="text" id="ann-title" placeholder="Es. Programmatore Java">
           </div>
           <div class="input-group">
-            <label>Categoria</label>
+            <label for="ann-category">Categoria</label>
             <select id="ann-category" onchange="handleCategoryChange()">
               <option value="tecnologia">Tecnologia</option>
               <option value="ristorazione">Ristorazione</option>
@@ -562,34 +565,35 @@
             </select>
           </div>
           <div id="other-category-container" class="input-group hidden">
-            <label>Specifica Altrol Lavoro</label>
+            <label for="ann-other-category">Specifica Altrol Lavoro</label>
             <div style="display:flex; align-items:center; gap:0.5rem;">
               <span style="font-size:1.5rem;">📝</span>
               <input type="text" id="ann-other-category" placeholder="Cosa devi far fare?">
             </div>
           </div>
           <div class="input-group">
-            <label>Descrizione</label>
+            <label for="ann-desc">Descrizione</label>
             <textarea id="ann-desc" style="height: 100px;"></textarea>
           </div>
           <div class="input-group">
-            <label>Città</label>
+            <label for="ann-city">Città</label>
             <input type="text" id="ann-city" placeholder="Es. Bologna, Milano, Online...">
           </div>
           <div class="input-group">
-            <label>Indirizzo (Via e Numero)</label>
+            <label for="ann-address">Indirizzo (Via e Numero)</label>
             <input type="text" id="ann-address" placeholder="Es. Via dell'Indipendenza 1, Bologna">
           </div>
           <div class="input-group">
-            <label>Foto Annuncio</label>
+            <label for="ann-image">Foto Annuncio</label>
             <input type="file" id="ann-image" accept="image/*" style="padding: 0.5rem;">
           </div>
           <div class="input-group">
-            <label>Compenso</label>
+            <label for="ann-salary">Compenso</label>
             <div style="display: flex; gap: 0.5rem;">
               <!-- Aggiunto oninput -->
               <input type="number" id="ann-salary" step="0.01" placeholder="Es. 15.00" style="flex: 2;"
                 oninput="updatePricePreview()">
+
               <select id="ann-time-unit" style="flex: 1;" onchange="updatePricePreview()">
                 <option value="ora">/ ora</option>
                 <option value="minuto">/ minuto</option>
@@ -601,7 +605,7 @@
 
           <!-- AGGIUNGI QUESTO BLOCCO SUBITO SOTTO -->
           <div class="input-group">
-            <label>Durata (Quantità)</label>
+            <label for="ann-duration">Durata (Quantità)</label>
             <input type="number" id="ann-duration" value="1" min="1" placeholder="Quante ore/giorni?"
               oninput="updatePricePreview()">
 
@@ -756,31 +760,31 @@
         <div class="modal-content glass" style="max-width: 500px; margin: 50px auto; padding: 2.5rem;">
           <h2 style="margin-bottom: 2rem;">Modifica Tuoi Dati</h2>
           <div class="input-group">
-            <label>Nome</label>
+            <label for="edit-name">Nome</label>
             <input type="text" id="edit-name">
           </div>
           <div class="input-group">
-            <label>Cognome</label>
+            <label for="edit-surname">Cognome</label>
             <input type="text" id="edit-surname">
           </div>
           <div class="input-group">
-            <label>Città</label>
+            <label for="edit-city">Città</label>
             <input type="text" id="edit-city">
           </div>
 
           <div class="input-group">
-            <label>Nuova Password (Lascia vuoto per non cambiare)</label>
+            <label for="edit-password">Nuova Password (Lascia vuoto per non cambiare)</label>
             <input type="password" id="edit-password" placeholder="••••••••">
           </div>
 
           <div class="input-group">
-            <label>Curriculum / Esperienze</label>
+            <label for="edit-cv">Curriculum / Esperienze</label>
             <textarea id="edit-cv" placeholder="Descrivi il tuo percorso lavorativo..."
               style="height: 100px;"></textarea>
           </div>
 
           <div class="input-group">
-            <label>Certificazioni / Abilità</label>
+            <label for="edit-certifications">Certificazioni / Abilità</label>
             <textarea id="edit-certifications" placeholder="Elenca le tue certificazioni e competenze..."
               style="height: 80px;"></textarea>
           </div>
@@ -788,31 +792,30 @@
           <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
             <h4 style="margin-bottom: 1rem;">Link Social</h4>
             <div class="input-group">
-              <label>Instagram (URL)</label>
+              <label for="edit-instagram">Instagram (URL)</label>
               <input type="url" id="edit-instagram" placeholder="https://instagram.com/tuonome">
             </div>
             <div class="input-group">
-              <label>X (ex Twitter - URL)</label>
+              <label for="edit-x">X (ex Twitter - URL)</label>
               <input type="url" id="edit-x" placeholder="https://x.com/tuonome">
             </div>
             <div class="input-group">
-              <label>Facebook (URL)</label>
+              <label for="edit-facebook">Facebook (URL)</label>
               <input type="url" id="edit-facebook" placeholder="https://facebook.com/tuonome">
             </div>
             <div class="input-group">
-              <label>Pinterest (URL)</label>
+              <label for="edit-pinterest">Pinterest (URL)</label>
               <input type="url" id="edit-pinterest" placeholder="https://pinterest.com/tuonome">
             </div>
           </div>
 
-
           <div id="edit-biz-fields" class="hidden">
             <div class="input-group">
-              <label>Nome Azienda</label>
+              <label for="edit-company-name">Nome Azienda</label>
               <input type="text" id="edit-company-name">
             </div>
             <div class="input-group">
-              <label>Indirizzo Azienda</label>
+              <label for="edit-company-address">Indirizzo Azienda</label>
               <input type="text" id="edit-company-address">
             </div>
           </div>
@@ -833,7 +836,7 @@
             lavoratore.</p>
 
           <div class="input-group">
-            <label>Motivo della Segnalazione</label>
+            <label for="report-reason">Motivo della Segnalazione</label>
             <select id="report-reason"
               style="width: 100%; padding: 0.8rem; border-radius: 8px; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--border);">
               <option value="absence">Lavoratore non si è presentato</option>
@@ -845,7 +848,7 @@
           </div>
 
           <div class="input-group">
-            <label>Dettagli aggiuntivi</label>
+            <label for="report-details">Dettagli aggiuntivi</label>
             <textarea id="report-details" style="height: 100px;"
               placeholder="Descrivi brevemente cosa è successo..."></textarea>
           </div>
@@ -875,6 +878,7 @@
           </div>
 
           <div class="input-group">
+            <label for="review-text" class="hidden">Recensione</label>
             <textarea id="review-text" placeholder="Scrivi un breve commento..." style="height: 100px;"></textarea>
           </div>
 

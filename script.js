@@ -36,7 +36,24 @@ function initSupabase() {
     }
     try {
         supabaseClient = window.supabase.createClient(cfg.url, cfg.anon);
-    console.log('✅ Supabase inizializzato correttamente');
+        console.log('✅ Supabase inizializzato correttamente');
+
+        // Pulisce l'URL da #access_token dopo OAuth (Supabase legge prima i parametri, poi noi ripuliamo)
+        try {
+            if (window.location.hash && window.location.hash.includes('access_token')) {
+                setTimeout(() => {
+                    try {
+                        const cleanUrl = window.location.pathname + window.location.search;
+                        window.history.replaceState(null, document.title, cleanUrl);
+                    } catch (e) {
+                        // ignore
+                    }
+                }, 800);
+            }
+        } catch (e) {
+            // ignore
+        }
+
         // Quick authorization smoke-test to detect 403/406 early and give actionable advice
         (async () => {
             try {
@@ -60,8 +77,8 @@ function initSupabase() {
                 showBanner('Impossibile contattare Supabase. Alcune funzioni potrebbero non funzionare.', 'supabase-banner');
             }
         })();
-    return true;
-        } catch (err) {
+        return true;
+    } catch (err) {
         console.error('❌ Errore caricamento Supabase:', err);
         supabaseAvailable = false;
         showBanner('Errore inizializzazione Supabase. Controlla la connessione e le chiavi.', 'supabase-banner');
@@ -93,28 +110,28 @@ window.addEventListener('error', (ev) => {
 
 // Initialize on page load
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    initSupabase();
-    // Auto-check login status after OAuth redirect (e.g., after Google login)
-    setTimeout(() => checkAutoLoginAfterRedirect(), 300);
-  });
+    document.addEventListener('DOMContentLoaded', () => {
+        initSupabase();
+        // Auto-check login status after OAuth redirect (e.g., after Google login)
+        setTimeout(() => checkAutoLoginAfterRedirect(), 300);
+    });
 } else {
-  initSupabase();
-  setTimeout(() => checkAutoLoginAfterRedirect(), 300);
+    initSupabase();
+    setTimeout(() => checkAutoLoginAfterRedirect(), 300);
 }
 
 // Controlla se l'utente è autenticato dopo un redirect OAuth (es. da Google)
 async function checkAutoLoginAfterRedirect() {
-  if (!supabaseClient) return;
-  try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (session) {
-      console.log('✅ Utente autenticato rilevato dopo redirect OAuth, caricamento profilo...');
-      checkLoginStatus();
+    if (!supabaseClient) return;
+    try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+            console.log('✅ Utente autenticato rilevato dopo redirect OAuth, caricamento profilo...');
+            checkLoginStatus();
+        }
+    } catch (err) {
+        console.warn('checkAutoLoginAfterRedirect errore:', err);
     }
-  } catch (err) {
-    console.warn('checkAutoLoginAfterRedirect errore:', err);
-  }
 }
 
 // --- 2. VARIABILI GLOBALI (Caricate da Supabase) ---
@@ -160,7 +177,7 @@ function showToast(message, type = 'info') {
     }, 5000);
 }
 
-
+// --- SISTEMA BANNER ---
 function showBanner(message, id) {
     if (!id) return;
     let b = document.getElementById(id);
@@ -455,7 +472,6 @@ async function renderTransactions() {
     }
 }
 
-
 // --- 3. INIZIALIZZAZIONE ALL'AVVIO ---
 // --- 3. INIZIALIZZAZIONE ALL'AVVIO ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -532,31 +548,31 @@ async function checkLoginStatus() {
             }
 
             // ... dentro checkLoginStatus ...
-if (profile) {
-    // Carichiamo i saldi
-    userBalance = parseFloat(profile.balance) || 0;
-    frozenBalance = parseFloat(profile.frozen_balance) || 0;
+            if (profile) {
+                // Carichiamo i saldi
+                userBalance = parseFloat(profile.balance) || 0;
+                frozenBalance = parseFloat(profile.frozen_balance) || 0;
 
-    // --- NUOVA PARTE: Caricamento contratti dal DB ---
-    const { data: contracts } = await supabaseClient
-        .from('contracts')
-        .select('job_id')
-        .eq('worker_id', user.id)
-        .eq('status', 'active');
+                // --- NUOVA PARTE: Caricamento contratti dal DB ---
+                const { data: contracts } = await supabaseClient
+                    .from('contracts')
+                    .select('job_id')
+                    .eq('worker_id', user.id)
+                    .eq('status', 'active');
 
-    if (contracts) {
-        // Popoliamo l'array globale con gli ID dei lavori accettati
-        acceptedContracts = contracts.map(c => c.job_id);
-    }
-    // ------------------------------------------------
-    
-    // Procedi con il resto della funzione
-    showView('app-view');
-    updateSidebar(); 
-    loadAnnouncementsFromDB();
-    renderUserProfile();
-    updateChatList(); // Aggiorna la lista chat basandosi sui contratti reali
-}
+                if (contracts) {
+                    // Popoliamo l'array globale con gli ID dei lavori accettati
+                    acceptedContracts = contracts.map(c => c.job_id);
+                }
+                // ------------------------------------------------
+                
+                // Procedi con il resto della funzione
+                showView('app-view');
+                updateSidebar(); 
+                loadAnnouncementsFromDB();
+                renderUserProfile();
+                updateChatList(); // Aggiorna la lista chat basandosi sui contratti reali
+            }
         } else {
             showView('auth-view');
         }
@@ -1244,7 +1260,7 @@ async function createAnnuncio() {
     }
 
     btn.disabled = true;
-    btn.textContent = "⌛ Caricamento in corso...";
+    btn.textContent = "Creazione in corso...";
 
     try {
         let finalImageUrl = "";
@@ -1286,7 +1302,13 @@ async function createAnnuncio() {
             arg_image_url: finalImageUrl // Qui salviamo solo il LINK (es. https://supabase.co/foto.jpg)
         });
 
-        if (dbError) throw dbError;
+        if (dbError) {
+            if (dbError.code === '409') {
+                showToast("Operazione già in corso o saldo insufficiente.", "warning");
+                return;
+            }
+            throw dbError;
+        }
 
         showToast("Annuncio pubblicato! 🚀", "success");
         closeCreateModal();
@@ -1294,6 +1316,10 @@ async function createAnnuncio() {
 
     } catch (err) {
         console.error(err);
+        if (err && err.code === '409') {
+            showToast("Operazione già in corso o saldo insufficiente.", "warning");
+            return;
+        }
         showToast("Errore durante la pubblicazione", "error");
     } finally {
         btn.disabled = false;
@@ -2052,19 +2078,25 @@ async function openEditAccountModal() {
         }
 
         // Recuperiamo il profilo
-        const { data: profile, error } = await supabaseClient
+        const { data, error } = await supabaseClient
             .from('profiles')
             .select('*')
-            .eq('id', user.id)
-            .single();
+            .eq('id', user.id);
 
-        if (error || !profile) {
-            console.error("Errore recupero profilo:", error);
-            showToast("Errore nel caricamento del profilo.", "error");
-            return;
+        const profile = (Array.isArray(data) && data.length > 0) ? data[0] : null;
+
+        if (error) {
+            console.warn("Errore recupero profilo:", error);
         }
 
+        // Fallback se il profilo non esiste ancora nel DB
         const metadata = user.user_metadata || {};
+        const fallbackProfile = {
+            display_name: metadata.full_name || user.email || '',
+            avatar_url: metadata.avatar_url || ''
+        };
+        const effectiveProfile = profile || fallbackProfile;
+
         const socials = metadata.socials || {};
 
         // Inizializzazione input
@@ -2083,7 +2115,7 @@ async function openEditAccountModal() {
         }
 
         // Popola i campi (Sbloccati per modifiche illimitate)
-        const nameParts = (profile.display_name || "").split(' ');
+        const nameParts = (effectiveProfile.display_name || "").split(' ');
         nameInput.value = nameParts[0] || "";
         surnameInput.value = nameParts.slice(1).join(' ') || "";
 
