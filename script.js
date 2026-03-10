@@ -829,8 +829,9 @@ async function loginWithGoogle() {
 // Geocoding (Nominatim API)
 async function getCoordinates(address) {
     try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
-        const data = await response.json();
+        // Prima prova con l'indirizzo completo
+        let response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
+        let data = await response.json();
         
         if (data && data.length > 0) {
             // Indirizzo trovato!
@@ -838,10 +839,42 @@ async function getCoordinates(address) {
                 lat: parseFloat(data[0].lat), 
                 lng: parseFloat(data[0].lon) 
             };
-        } else {
-            // Indirizzo NON trovato
-            return null; 
         }
+        
+        // Fallback: prova solo con la città se l'indirizzo completo non funziona
+        const addressParts = address.split(',');
+        if (addressParts.length > 1) {
+            const cityOnly = addressParts[addressParts.length - 1].trim();
+            console.log(`Indirizzo completo non trovato, provo con città: ${cityOnly}`);
+            
+            response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityOnly)}`);
+            data = await response.json();
+            
+            if (data && data.length > 0) {
+                return { 
+                    lat: parseFloat(data[0].lat), 
+                    lng: parseFloat(data[0].lon) 
+                };
+            }
+        }
+        
+        // Fallback finale: prova solo la prima parte dell'indirizzo
+        const firstPart = addressParts[0].trim();
+        console.log(`Provo con prima parte indirizzo: ${firstPart}`);
+        
+        response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(firstPart)}`);
+        data = await response.json();
+        
+        if (data && data.length > 0) {
+            return { 
+                lat: parseFloat(data[0].lat), 
+                lng: parseFloat(data[0].lon) 
+            };
+        }
+        
+        // Indirizzo NON trovato dopo tutti i tentativi
+        console.warn("Impossibile geocodificare l'indirizzo:", address);
+        return null; 
     } catch (e) { 
         console.error("Errore Geocoding:", e); 
         return null;
@@ -987,7 +1020,16 @@ async function renderBacheca() {
         const card = document.createElement('div');
         card.className = `annuncio-card glass ${isAccepted ? 'accepted' : ''}`;
         card.id = `annuncio-${ann.id}`;
-        card.onclick = () => openAnnuncioDetails(ann.id);
+        card.onclick = () => {
+            openAnnuncioDetails(ann.id);
+            // FlyTo animation per centrare la mappa sull'annuncio
+            if (map && ann.lat && ann.lng) {
+                map.flyTo([ann.lat, ann.lng], 15, {
+                    duration: 1.5,
+                    easeLinearity: 'linear'
+                });
+            }
+        };
 
         card.innerHTML = `
             ${ann.image ? `<img src="${ann.image}" class="annuncio-img">` : ''}
@@ -1255,11 +1297,9 @@ function confirmRevocation() {
     acceptedContracts = acceptedContracts.filter(cid => cid !== revokeAnnuncioId);
     localStorage.setItem('acceptedContracts', JSON.stringify(acceptedContracts));
 
-    alert(`Contratto revocato. I fondi sono stati riaccreditati.`);
-    closeModal('revoke-modal');
-    renderBacheca();
+    showToast("Contratto revocato. I fondi sono stati riaccreditati.", "success");
+    closeRevokeModal();
 }
-
 
 function syncMapMarkers(filteredAnnunci) {
     if (!map) return;
@@ -1270,33 +1310,98 @@ function syncMapMarkers(filteredAnnunci) {
 
     filteredAnnunci.forEach(ann => {
         const isPremium = ann.isPremium;
-        const markerColor = isPremium ? '#dcaa25' : '#2C3E50'; // Premium = Oro, Base = Blu scuro elegante
-        const iconEmoji = isPremium ? '💎' : '💼';
+        const borderColor = isPremium ? '#dcaa25' : '#2C3E50'; // Premium = Oro, Base = Blu scuro elegante
 
-        // Marker forma "Goccia" rovesciata (classico pin)
+        // Funzione helper per ottenere le iniziali del nome
+        function getInitials(name) {
+            if (!name) return 'UT';
+            const parts = name.trim().split(' ');
+            if (parts.length >= 2) {
+                return parts[0][0].toUpperCase() + parts[parts.length - 1][0].toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
+        }
+
+        // Crea HTML per il marker personalizzato
+        function createMarkerHTML(ann) {
+            const hasPhoto = ann.user_avatar && ann.user_avatar.trim() !== '';
+            const initials = getInitials(ann.author || 'Utente');
+            
+            if (hasPhoto) {
+                return `
+                    <div class="custom-user-marker">
+                        <img src="${ann.user_avatar}" alt="${ann.author}" 
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                             style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                        <div class="marker-fallback" style="display:none;">
+                            ${initials}
+                        </div>
+                        <div class="marker-border ${isPremium ? 'premium' : 'standard'}"></div>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="custom-user-marker">
+                        <div class="marker-fallback">
+                            ${initials}
+                        </div>
+                        <div class="marker-border ${isPremium ? 'premium' : 'standard'}"></div>
+                    </div>
+                `;
+            }
+        }
+
+        // Marker personalizzato con foto profilo
         const customIcon = L.divIcon({
-            html: `<div style="background:${markerColor}; width:35px; height:35px; border-radius:50% 50% 50% 0; transform: rotate(-45deg); display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow:0 4px 10px rgba(0,0,0,0.4); color:white;">
-                     <span style="transform: rotate(45deg); font-size:16px; margin-top:2px; margin-left:2px;">${iconEmoji}</span>
-                   </div>`,
+            html: createMarkerHTML(ann),
             className: 'custom-div-icon',
-            iconSize:[35, 35],
-            iconAnchor: [17, 35],
-            popupAnchor:[0, -35]
+            iconSize: [45, 45],
+            iconAnchor: [22.5, 45],
+            popupAnchor: [0, -45]
         });
 
-        const marker = L.marker([ann.lat, ann.lng], { icon: customIcon }).addTo(map)
-            .bindPopup(`
-                <div style="text-align: center; color: black; min-width:140px;">
-                    <strong style="color:${markerColor}; font-size:1.1rem;">${sanitizeInput(ann.title)}</strong><br>
-                    <span style="font-size:0.9rem; color:#555;">${sanitizeInput(ann.salary)}</span><br>
-                    <button class="btn-primary" style="margin-top:8px; padding:4px 10px; font-size:12px; width:100%; border-radius:6px;" onclick="openAnnuncioDetails(${ann.id})">Vedi Dettagli</button>
+        // Popup migliorato con stile Glassmorphism
+        const popupContent = `
+            <div class="custom-popup glass">
+                <div class="popup-header">
+                    <div class="popup-user-info">
+                        ${hasPhoto ? 
+                            `<img src="${ann.user_avatar}" alt="${ann.author}" class="popup-avatar">` :
+                            `<div class="popup-avatar-fallback">${getInitials(ann.author || 'Utente')}</div>`
+                        }
+                        <div class="popup-user-details">
+                            <h3 class="popup-title">${sanitizeInput(ann.title)}</h3>
+                            <p class="popup-author">${sanitizeInput(ann.author || 'Utente')}</p>
+                        </div>
+                    </div>
+                    ${isPremium ? '<div class="premium-badge-popup">💎</div>' : ''}
                 </div>
-            `);
+                <div class="popup-body">
+                    <div class="popup-price">
+                        <span class="price-label">Compenso:</span>
+                        <span class="price-value">${sanitizeInput(ann.salary)}</span>
+                    </div>
+                    <div class="popup-location">
+                        📍 ${sanitizeInput(ann.address || ann.city || 'Posizione non specificata')}
+                    </div>
+                </div>
+                <div class="popup-footer">
+                    <button class="btn-primary popup-btn" onclick="openAnnuncioDetails(${ann.id})">
+                        Vedi Dettagli
+                    </button>
+                </div>
+            </div>
+        `;
+
+        const marker = L.marker([ann.lat, ann.lng], { icon: customIcon }).addTo(map)
+            .bindPopup(popupContent, {
+                maxWidth: 280,
+                className: 'custom-leaflet-popup'
+            });
+        
         markers.push(marker);
     });
 }
-function openCreateModal() { document.getElementById('create-annuncio-modal').classList.remove('hidden'); }
-function closeCreateModal() { document.getElementById('create-annuncio-modal').classList.add('hidden'); }
 
 async function createAnnuncio() {
     const btn = document.getElementById('create-annuncio-submit');

@@ -1894,3 +1894,222 @@ html.auth-mode {
 .chat-window.active {
     display: flex !important;
 }
+
+/* --- MARKER PERSONALIZZATI CON FOTO PROFILO --- */
+.custom-user-marker {
+    width: 45px;
+    height: 45px;
+    position: relative;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease;
+}
+
+.custom-user-marker:hover {
+    transform: scale(1.1);
+}
+
+.marker-fallback {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #2C3E50, #34495e);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.marker-border {
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 50%;
+    border: 2px solid;
+    pointer-events: none;
+}
+
+.marker-border.premium {
+    border-color: #dcaa25;
+    box-shadow: 0 0 8px rgba(220, 170, 37, 0.5);
+}
+
+.marker-border.standard {
+    border-color: #2C3E50;
+    box-shadow: 0 0 8px rgba(44, 62, 80, 0.3);
+}
+
+/* --- POPUP PERSONALIZZATI CON GLASSMORPHISM --- */
+.custom-leaflet-popup .leaflet-popup-content-wrapper {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.custom-leaflet-popup .leaflet-popup-tip {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.custom-popup {
+    min-width: 280px;
+    max-width: 320px;
+    padding: 0;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.popup-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.popup-user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.popup-avatar, .popup-avatar-fallback {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.popup-avatar-fallback {
+    background: linear-gradient(135deg, #2C3E50, #34495e);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+.popup-user-details {
+    flex: 1;
+}
+
+.popup-title {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.2;
+}
+
+.popup-author {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-dim);
+}
+
+.premium-badge-popup {
+    font-size: 18px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.popup-body {
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.popup-price {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 12px;
+    background: rgba(220, 170, 37, 0.1);
+    border-radius: 12px;
+    border: 1px solid rgba(220, 170, 37, 0.3);
+}
+
+.price-label {
+    font-size: 14px;
+    color: var(--text-dim);
+}
+
+.price-value {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.popup-location {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border-left: 3px solid var(--primary);
+}
+
+.popup-footer {
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.popup-btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.popup-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 170, 37, 0.4);
+}
+
+/* Responsive per marker */
+@media (max-width: 768px) {
+    .custom-user-marker {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .marker-fallback {
+        font-size: 10px;
+    }
+    
+    .popup-avatar, .popup-avatar-fallback {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .popup-title {
+        font-size: 14px;
+    }
+    
+    .custom-popup {
+        min-width: 240px;
+        max-width: 280px;
+    }
+}
