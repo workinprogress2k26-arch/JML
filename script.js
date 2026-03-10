@@ -1295,8 +1295,6 @@ function syncMapMarkers(filteredAnnunci) {
         markers.push(marker);
     });
 }
-
-// Annunci
 function openCreateModal() { document.getElementById('create-annuncio-modal').classList.remove('hidden'); }
 function closeCreateModal() { document.getElementById('create-annuncio-modal').classList.add('hidden'); }
 
@@ -1315,6 +1313,7 @@ async function createAnnuncio() {
         return;
     }
 
+    // Fix 409: Blocca immediatamente il pulsante per evitare doppio click
     btn.disabled = true;
     btn.textContent = "Creazione in corso...";
 
@@ -1572,21 +1571,20 @@ async function updateChatList() {
 
     // 3. Per ogni chat, scarichiamo i dettagli (titolo annuncio + nome partner)
     for (const [key, info] of activeChats) {
+        // Fix 406: remove .single() and use array handling with fallbacks
         const { data: annData } = await supabaseClient
             .from('announcements')
             .select('title, author_id')
-            .eq('id', info.jobId)
-            .single();
+            .eq('id', info.jobId);
 
         const { data: partnerData } = await supabaseClient
             .from('profiles')
             .select('display_name')
-            .eq('id', info.partnerId)
-            .single();
+            .eq('id', info.partnerId);
 
-        const chatName = partnerData?.display_name || "Utente";
-        const jobTitle = annData?.title || "Lavoro";
-        const isOwner = annData?.author_id === user.id;
+        const chatName = (Array.isArray(partnerData) && partnerData.length > 0) ? partnerData[0].display_name : "Utente";
+        const jobTitle = (Array.isArray(annData) && annData.length > 0) ? annData[0].title : "Lavoro";
+        const isOwner = (Array.isArray(annData) && annData.length > 0) ? annData[0].author_id === user.id : false;
 
         const item = document.createElement('div');
         item.className = 'chat-item glass';
@@ -2259,7 +2257,7 @@ async function openEditAccountModal() {
             return;
         }
 
-        // Recuperiamo il profilo
+        // Recuperiamo il profilo senza .single() per evitare errore 406
         const { data, error } = await supabaseClient
             .from('profiles')
             .select('*')

@@ -783,7 +783,10 @@
 
           <div class="input-group">
             <label for="edit-password">Nuova Password (Lascia vuoto per non cambiare)</label>
-            <input type="password" id="edit-password" placeholder="••••••••">
+            <div class="password-wrapper">
+              <input type="password" id="edit-password" placeholder="••••••••">
+              <span class="toggle-password" onclick="togglePassword('edit-password', this)">👁️</span>
+            </div>
           </div>
 
           <div class="input-group">
