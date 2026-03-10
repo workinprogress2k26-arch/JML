@@ -1365,41 +1365,14 @@ function syncMapMarkers(filteredAnnunci) {
                     </div>
                 `;
             } else {
+                // Marker colorato quando non c'è la foto
+                const markerColor = isPremium ? '#dcaa25' : '#2C3E50';
                 return `
-                    <div class="custom-user-marker">
-                        <div class="marker-fallback">
+                    <div class="custom-user-marker" style="background: ${markerColor}; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                        <div class="marker-fallback" style="color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
                             ${getInitials(ann.author || 'Utente')}
                         </div>
                         <div class="marker-border ${isPremium ? 'premium' : 'standard'}"></div>
-                    </div>
-                `;
-            }
-        }
-
-        // Marker personalizzato con foto profilo
-        const customIcon = L.divIcon({
-            html: createMarkerHTML(),
-            className: 'custom-div-icon',
-            iconSize: [45, 45],
-            iconAnchor: [22.5, 45],
-            popupAnchor: [0, -45]
-        });
-
-        // Popup migliorato con stile Glassmorphism
-        const popupContent = `
-            <div class="custom-popup glass">
-                <div class="popup-header">
-                    <div class="popup-user-info">
-                        ${hasPhoto ? 
-                            `<img src="${ann.authorAvatar}" alt="${ann.author}" class="popup-avatar">` :
-                            `<div class="popup-avatar-fallback">${getInitials(ann.author || 'Utente')}</div>`
-                        }
-                        <div class="popup-user-details">
-                            <h3 class="popup-title">${sanitizeInput(ann.title)}</h3>
-                            <p class="popup-author">${sanitizeInput(ann.author || 'Utente')}</p>
-                        </div>
-                    </div>
-                    ${isPremium ? '<div class="premium-badge-popup">💎</div>' : ''}
                 </div>
                 <div class="popup-body">
                     <div class="popup-price">
@@ -1411,12 +1384,15 @@ function syncMapMarkers(filteredAnnunci) {
                     </div>
                 </div>
                 <div class="popup-footer">
-                    <button class="btn-primary popup-btn" onclick="openAnnuncioDetails(${ann.id})">
-                        Vedi Dettagli
-                    </button>
-                </div>
-            </div>
-        `;
+
+        // Marker personalizzato con foto profilo
+        const customIcon = L.divIcon({
+            html: createMarkerHTML(),
+            className: 'custom-div-icon',
+            iconSize: [45, 45],
+            iconAnchor: [22.5, 45],
+            popupAnchor: [0, -45]
+        });
 
         try {
             const marker = L.marker([ann.lat, ann.lng], { icon: customIcon }).addTo(map)
