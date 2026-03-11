@@ -1082,7 +1082,7 @@ body {
 
 /* Sostituisci il blocco body::before che hai già con questo */
 body::before {
-    
+
     content: '';
     position: fixed;
     top: 0; 
@@ -1091,7 +1091,7 @@ body::before {
     height: 100vh;
     
     /* URL della tua immagine */
-    background-image: url('sfondo.jpg');
+    background-image: url('wallpaper.jpeg');
     
     background-size: cover;          /* Copre tutto lo schermo */
     background-position: center;     /* Tiene il centro dell'immagine sempre visibile */
