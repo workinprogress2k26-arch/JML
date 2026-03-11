@@ -2996,57 +2996,6 @@ async function releasePayment() {
     }
 }
 
-// Controllo in tempo reale della password
-// Controllo in tempo reale dei requisiti della password
-function checkPasswordRequirements() {
-    const pwd = document.getElementById('reg-password').value;
-    
-    const lengthHint = document.getElementById('hint-length');
-    const upperHint = document.getElementById('hint-upper');
-    const numberHint = document.getElementById('hint-number');
-    const specialHint = document.getElementById('hint-special');
-
-    if (!lengthHint) return;
-
-    // Regola 1: Lunghezza (Minimo 8)
-    if (pwd.length >= 8) { 
-        lengthHint.innerHTML = '✅ Min. 8 caratteri'; 
-        lengthHint.style.color = '#4CAF50'; 
-    } else { 
-        lengthHint.innerHTML = '❌ Min. 8 caratteri'; 
-        lengthHint.style.color = 'var(--text-dim)'; 
-    }
-
-    // Regola 2: Lettera Maiuscola
-    if (/[A-Z]/.test(pwd)) { 
-        upperHint.innerHTML = '✅ 1 lettera maiuscola'; 
-        upperHint.style.color = '#4CAF50'; 
-    } else { 
-        upperHint.innerHTML = '❌ 1 lettera maiuscola'; 
-        upperHint.style.color = 'var(--text-dim)'; 
-    }
-
-    // Regola 3: Numero
-    if (/\d/.test(pwd)) { 
-        numberHint.innerHTML = '✅ 1 numero'; 
-        numberHint.style.color = '#4CAF50'; 
-    } else { 
-        numberHint.innerHTML = '❌ 1 numero'; 
-        numberHint.style.color = 'var(--text-dim)'; 
-    }
-
-    // Regola 4: Carattere speciale
-    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(pwd)) { 
-        specialHint.innerHTML = '✅ 1 carattere speciale (!@#$...)'; 
-        specialHint.style.color = '#4CAF50'; 
-    } else { 
-        specialHint.innerHTML = '❌ 1 carattere speciale (!@#$...)'; 
-        specialHint.style.color = 'var(--text-dim)'; 
-    }
-
-    // Controlla anche se la conferma password combacia, se l'utente la sta già digitando
-    checkPasswordMatch();
-}
 
 // Controllo in tempo reale se le due password coincidono
 // Controllo in tempo reale dei requisiti della password
