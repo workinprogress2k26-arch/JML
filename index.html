@@ -133,16 +133,27 @@
           <div class="input-group">
             <label for="reg-password">Password</label>
             <div class="password-wrapper">
-              <input type="password" id="reg-password" placeholder="••••••••" autocomplete="new-password">
+              <!-- AGGIUNTO oninput="checkPasswordRequirements()" -->
+              <input type="password" id="reg-password" placeholder="••••••••" autocomplete="new-password" oninput="checkPasswordRequirements()">
               <span class="toggle-password" onclick="togglePassword('reg-password', this)">👁️</span>
             </div>
+          <div id="password-hints" style="margin-top: 8px; font-size: 0.8rem; display: flex; flex-direction: column; gap: 4px;">
+              <span id="hint-length" style="color: var(--text-dim);">❌ Min. 8 caratteri</span>
+              <span id="hint-upper" style="color: var(--text-dim);">❌ 1 lettera maiuscola</span>
+              <span id="hint-number" style="color: var(--text-dim);">❌ 1 numero</span>
+              <span id="hint-special" style="color: var(--text-dim);">❌ 1 carattere speciale (!@#$...)</span>
+            </div>
           </div>
-          <div class="input-group">
+           <div class="input-group">
             <label for="reg-confirm">Conferma Password</label>
             <div class="password-wrapper">
-              <input type="password" id="reg-confirm" placeholder="••••••••" autocomplete="new-password">
+              <!-- AGGIUNTO oninput="checkPasswordMatch()" -->
+              <input type="password" id="reg-confirm" placeholder="••••••••" autocomplete="new-password" oninput="checkPasswordMatch()">
               <span class="toggle-password" onclick="togglePassword('reg-confirm', this)">👁️</span>
             </div>
+            <!-- FEEDBACK CONFERMA PASSWORD -->
+            <div id="hint-match" style="margin-top: 8px; font-size: 0.8rem; color: var(--text-dim); display: none;">❌ Le password non coincidono</div>
+          </div>
           </div>
         </div>
 

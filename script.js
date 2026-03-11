@@ -2088,95 +2088,72 @@ function appendMessage(role, text, container) {
     container.scrollTop = container.scrollHeight;
 }
 
-// Rimossa gestione manuale DeepSeek Key婆
-// AUTH & REGISTRAZIONE
+// AUTH & REGISTRAZIONE: Funzioni di validazione
+
 function validateEmail(email) {
+    if (!email) return false;
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 // Live validation helpers
 function validateEmailLive(value) {
     if (!value) return null;
-    return validateEmail(value) ? null : "Email non valida";
-}
-
-function validatePasswordLive(value) {
-    if (!value) return null;
-    const issues = [];
-    if (value.length < 8) issues.push("almeno 8 caratteri");
-    if (!/[A-Z]/.test(value)) issues.push("una maiuscola");
-    if (!/\d/.test(value)) issues.push("un numero");
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(value)) issues.push("un carattere speciale");
-    return issues.length ? "Password: " + issues.join(", ") : null;
+    return validateEmail(value) ? null : "Formato email non valido (es: mario@email.it)";
 }
 
 function validateConfirmLive(value, password) {
-    if (!value) return null;
+    if (!value || !password) return null;
     return value === password ? null : "Le password non coincidono";
 }
 
 function validateSurnameLive(value) {
     if (!value) return null;
-    return value.trim().length >= 2 ? null : "Cognome troppo corto (minimo 2 caratteri)";
+    return value.trim().length >= 2 ? null : "Il cognome deve avere almeno 2 caratteri";
 }
 
 function validateCountryLive(value) {
     if (!value) return null;
     // Lista di paesi validi semplificata
-    const validCountries = ['italia', 'italy', 'francia', 'france', 'germania', 'germany', 'spagna', 'spain', 'regno unito', 'uk', 'united kingdom', 'svizzera', 'switzerland'];
-    return validCountries.includes(value.toLowerCase().trim()) ? null : `"${value}" non è un paese valido`;
+    const validCountries =['italia', 'italy', 'francia', 'france', 'germania', 'germany', 'spagna', 'spain', 'regno unito', 'uk', 'united kingdom', 'svizzera', 'switzerland'];
+    return validCountries.includes(value.toLowerCase().trim()) ? null : "Paese non supportato o errato";
 }
 
 function validateCityZipLive(city, zip) {
-    const hasCity = city.trim().length > 0;
-    const hasZip = zip.trim().length > 0;
-    if ((hasCity && !hasZip) || (!hasCity && hasZip)) return "Inserisci sia città che CAP";
-    if (zip && !/^\d{5}$/.test(zip)) return "CAP non valido (deve avere 5 cifre)";
+    // Gestione sicura nel caso uno dei due campi sia null o undefined
+    const c = city ? city.trim() : '';
+    const z = zip ? zip.trim() : '';
+    
+    if (c.length > 0 && z.length === 0) return "Hai inserito la città, manca il CAP";
+    if (z.length > 0 && c.length === 0) return "Hai inserito il CAP, manca la città";
+    
+    // Il CAP deve essere ESATTAMENTE di 5 cifre numeriche
+    if (z.length > 0 && !/^\d{5}$/.test(z)) return "Il CAP deve contenere esattamente 5 numeri (es. 40121)";
+    
     return null;
 }
 
 function validateBirthLive(value) {
     if (!value) return null;
+    
     const birthDate = new Date(value);
-    if (Number.isNaN(birthDate.getTime())) return "Data non valida (usa il formato GG/MM/AAAA)";
+    // Controllo se la data è valida
+    if (isNaN(birthDate.getTime())) return "Data non valida";
+    
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-    return age >= 14 ? null : `Devi avere almeno 14 anni (hai ${age} anni)`;
+    
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    
+    if (age < 14) return `Devi avere almeno 14 anni (ne hai calcolati ${age})`;
+    if (age > 100) return "Data di nascita non plausibile"; // Evita anni come 1800
+    
+    return null;
 }
 
-// Attach live validation listeners
-function setupSignupLiveValidation() {
-    console.log("🔧 setupSignupLiveValidation: inizio");
-    const fields = [
-        { id: 'reg-email', validator: v => validateEmailLive(v), event: 'blur' },
-        { id: 'reg-password', validator: v => validatePasswordLive(v), event: 'input' },
-        { id: 'reg-confirm', validator: v => validateConfirmLive(v, document.getElementById('reg-password')?.value || ''), event: 'input' },
-        { id: 'reg-surname', validator: v => validateSurnameLive(v), event: 'blur' },
-        { id: 'reg-country', validator: v => validateCountryLive(v), event: 'blur' },
-        { id: 'reg-city', validator: v => validateCityZipLive(v, document.getElementById('reg-zip')?.value || ''), event: 'blur' },
-        { id: 'reg-zip', validator: v => validateCityZipLive(document.getElementById('reg-city')?.value || '', v), event: 'blur' },
-        { id: 'reg-birth', validator: v => validateBirthLive(v), event: 'blur' }
-    ];
 
-    fields.forEach(({ id, validator, event }) => {
-        const el = document.getElementById(id);
-        if (!el) {
-            console.warn(`⚠️ Campo non trovato: ${id}`);
-            return;
-        }
-        console.log(`✅ Listener attached: ${id} (${event})`);
-        el.addEventListener(event, () => {
-            const err = validator(el.value);
-            console.log(`🔍 Live validation ${id}: value="${el.value}" err=${err}`);
-            if (err) {
-                showToast("⚠️ " + err, "warning");
-            }
-        });
-    });
-    console.log("🔧 setupSignupLiveValidation: fine");
-}
 
 function getCurrencySymbol(country) {
     const c = country.toLowerCase().trim();
@@ -3020,7 +2997,8 @@ async function releasePayment() {
 }
 
 // Controllo in tempo reale della password
-function validatePasswordLive() {
+// Controllo in tempo reale dei requisiti della password
+function checkPasswordRequirements() {
     const pwd = document.getElementById('reg-password').value;
     
     const lengthHint = document.getElementById('hint-length');
@@ -3059,17 +3037,140 @@ function validatePasswordLive() {
 
     // Regola 4: Carattere speciale
     if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(pwd)) { 
-        specialHint.innerHTML = '✅ 1 carattere speciale'; 
+        specialHint.innerHTML = '✅ 1 carattere speciale (!@#$...)'; 
         specialHint.style.color = '#4CAF50'; 
     } else { 
         specialHint.innerHTML = '❌ 1 carattere speciale (!@#$...)'; 
         specialHint.style.color = 'var(--text-dim)'; 
     }
+
+    // Controlla anche se la conferma password combacia, se l'utente la sta già digitando
+    checkPasswordMatch();
 }
+
+// Controllo in tempo reale se le due password coincidono
+// Controllo in tempo reale dei requisiti della password
+function checkPasswordRequirements() {
+    const pwd = document.getElementById('reg-password').value;
+    
+    const lengthHint = document.getElementById('hint-length');
+    const upperHint = document.getElementById('hint-upper');
+    const numberHint = document.getElementById('hint-number');
+    const specialHint = document.getElementById('hint-special');
+
+    if (!lengthHint) return;
+
+    // Regola 1: Lunghezza (Minimo 8)
+    if (pwd.length >= 8) { 
+        lengthHint.innerHTML = '✅ Min. 8 caratteri'; 
+        lengthHint.style.color = '#4CAF50'; 
+    } else { 
+        lengthHint.innerHTML = '❌ Min. 8 caratteri'; 
+        lengthHint.style.color = 'var(--text-dim)'; 
+    }
+
+    // Regola 2: Lettera Maiuscola
+    if (/[A-Z]/.test(pwd)) { 
+        upperHint.innerHTML = '✅ 1 lettera maiuscola'; 
+        upperHint.style.color = '#4CAF50'; 
+    } else { 
+        upperHint.innerHTML = '❌ 1 lettera maiuscola'; 
+        upperHint.style.color = 'var(--text-dim)'; 
+    }
+
+    // Regola 3: Numero
+    if (/\d/.test(pwd)) { 
+        numberHint.innerHTML = '✅ 1 numero'; 
+        numberHint.style.color = '#4CAF50'; 
+    } else { 
+        numberHint.innerHTML = '❌ 1 numero'; 
+        numberHint.style.color = 'var(--text-dim)'; 
+    }
+
+    // Regola 4: Carattere speciale
+    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(pwd)) { 
+        specialHint.innerHTML = '✅ 1 carattere speciale (!@#$...)'; 
+        specialHint.style.color = '#4CAF50'; 
+    } else { 
+        specialHint.innerHTML = '❌ 1 carattere speciale (!@#$...)'; 
+        specialHint.style.color = 'var(--text-dim)'; 
+    }
+
+    // Controlla anche se la conferma password combacia, se l'utente la sta già digitando
+    checkPasswordMatch();
+}
+
+// Controllo in tempo reale se le due password coincidono
+function checkPasswordMatch() {
+    const pwd = document.getElementById('reg-password').value;
+    const confirm = document.getElementById('reg-confirm').value;
+    const matchHint = document.getElementById('hint-match');
+    
+    if (!confirm) {
+        matchHint.style.display = 'none';
+        return;
+    }
+    
+    matchHint.style.display = 'block';
+    if (pwd === confirm) {
+        matchHint.innerHTML = '✅ Le password coincidono';
+        matchHint.style.color = '#4CAF50';
+    } else {
+        matchHint.innerHTML = '❌ Le password non coincidono';
+        matchHint.style.color = '#ff4d4d'; // Rosso accesso per avviso
+    }
+}
+
 
 function getInitials(name) {
     if (!name) return "U";
     const parts = name.trim().split(" ");
     if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+function setupSignupLiveValidation() {
+    console.log("🔧 setupSignupLiveValidation: inizio");
+    
+    // NOTA: Abbiamo rimosso reg-password e reg-confirm perché ora usano l'oninput HTML (vedi passo precedente)
+    const fields =[
+        { id: 'reg-email', validator: v => validateEmailLive(v), event: 'blur' },
+        { id: 'reg-surname', validator: v => validateSurnameLive(v), event: 'blur' },
+        { id: 'reg-country', validator: v => validateCountryLive(v), event: 'blur' },
+        { id: 'reg-city', validator: v => validateCityZipLive(v, document.getElementById('reg-zip')?.value), event: 'blur' },
+        { id: 'reg-zip', validator: v => validateCityZipLive(document.getElementById('reg-city')?.value, v), event: 'blur' },
+        { id: 'reg-birth', validator: v => validateBirthLive(v), event: 'blur' }
+    ];
+
+    fields.forEach(({ id, validator, event }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        // Crea un piccolo testo di errore nascosto sotto ogni input
+        let errorSpan = document.createElement('span');
+        errorSpan.style.color = '#ff4d4d'; // Rosso
+        errorSpan.style.fontSize = '0.8rem';
+        errorSpan.style.display = 'none';
+        errorSpan.style.marginTop = '4px';
+        el.parentNode.appendChild(errorSpan);
+
+        el.addEventListener(event, () => {
+            const err = validator(el.value);
+            if (err) {
+                // Se c'è errore: bordo rosso e testo visibile
+                el.style.borderColor = '#ff4d4d';
+                errorSpan.textContent = "❌ " + err;
+                errorSpan.style.display = 'block';
+            } else if (el.value.trim() !== "") {
+                // Se è corretto e non è vuoto: bordo verde e nasconde l'errore
+                el.style.borderColor = '#4CAF50';
+                errorSpan.style.display = 'none';
+            } else {
+                // Se è vuoto, resetta al colore base
+                el.style.borderColor = 'var(--border)';
+                errorSpan.style.display = 'none';
+            }
+        });
+    });
+    console.log("🔧 setupSignupLiveValidation: fine");
 }
