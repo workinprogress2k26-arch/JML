@@ -4041,41 +4041,84 @@ html.auth-mode {
 }
 
 /* ========================================================================== */
-/* 📱 LOGICA MOBILE DEFINITIVA (Sostituisci il vecchio blocco mobile con questo) */
+/* 📱 LOGICA MOBILE CHAT - VERSIONE PREMIUM (Stile WhatsApp/Messenger) */
 /* ========================================================================== */
 @media (max-width: 767px) {
-    /* 1. Reset generale per mobile */
-    html, body { overflow-x: hidden !important; width: 100vw !important; }
-    .main-content { padding-bottom: 100px !important; }
-
-    /* 2. CHAT: Stile WhatsApp (Lista vs Window) */
-    .chat-container { display: block !important; height: calc(100vh - 150px) !important; background: transparent !important; }
-    
-    #company-chat-list { display: block !important; width: 100% !important; }
-    #company-chat-window { display: none !important; } /* Nascosta di default */
-    
-    #company-chat-window.active {
+    /* CHAT HEADER: Nome azienda sopra, bottoni sotto su una riga pulita */
+    .company-chat-header {
         display: flex !important;
         flex-direction: column !important;
-        position: fixed !important;
-        top: 0; left: 0; right: 0; bottom: 0;
-        z-index: 9999 !important;
-        background: #0a0b10 !important;
+        padding: 12px !important;
+        gap: 8px !important;
+        background: #1a1b26 !important;
+        border-bottom: 1px solid var(--primary) !important;
     }
 
-    /* 3. MESSAGGI: DESTRA E SINISTRA */
-    .chat-body { display: flex !important; flex-direction: column !important; gap: 10px !important; padding: 10px !important; }
-    
-    .message { max-width: 85% !important; padding: 10px 14px !important; border-radius: 16px !important; font-size: 0.9rem !important; }
-    
-    /* I TUOI MESSAGGI (Destra) */
-    .message.user { align-self: flex-end !important; background: var(--primary) !important; color: #000 !important; border-bottom-right-radius: 4px !important; }
-    
-    /* MESSAGGI ALTRUI (Sinistra) */
-    .message.company { align-self: flex-start !important; background: #252525 !important; color: #fff !important; border-bottom-left-radius: 4px !important; border: 1px solid #333 !important; }
+    /* Riga 1: Indietro + Nome */
+    .company-chat-header > div:first-child {
+        width: 100% !important;
+        justify-content: flex-start !important;
+    }
 
-    /* 4. HEADER CHAT MOBILE */
-    .company-chat-header { flex-direction: column !important; gap: 10px !important; height: auto !important; padding: 10px !important; }
-    .company-chat-header > div:last-child { width: 100% !important; display: flex !important; gap: 5px !important; }
-    .company-chat-header .btn-primary { flex: 1 !important; min-height: 35px !important; font-size: 0.75rem !important; }
+    /* Riga 2: Pulsanti Paga/Segnala */
+    .company-chat-header > div:last-child {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        gap: 8px !important;
+    }
+
+    /* Pulsanti header ridimensionati per stare in riga */
+    .company-chat-header .btn-primary {
+        flex: 1 !important;
+        padding: 6px !important;
+        font-size: 0.70rem !important;
+        min-height: 32px !important;
+        margin: 0 !important;
+    }
+
+    /* CORPO CHAT: Spaziatura migliorata */
+    .chat-body {
+        padding: 15px !important;
+        gap: 15px !important;
+        background: #050505 !important; /* Sfondo leggermente più scuro per contrasto */
+    }
+
+    /* FUMETTI MESSAGGI */
+    .message {
+        max-width: 80% !important;
+        padding: 10px 15px !important;
+        font-size: 0.95rem !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+    }
+
+    /* TUO MESSAGGIO (Destra - Oro/Worky) */
+    .message.user {
+        align-self: flex-end !important;
+        background: var(--primary) !important;
+        color: #000 !important;
+        border-radius: 18px 18px 4px 18px !important;
+    }
+
+    /* MESSAGGIO AZIENDA (Sinistra - Grigio Scuro) */
+    .message.company {
+        align-self: flex-start !important;
+        background: #2a2a2a !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 18px 18px 18px 4px !important;
+    }
+
+    /* Timestamp (l'orario sotto il testo) */
+    .msg-timestamp {
+        font-size: 0.65rem !important;
+        margin-top: 4px !important;
+        opacity: 0.7 !important;
+    }
+
+    /* INPUT CHAT */
+    .chat-input-area {
+        background: #111 !important;
+        border-top: 1px solid #333 !important;
+    }
 }
