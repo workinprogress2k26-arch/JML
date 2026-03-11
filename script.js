@@ -1425,27 +1425,33 @@ function syncMapMarkers(filteredAnnunci) {
         const isPremium = ann.isPremium;
         const borderColor = isPremium ? '#dcaa25' : '#2C3E50'; // Premium = Oro, Base = Blu scuro elegante
 
-        // Crea un'icona personalizzata con la foto profilo
-        const avatarUrl = ann.authorAvatar || 'https://via.placeholder.com/50';
+        // 1. DEFINIAMO hasPhoto PER EVITARE IL CRASH
+        const hasPhoto = ann.authorAvatar && ann.authorAvatar.trim() !== '';
+
+        // 2. Impostiamo l'URL dell'avatar solo se c'è, altrimenti usiamo un placeholder
+        const avatarUrl = hasPhoto ? ann.authorAvatar : 'https://via.placeholder.com/50';
+        
+        // 3. Creazione del PIN sulla mappa (marker)
         const customIcon = L.divIcon({
             className: 'custom-user-marker',
-            html: `<div class="marker-container">
-                      <img src="${avatarUrl}" class="marker-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                      <div class="marker-fallback" style="display:none;">${getInitials(ann.author || 'Utente')}</div>
-                      <div class="marker-edge"></div>
+            html: `<div class="marker-container" style="border-color: ${borderColor}">
+                      <img src="${avatarUrl}" class="marker-avatar" style="${!hasPhoto ? 'display:none;' : ''}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                      <div class="marker-fallback" style="${hasPhoto ? 'display:none;' : 'display:flex;'}">${getInitials(ann.author || 'Utente')}</div>
+                      <div class="marker-edge" style="border-top-color: ${borderColor}"></div>
                    </div>`,
             iconSize: [45, 45],
-            iconAnchor: [22, 45],
+            iconAnchor:[22, 45],
             popupAnchor: [0, -40]
         });
 
-        // Popup migliorato con stile Glassmorphism
+        // 4. Creazione del Popup al click
         const popupContent = `
             <div class="custom-popup glass">
                 <div class="popup-header">
                     <div class="popup-user-info">
                         ${hasPhoto ? 
-                            `<img src="${ann.authorAvatar}" alt="${ann.author}" class="popup-avatar">` :
+                            `<img src="${ann.authorAvatar}" alt="${ann.author}" class="popup-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                             <div class="popup-avatar-fallback" style="display:none;">${getInitials(ann.author || 'Utente')}</div>` :
                             `<div class="popup-avatar-fallback">${getInitials(ann.author || 'Utente')}</div>`
                         }
                         <div class="popup-user-details">
@@ -2423,17 +2429,16 @@ function renderUserProfile() {
         }
     }
 
-    // Aggiornamento dei riquadri CV e Certificazioni
+// Aggiornamento dei riquadri CV e Certificazioni
     const cvBox = document.getElementById('profile-cv-data');
     const certBox = document.getElementById('profile-certifications-data');
     if (cvBox) cvBox.textContent = data.cv || "Nessun curriculum inserito.";
     if (certBox) certBox.textContent = data.certifications || "Nessuna certificazione inserita.";
-}
 
     // Carichiamo anche i movimenti
     renderTransactions();
-    
     renderReviews();
+}
 
 
 // --- 11. SISTEMA MODIFICA PROFILO ---
@@ -3060,4 +3065,11 @@ function validatePasswordLive() {
         specialHint.innerHTML = '❌ 1 carattere speciale (!@#$...)'; 
         specialHint.style.color = 'var(--text-dim)'; 
     }
+}
+
+function getInitials(name) {
+    if (!name) return "U";
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }

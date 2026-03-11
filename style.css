@@ -2015,18 +2015,15 @@ input:focus {
 
 
 #premium-competitors-list li {
-
     padding: 0.8rem 1.2rem;
-
     background: rgba(255, 255, 255, 0.05);
-
     border-radius: 12px;
-
     display: flex;
-
     justify-content: space-between;
-
-
+    align-items: center;
+    border: 1px solid transparent;
+    transition: border-color 0.3s;
+} /* <--- QUESTA PARENTESI GRAFFA MANCAVA! */
 
 /* === MOBILE ALIGNMENT FIXES (override and align elements) === */
 
@@ -2168,13 +2165,7 @@ input:focus {
 
 }
 
-    align-items: center;
-
-    border: 1px solid transparent;
-
-    transition: border-color 0.3s;
-
-}
+    
 
 
 
