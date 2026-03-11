@@ -1080,26 +1080,29 @@ body {
 
 
 
+/* Sostituisci il blocco body::before che hai già con questo */
 body::before {
-
+    
     content: '';
-
     position: fixed;
-
-    top: 0; left: 0; width: 100vw; height: 100vh;
-
-    background: 
-
-        radial-gradient(circle at 15% 30%, rgba(220, 170, 37, 0.12) 0%, transparent 40%),
-
-        radial-gradient(circle at 85% 70%, rgba(52, 152, 219, 0.08) 0%, transparent 40%);
-
+    top: 0; 
+    left: 0; 
+    width: 100vw; 
+    height: 100vh;
+    
+    /* URL della tua immagine */
+    background-image: url('sfondo.jpg');
+    
+    background-size: cover;          /* Copre tutto lo schermo */
+    background-position: center;     /* Tiene il centro dell'immagine sempre visibile */
+    background-repeat: no-repeat;
+    
+    /* Aggiunge un velo scuro per leggere meglio il testo */
+    background-color: rgba(0, 0, 0, 0.7); 
+    background-blend-mode: darken;
+    
     z-index: -1;
-
     pointer-events: none;
-
-    animation: backgroundShift 20s ease-in-out infinite alternate;
-
 }
 
 
