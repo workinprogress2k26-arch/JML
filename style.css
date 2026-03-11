@@ -4133,3 +4133,54 @@ html.auth-mode {
         background: #111 !important;
     }
 }
+
+/* --- CORREZIONE POPUP MAPPA (Background solido e contrasto) --- */
+
+/* 1. Forziamo uno sfondo scuro solido al contenitore del popup */
+.custom-leaflet-popup .leaflet-popup-content-wrapper {
+    background: #0a0b10 !important; /* Colore scuro solido, non trasparente */
+    color: #ffffff !important;
+    border: 1px solid var(--primary) !important;
+    padding: 0 !important;
+    border-radius: 12px !important;
+}
+
+/* 2. Sistemiamo la freccetta sotto il popup */
+.custom-leaflet-popup .leaflet-popup-tip {
+    background: #0a0b10 !important;
+    border-left: 1px solid var(--primary);
+    border-bottom: 1px solid var(--primary);
+}
+
+/* 3. Assicuriamoci che il contenuto interno sia leggibile */
+.custom-popup {
+    background: #0a0b10 !important; /* Sfondo solido */
+    width: 260px !important;
+    padding: 10px !important;
+}
+
+/* 4. Miglioriamo il contrasto dei testi */
+.popup-title {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+.popup-author {
+    color: #cccccc !important;
+}
+
+.popup-price {
+    background: rgba(220, 170, 37, 0.15) !important; /* Un tocco leggero di colore */
+    padding: 8px !important;
+    border-radius: 8px !important;
+}
+
+/* 5. Rendiamo il bottone "Vedi Dettagli" più leggibile */
+.popup-btn {
+    background: var(--primary) !important;
+    color: #000 !important;
+    font-weight: bold !important;
+    border: none !important;
+    padding: 10px !important;
+}
+
