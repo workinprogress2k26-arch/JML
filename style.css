@@ -4080,26 +4080,45 @@ html.auth-mode {
         display: flex !important; 
         flex-direction: column !important; 
         padding: 10px !important; 
-        gap: 8px !important; 
+        gap: 10px !important; 
+        background: #1a1b26 !important;
+        border-bottom: 1px solid var(--primary) !important;
+    }
+
+    /* Riga 1: Freccia + Nome */
+    .company-chat-header > div:first-child {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
     }
 
     /* Bottoni Header (Solo Icone) */
     .company-chat-header > div:last-child {
-        display: flex !important;
-        justify-content: flex-end !important;
-        gap: 8px !important;
         width: 100% !important;
+        display: flex !important;
+        justify-content: flex-end !important; /* Bottoni a destra */
+        gap: 8px !important;
+    }
+    /* Stile tasto indietro */
+    .back-chat-btn {
+        display: flex !important; /* Forza la visualizzazione */
+        min-width: 35px !important;
+        height: 35px !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
     /* Rendiamo i bottoni quadrati e compatti */
+    /* Trasformiamo i bottoni in quadrati perfetti con icone */
     .company-chat-header .btn-primary {
-        width: 45px !important;
-        padding: 6px !important;
-        font-size: 1rem !important; /* Mostriamo l'emoji */
+        width: 45px !important; 
+        padding: 0 !important;
         min-height: 40px !important;
-        flex: 0 0 auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 1.2rem !important; /* Dimensione icona */
     }
-    
     /* Nascondiamo il testo lungo dei bottoni su mobile */
     .company-chat-header .btn-primary span:not(.btn-icon-fallback) {
         display: none !important;
