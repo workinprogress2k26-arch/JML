@@ -4044,7 +4044,7 @@ html.auth-mode {
     /* 1. Reset generale */
     html, body { overflow-x: hidden !important; width: 100vw !important; }
     
-    /* 2. Chat Layout (senza forzare posizioni fisse strane) */
+    /* 2. Chat Layout (stile WhatsApp) */
     .chat-container { display: flex !important; flex-direction: column !important; height: calc(100vh - 160px) !important; }
     
     /* 3. Divisione Destra/Sinistra per i messaggi */
@@ -4052,23 +4052,62 @@ html.auth-mode {
     
     .message { 
         max-width: 80% !important; 
-        padding: 10px !important; 
-        margin: 0 !important; /* Reset margini per usare align-self */
+        padding: 10px 14px !important; 
+        margin: 0 !important; 
+        border-radius: 16px !important;
+        font-size: 0.9rem !important;
     }
     
     .message.user { 
-        align-self: flex-end !important; /* Tuoi messaggi a destra */
+        align-self: flex-end !important; 
         background: var(--primary) !important; 
         color: #000 !important; 
+        border-bottom-right-radius: 4px !important;
     }
     
     .message.company { 
-        align-self: flex-start !important; /* Loro messaggi a sinistra */
+        align-self: flex-start !important; 
         background: #333 !important; 
         color: #fff !important; 
+        border-bottom-left-radius: 4px !important;
     }
 
-    /* 4. Manteniamo il resto del layout base che funzionava */
+    /* 4. Chat Header e Bottoni (Icone per non uscire dallo schermo) */
     #company-chat-window { display: none !important; }
-    #company-chat-window.active { display: flex !important; }
+    #company-chat-window.active { display: flex !important; position: fixed !important; top:0; left:0; right:0; bottom:0; z-index:9999; background: #0a0b10 !important; }
+
+    .company-chat-header { 
+        display: flex !important; 
+        flex-direction: column !important; 
+        padding: 10px !important; 
+        gap: 8px !important; 
+    }
+
+    /* Bottoni Header (Solo Icone) */
+    .company-chat-header > div:last-child {
+        display: flex !important;
+        justify-content: flex-end !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+
+    /* Rendiamo i bottoni quadrati e compatti */
+    .company-chat-header .btn-primary {
+        width: 45px !important;
+        padding: 6px !important;
+        font-size: 1rem !important; /* Mostriamo l'emoji */
+        min-height: 40px !important;
+        flex: 0 0 auto !important;
+    }
+    
+    /* Nascondiamo il testo lungo dei bottoni su mobile */
+    .company-chat-header .btn-primary span:not(.btn-icon-fallback) {
+        display: none !important;
+    }
+
+    /* INPUT CHAT MOBILE */
+    .chat-input-area {
+        padding: 10px !important;
+        background: #111 !important;
+    }
 }

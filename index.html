@@ -340,18 +340,22 @@
               </div>
               <div style="display: flex; gap: 0.5rem; align-items: center;">
                 <!-- Pulsanti Azione (visibili solo per l'autore dell'annuncio) -->
-                <button id="btn-release-payment" class="btn-primary hidden"
-                  style="background: #4CAF50; padding: 0.5rem 1rem; width: auto; font-size: 0.8rem;"
-                  onclick="releasePayment()">Conferma e Paga</button>
+                <button id="btn-release-payment" class="btn-primary hidden btn-icon-only"
+  style="background: #4CAF50; padding: 0.5rem 1rem; width: auto; font-size: 0.8rem;"
+  onclick="releasePayment()">
+  <span class="btn-text">Conferma e Paga</span>
+  <span class="btn-icon-fallback">✅</span>
+</button>
                 <button id="btn-report-job" class="btn-primary hidden"
                   style="background: #ff4d4d; padding: 0.5rem 1rem; width: auto; font-size: 0.8rem;"
                   onclick="openReportModal()">Segnala</button>
 
-                <button id="btn-clear-chat" class="hidden" onclick="clearChat(currentChatCompany.jobId)"
-                  style="background:none; border:none; color:#ff4d4d; cursor:pointer; font-size:1.2rem;"
-                  title="Svuota la tua cronologia">
-                  🗑️
-                </button>
+                <button id="btn-report-job" class="btn-primary hidden btn-icon-only"
+  style="background: #ff4d4d; padding: 0.5rem 1rem; width: auto; font-size: 0.8rem;"
+  onclick="openReportModal()">
+  <span class="btn-text">Segnala</span>
+  <span class="btn-icon-fallback">⚠️</span>
+</button>
               </div>
             </div>
 
