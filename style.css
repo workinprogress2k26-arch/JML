@@ -630,195 +630,7 @@ body::-webkit-scrollbar {
 
 
 
-/* === ADDITIONAL MOBILE FIXES: Chat stacking and modal overrides === */
 
-@media (max-width: 767px) {
-
-    /* Stack chat list and chat window vertically to avoid horizontal overflow */
-
-    .chat-container {
-
-        display: flex !important;
-
-        flex-direction: column !important;
-
-        gap: 0.5rem !important;
-
-        width: 100% !important;
-
-    }
-
-
-
-    .chat-list {
-
-        width: 100% !important;
-
-        max-height: 34vh !important;
-
-        overflow-y: auto !important;
-
-        border-bottom: 1px solid var(--border) !important;
-
-        padding: 0.75rem !important;
-
-    }
-
-
-
-    .chat-window {
-
-        width: 100% !important;
-
-        min-height: calc(100vh - 220px) !important;
-
-        max-height: calc(100vh - 120px) !important;
-
-        overflow: hidden !important;
-
-        display: flex !important;
-
-        flex-direction: column !important;
-
-    }
-
-
-
-    /* Keep header visible and compact */
-
-    .company-chat-header {
-
-        position: sticky !important;
-
-        top: 0 !important;
-
-        background: rgba(10,11,16,0.95) !important;
-
-        padding: 0.6rem 0.9rem !important;
-
-        z-index: 30 !important;
-
-    }
-
-
-
-    .chat-body {
-
-        flex: 1 1 auto !important;
-
-        max-height: calc(100vh - 260px) !important;
-
-        overflow-y: auto !important;
-
-        padding: 0.8rem !important;
-
-    }
-
-
-
-    .chat-input-area {
-
-        position: sticky !important;
-
-        bottom: 0 !important;
-
-        background: rgba(0,0,0,0.35) !important;
-
-        padding: 0.6rem !important;
-
-        border-top: 1px solid var(--border) !important;
-
-    }
-
-
-
-    .chat-input-area input {
-
-        width: 100% !important;
-
-    }
-
-
-
-    /* Specific modal overrides for create-annuncio and chat modal to ensure they don't overflow */
-
-    #create-annuncio-modal .modal-content,
-
-    #company-chat-modal .modal-content,
-
-    #annuncio-details-modal .modal-content {
-
-        width: 95vw !important;
-
-        max-width: 640px !important;
-
-        margin: 8px auto !important;
-
-        padding: 1rem !important;
-
-        max-height: calc(100vh - 70px) !important;
-
-        overflow-y: auto !important;
-
-        box-sizing: border-box !important;
-
-    }
-
-
-
-    /* Reduce heavy paddings inside create modal fields to fit mobile better */
-
-    #create-annuncio-modal .input-group input,
-
-    #create-annuncio-modal .input-group textarea,
-
-    #create-annuncio-modal .input-group select {
-
-        padding: 0.75rem !important;
-
-        font-size: 15px !important;
-
-    }
-
-
-
-    /* Ensure modal titles and primary actions are readable on mobile */
-
-    #create-annuncio-modal h2,
-
-    #create-annuncio-modal h3,
-
-    .modal-content h2,
-
-    .modal-content h3 {
-
-        font-size: 1.25rem !important;
-
-        line-height: 1.2 !important;
-
-        margin-bottom: 0.5rem !important;
-
-    }
-
-
-
-    /* Make the publish button more prominent on mobile */
-
-    #create-annuncio-submit {
-
-        font-size: 1rem !important;
-
-        padding: 0.8rem 1rem !important;
-
-    }
-
-
-
-    /* Tighter input spacing to avoid overflow */
-
-    .modal-content .input-group { padding-bottom: 0.6rem !important; }
-
-}
 
 
 
@@ -4228,99 +4040,42 @@ html.auth-mode {
     gap: 1rem;
 }
 
-/* ========================================== */
-    /* 2. FIX SEZIONE CHAT (STILE WHATSAPP) */
-    /* ========================================== */
+/* ========================================================================== */
+/* 📱 LOGICA MOBILE DEFINITIVA (Sostituisci il vecchio blocco mobile con questo) */
+/* ========================================================================== */
+@media (max-width: 767px) {
+    /* 1. Reset generale per mobile */
+    html, body { overflow-x: hidden !important; width: 100vw !important; }
+    .main-content { padding-bottom: 100px !important; }
+
+    /* 2. CHAT: Stile WhatsApp (Lista vs Window) */
+    .chat-container { display: block !important; height: calc(100vh - 150px) !important; background: transparent !important; }
     
-    .chat-container {
-        position: relative !important;
-        display: block !important;
-        height: calc(100vh - 200px) !important; 
-        min-height: unset !important;
-        overflow: hidden !important;
-        padding: 0 !important;
-    }
-
-    /* FASE 1: MOSTRA SOLO LA LISTA E FORZA LA FINESTRA CHAT A SCOMPARIRE */
-    #company-chat-list {
-        width: 100% !important;
-        height: 100% !important;
-        max-height: none !important;
-        overflow-y: auto !important;
-        border: none !important;
-        padding: 0.5rem !important;
-        display: block !important;
-    }
-
-    /* Usiamo l'ID #company-chat-window per vincere sulla specificità del desktop */
-    #company-chat-window {
-        display: none !important;
-    }
-
-    /* FASE 2: QUANDO ENTRI IN UNA CHAT (Copre la lista) */
+    #company-chat-list { display: block !important; width: 100% !important; }
+    #company-chat-window { display: none !important; } /* Nascosta di default */
+    
     #company-chat-window.active {
         display: flex !important;
         flex-direction: column !important;
-        position: absolute !important;
-        top: 0 !important; 
-        left: 0 !important; 
-        right: 0 !important; 
-        bottom: 0 !important;
-        z-index: 50 !important;
-        background: #0a0b10 !important; /* Colore scuro esplicito al posto della variabile */
-        border-radius: 12px !important;
+        position: fixed !important;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 9999 !important;
+        background: #0a0b10 !important;
     }
 
-    /* HEADER CHAT: Più compatto, in ordine e senza mappazzoni */
-    .company-chat-header {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        padding: 10px 15px !important;
-        gap: 10px !important;
-        height: auto !important; /* Rimuove altezze fisse che causano schiacciamenti */
-    }
-
-    /* Prima riga: Freccia Indietro + Nome Utente */
-    .company-chat-header > div:first-child {
-        width: 100% !important;
-        display: flex !important;
-        align-items: center !important;
-    }
-
-    /* Seconda riga: Bottoni Paga / Segnala / Cestino in wrap */
-    .company-chat-header > div:last-child {
-        width: 100% !important;
-        display: flex !important;
-        justify-content: flex-start !important;
-        flex-wrap: wrap !important; /* Se i bottoni non ci stanno, vanno a capo */
-        gap: 8px !important;
-    }
-
-    .company-chat-header .btn-primary {
-        flex: 1 !important; /* Si allargano per occupare lo spazio disponibile */
-        padding: 6px 10px !important;
-        font-size: 0.75rem !important;
-        min-height: 35px !important;
-        white-space: normal !important; /* Il testo dentro il bottone può andare a capo se troppo lungo */
-        line-height: 1.2 !important;
-    }
-
-    /* AREA INPUT MESSAGGI */
-    .chat-input-area {
-        padding: 10px !important;
-        background: rgba(0,0,0,0.5) !important;
-        display: flex !important;
-        flex-wrap: nowrap !important;
-        gap: 8px !important;
-    }
+    /* 3. MESSAGGI: DESTRA E SINISTRA */
+    .chat-body { display: flex !important; flex-direction: column !important; gap: 10px !important; padding: 10px !important; }
     
-    .chat-input-area input {
-        width: calc(100% - 80px) !important;
-    }
+    .message { max-width: 85% !important; padding: 10px 14px !important; border-radius: 16px !important; font-size: 0.9rem !important; }
     
-    .chat-input-area .btn-primary {
-        width: 75px !important;
-        padding: 0 !important;
-        min-height: 45px !important;
-    }
+    /* I TUOI MESSAGGI (Destra) */
+    .message.user { align-self: flex-end !important; background: var(--primary) !important; color: #000 !important; border-bottom-right-radius: 4px !important; }
+    
+    /* MESSAGGI ALTRUI (Sinistra) */
+    .message.company { align-self: flex-start !important; background: #252525 !important; color: #fff !important; border-bottom-left-radius: 4px !important; border: 1px solid #333 !important; }
+
+    /* 4. HEADER CHAT MOBILE */
+    .company-chat-header { flex-direction: column !important; gap: 10px !important; height: auto !important; padding: 10px !important; }
+    .company-chat-header > div:last-child { width: 100% !important; display: flex !important; gap: 5px !important; }
+    .company-chat-header .btn-primary { flex: 1 !important; min-height: 35px !important; font-size: 0.75rem !important; }
+}
